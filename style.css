@@ -14,7 +14,7 @@ input {
   min-height: 100vh;
   overflow: hidden;
 
-  /* 🔹 Background image instead of white */
+  /*Background image */
   background: url("https://tagum.umindanao.edu.ph/images/thumbs/t5.jpg")
     no-repeat center center/cover;
 }
@@ -81,11 +81,11 @@ form.sign-in-form {
   color: #aaa;
   width: 100%;
   padding: 0 10px;
-  appearance: none; /* removes default arrow */
+  appearance: none; 
   cursor: pointer;
 }
 
-/* Custom dropdown arrow */
+/* dropdown arrow */
 .input-field select::-ms-expand {
   display: none;
 }
