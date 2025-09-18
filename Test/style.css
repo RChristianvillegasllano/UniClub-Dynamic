@@ -321,11 +321,13 @@ form.sign-in-form {
   .right-panel .content {
     transform: translateY(300px);
   }
-  .container.sign-up-mode .signin-signup {
+.container.sign-up-mode .signin-signup {
     top: 5%;
     transform: translate(-50%, 0);
   }
 }
+
+/* Styling for Font Awesome solid user icon */
 @media (max-width: 570px) {
   form {
     padding: 0 1.5rem;
