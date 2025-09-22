@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UniClub Officer Dashboard</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="menu-toggle" id="menuToggle">
+        <div class="bar"></div>
+        <div class="bar"></div>
+        <div class="bar"></div>
+      </div>
+      <a href="#" class="active"
+        ><i class="ri-dashboard-line"></i> <span>Dashboard</span></a
+      >
+      <a href="#" id="sidebarMemberApprovals"
+        ><i class="ri-user-add-line"></i> <span>Member Approvals</span></a
+      >
+      <a href="#"
+        ><i class="ri-calendar-check-line"></i> <span>Attendance</span></a
+      >
+      <a href="#"><i class="ri-team-line"></i> <span>Club Records</span></a>
+      <a href="#"
+        ><i class="ri-user-star-line"></i> <span>Officer Roles</span></a
+      >
+      <a href="#"
+        ><i class="ri-bar-chart-box-line"></i> <span>Analytics</span></a
+      >
+      <a href="#"
+        ><i class="ri-notification-3-line"></i> <span>Communication</span></a
+      >
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+      <div class="topbar">
+        <h1>Officer Dashboard</h1>
+        <div class="topbar-right">
+          <div class="notif" id="notifBtn" style="position: relative">
+            <i class="ri-notification-2-line"></i>
+            <span id="notifCount">3</span>
+            <div
+              id="notifDropdown"
+              style="
+                display: none;
+                position: absolute;
+                right: 0;
+                top: 40px;
+                background: #fff;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+                border-radius: 12px;
+                min-width: 320px;
+                z-index: 100;
+                border: 1px solid #e5e7eb;
+              "
+            >
+              <div
+                style="
+                  padding: 16px 20px;
+                  border-bottom: 1px solid #f0f0f0;
+                  font-weight: 600;
+                  font-size: 17px;
+                  color: #222;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
+                <i
+                  class="ri-notification-3-line"
+                  style="font-size: 20px; color: #8e0e00"
+                ></i>
+                Announcements
+              </div>
+              <ul
+                id="notifAnnouncements"
+                style="
+                  list-style: none;
+                  margin: 0;
+                  padding: 0;
+                  max-height: 320px;
+                  overflow-y: auto;
+                "
+              ></ul>
+              <div
+                style="
+                  padding: 12px;
+                  text-align: center;
+                  font-size: 13px;
+                  color: #aaa;
+                  border-top: 1px solid #f0f0f0;
+                  background: #fafbfc;
+                  border-radius: 0 0 12px 12px;
+                "
+              >
+                No more announcements
+              </div>
+            </div>
+          </div>
+          <script>
+            // ...existing code...
+            // Notification dropdown logic
+            const notifBtn = document.getElementById("notifBtn");
+            const notifDropdown = document.getElementById("notifDropdown");
+            const notifAnnouncements =
+              document.getElementById("notifAnnouncements");
+
+            // Example announcements (can be replaced with dynamic data)
+            const announcements = [
+              {
+                title: "General Assembly",
+                message: "Assembly on Sept 15, 2025 at 2PM.",
+              },
+              {
+                title: "Leadership Training",
+                message: "Training on Sept 22, 2025.",
+              },
+              {
+                title: "New Club Applications",
+                message: "Review pending club applications.",
+              },
+            ];
+
+            function renderAnnouncements() {
+              notifAnnouncements.innerHTML = "";
+              if (announcements.length === 0) {
+                notifAnnouncements.innerHTML =
+                  '<li style="padding:24px; text-align:center; color:#888;">No announcements</li>';
+                return;
+              }
+              announcements.forEach((a) => {
+                const li = document.createElement("li");
+                li.style.padding = "16px 20px";
+                li.style.borderBottom = "1px solid #f0f0f0";
+                li.style.transition = "background 0.2s";
+                li.style.cursor = "pointer";
+                li.onmouseover = () => (li.style.background = "#f6f8fa");
+                li.onmouseout = () => (li.style.background = "");
+                li.innerHTML = `
+              <div style='display:flex; align-items:center; gap:12px;'>
+                <div style='background:#8e0e00; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:18px;'>
+                  <i class='ri-megaphone-line'></i>
+                </div>
+                <div style='flex:1;'>
+                  <div style='font-weight:500; font-size:15px; color:#222;'>${a.title}</div>
+                  <div style='font-size:13px; color:#555; margin-top:2px;'>${a.message}</div>
+                </div>
+              </div>
+            `;
+                notifAnnouncements.appendChild(li);
+              });
+            }
+
+            notifBtn.addEventListener("click", (e) => {
+              e.stopPropagation();
+              renderAnnouncements();
+              notifDropdown.style.display =
+                notifDropdown.style.display === "none" ? "block" : "none";
+            });
+
+            // Hide dropdown when clicking outside
+            document.addEventListener("click", (e) => {
+              if (!notifBtn.contains(e.target)) {
+                notifDropdown.style.display = "none";
+              }
+            });
+            // ...existing code...
+          </script>
+          <div class="profile">
+            <img src="https://i.pravatar.cc/50" alt="Profile" />
+            <span>Officer</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-grid" id="cardGrid">
+        <div class="card">
+          <h3>Pending Memberships</h3>
+          <p id="membershipText">3 new applications awaiting approval.</p>
+          <button class="btn" onclick="openMembershipModal()">Review</button>
+        </div>
+        <!-- Calendar Card -->
+        <div class="card">
+          <h3>Events Calendar</h3>
+          <div id="calendar"></div>
+        </div>
+        <div class="card">
+          <h3>Analytics</h3>
+          <canvas id="analyticsChart"></canvas>
+          <button class="btn" onclick="refreshChart()">Refresh Data</button>
+        </div>
+        <div class="card">
+          <h3>Communication</h3>
+          <p id="commStatus">Post announcements or event reminders.</p>
+          <button class="btn" onclick="createPost()">Create Post</button>
+          <ul id="postList"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Membership Approval -->
+    <div class="modal" id="membershipModal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeMembershipModal()">✖</span>
+        <h3>Membership Approvals</h3>
+
+        <div class="member-toolbar">
+          <div class="member-left">
+            <label class="visually-hidden" for="memberSearch"
+              >Search applicant</label
+            >
+            <input
+              id="memberSearch"
+              type="text"
+              placeholder="Search by name or club..."
+            />
+          </div>
+          <div class="member-right">
+            <span class="pill"
+              >Pending: <strong id="pendingCount">3</strong></span
+            >
+            <span class="pill green"
+              >Approved: <strong id="approvedCountTop">0</strong></span
+            >
+            <span class="pill red"
+              >Rejected: <strong id="rejectedCountTop">0</strong></span
+            >
+          </div>
+        </div>
+
+        <div class="member-tabs">
+          <button class="tab-btn active" data-tab="pendingTab">Pending</button>
+          <button class="tab-btn" data-tab="approvedTab">Approved</button>
+          <button class="tab-btn" data-tab="rejectedTab">Rejected</button>
+        </div>
+
+        <div class="approval-sections">
+          <!-- Pending List -->
+          <div class="tab-pane" id="pendingTab">
+            <div class="approval-card">
+              <h4>
+                Pending Applications (<span id="pendingCountHeader">3</span>)
+              </h4>
+              <div class="table-wrap">
+                <table id="pendingTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Applying For</th>
+                      <th>Current Clubs</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr data-clubs="2">
+                      <td>Juan Dela Cruz</td>
+                      <td>Math Club</td>
+                      <td><span class="badge">2</span></td>
+                      <td>
+                        <button class="approve" onclick="approveStudent(this)">
+                          <i class="ri-check-line"></i> Approve
+                        </button>
+                        <button class="reject" onclick="rejectStudent(this)">
+                          <i class="ri-close-line"></i> Reject
+                        </button>
+                      </td>
+                    </tr>
+                    <tr data-clubs="1">
+                      <td>Maria Santos</td>
+                      <td>Physics Club</td>
+                      <td><span class="badge">1</span></td>
+                      <td>
+                        <button class="approve" onclick="approveStudent(this)">
+                          <i class="ri-check-line"></i> Approve
+                        </button>
+                        <button class="reject" onclick="rejectStudent(this)">
+                          <i class="ri-close-line"></i> Reject
+                        </button>
+                      </td>
+                    </tr>
+                    <tr data-clubs="3">
+                      <td>Carlos Reyes</td>
+                      <td>Science & Math Club</td>
+                      <td><span class="badge">3</span></td>
+                      <td>
+                        <button class="approve" onclick="approveStudent(this)">
+                          <i class="ri-check-line"></i> Approve
+                        </button>
+                        <button class="reject" onclick="rejectStudent(this)">
+                          <i class="ri-close-line"></i> Reject
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Approved List -->
+          <div class="tab-pane" id="approvedTab" style="display: none">
+            <div class="approval-card approved">
+              <h4>Approved Members (<span id="approvedCount">0</span>)</h4>
+              <div class="table-wrap">
+                <table id="approvedTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Club</th>
+                      <th>Current Clubs</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rejected List -->
+          <div class="tab-pane" id="rejectedTab" style="display: none">
+            <div class="approval-card rejected">
+              <h4>Rejected Members (<span id="rejectedCount">0</span>)</h4>
+              <div class="table-wrap">
+                <table id="rejectedTable">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Club</th>
+                      <th>Current Clubs</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Attendance Management -->
+    <div class="modal" id="attendanceModal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeAttendanceModal()">✖</span>
+        <h3>Attendance Management – General Assembly</h3>
+
+        <div id="attendanceSummary">
+          Present: <span id="presentCount">0</span> | Absent:
+          <span id="absentCount">0</span>
+        </div>
+
+        <div class="attn-toolbar">
+          <div class="attn-left">
+            <label class="visually-hidden" for="attnSearch"
+              >Search attendee</label
+            >
+            <input
+              id="attnSearch"
+              type="text"
+              placeholder="Search attendee..."
+            />
+            <label class="visually-hidden" for="attnFilter"
+              >Filter status</label
+            >
+            <select id="attnFilter">
+              <option value="all">All</option>
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+              <option value="not_marked">Not Marked</option>
+            </select>
+          </div>
+          <div class="attn-right">
+            <button
+              id="attnExport"
+              class="btn btn-light"
+              type="button"
+              aria-label="Export attendance to CSV"
+            >
+              <i class="ri-download-2-line"></i> Export
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table id="attendanceTable">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Juan Dela Cruz</td>
+                <td class="status">Not Marked</td>
+                <td>
+                  <button class="approve" onclick="markPresent(this)">
+                    <i class="ri-checkbox-circle-line"></i> Present
+                  </button>
+                  <button class="reject" onclick="markAbsent(this)">
+                    <i class="ri-close-circle-line"></i> Absent
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>Maria Santos</td>
+                <td class="status">Not Marked</td>
+                <td>
+                  <button class="approve" onclick="markPresent(this)">
+                    <i class="ri-checkbox-circle-line"></i> Present
+                  </button>
+                  <button class="reject" onclick="markAbsent(this)">
+                    <i class="ri-close-circle-line"></i> Absent
+                  </button>
+                </td>
+              </tr>
+              <tr>
+                <td>Carlos Reyes</td>
+                <td class="status">Not Marked</td>
+                <td>
+                  <button class="approve" onclick="markPresent(this)">
+                    <i class="ri-checkbox-circle-line"></i> Present
+                  </button>
+                  <button class="reject" onclick="markAbsent(this)">
+                    <i class="ri-close-circle-line"></i> Absent
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Create Post -->
+    <div class="modal" id="postModal">
+      <div class="modal-content">
+        <span
+          class="close"
+          onclick="document.getElementById('postModal').style.display='none'"
+          >&times;</span
+        >
+        <h3>Create Announcement / Post</h3>
+
+        <form id="postForm">
+          <div class="form-group">
+            <label for="postTitle">Title</label>
+            <input
+              type="text"
+              id="postTitle"
+              placeholder="Enter post title"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="postMessage">Message</label>
+            <textarea
+              id="postMessage"
+              rows="5"
+              placeholder="Write your announcement here..."
+              required
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="postAudience">Audience</label>
+            <select id="postAudience" required>
+              <option value="">-- Select Audience --</option>
+              <option value="all">All Members</option>
+              <option value="officers">Officers Only</option>
+              <option value="applicants">Applicants</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn">Post Announcement</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // Sidebar toggle
+      const sidebar = document.getElementById("sidebar");
+      const menuToggle = document.getElementById("menuToggle");
+      menuToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("collapsed");
+        menuToggle.classList.toggle("active");
+      });
+
+      // Membership Modal
+      const membershipModal = document.getElementById("membershipModal");
+      function openMembershipModal() {
+        membershipModal.style.display = "flex";
+      }
+      function closeMembershipModal() {
+        membershipModal.style.display = "none";
+      }
+      // Sidebar Member Approvals click
+      document
+        .getElementById("sidebarMemberApprovals")
+        .addEventListener("click", function (e) {
+          e.preventDefault();
+          openMembershipModal();
+        });
+
+      function approveStudent(btn) {
+        const row = btn.closest("tr");
+        const name = row.cells[0].innerText;
+        const applyingFor = row.cells[1].innerText;
+        const currentClubs = row.cells[2].innerText.replace(/[^0-9]/g, "");
+
+        document.querySelector("#approvedTable tbody").insertAdjacentHTML(
+          "beforeend",
+          `<tr>
+      <td>${name}</td>
+      <td>${applyingFor}</td>
+      <td>${currentClubs}</td>
+      <td><button class="delete-row" onclick="deleteMemberRow(this)"><i class='ri-delete-bin-line'></i> Delete</button></td>
+    </tr>`
+        );
+
+        row.remove();
+        updateCounts();
+      }
+
+      function rejectStudent(btn) {
+        const row = btn.closest("tr");
+        const name = row.cells[0].innerText;
+        const applyingFor = row.cells[1].innerText;
+        const currentClubs = row.cells[2].innerText.replace(/[^0-9]/g, "");
+
+        document.querySelector("#rejectedTable tbody").insertAdjacentHTML(
+          "beforeend",
+          `<tr>
+      <td>${name}</td>
+      <td>${applyingFor}</td>
+      <td>${currentClubs}</td>
+      <td><button class="delete-row" onclick="deleteMemberRow(this)"><i class='ri-delete-bin-line'></i> Delete</button></td>
+    </tr>`
+        );
+
+        row.remove();
+        updateCounts();
+      }
+
+      function deleteMemberRow(btn) {
+        const row = btn.closest("tr");
+        const table = row.closest("table");
+        if (confirm("Delete this record?")) {
+          // If deleting from approved or rejected, move back to pending
+          if (table.id === "approvedTable" || table.id === "rejectedTable") {
+            const name = row.cells[0].innerText;
+            const applyingFor = row.cells[1].innerText;
+            const currentClubs = row.cells[2].innerText;
+            document.querySelector("#pendingTable tbody").insertAdjacentHTML(
+              "beforeend",
+              `<tr data-clubs="${currentClubs}">
+                <td>${name}</td>
+                <td>${applyingFor}</td>
+                <td><span class="badge">${currentClubs}</span></td>
+                <td>
+                  <button class="approve" onclick="approveStudent(this)"><i class="ri-check-line"></i> Approve</button>
+                  <button class="reject" onclick="rejectStudent(this)"><i class="ri-close-line"></i> Reject</button>
+                </td>
+              </tr>`
+            );
+          }
+          row.remove();
+          updateCounts();
+        }
+      }
+
+      // Tabs behavior
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document
+            .querySelectorAll(".tab-btn")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          const id = btn.getAttribute("data-tab");
+          document.querySelectorAll(".tab-pane").forEach((p) => {
+            p.style.display = p.id === id ? "" : "none";
+          });
+        });
+      });
+
+      // Update counts for membership tables and toolbar
+      function updateCounts() {
+        const approved = document.querySelectorAll(
+          "#approvedTable tbody tr"
+        ).length;
+        const rejected = document.querySelectorAll(
+          "#rejectedTable tbody tr"
+        ).length;
+        const pending = document.querySelectorAll(
+          "#pendingTable tbody tr"
+        ).length;
+        const approvedCountEl = document.getElementById("approvedCount");
+        const rejectedCountEl = document.getElementById("rejectedCount");
+        const approvedTop = document.getElementById("approvedCountTop");
+        const rejectedTop = document.getElementById("rejectedCountTop");
+        const pendingCountEl = document.getElementById("pendingCount");
+        const pendingHeaderEl = document.getElementById("pendingCountHeader");
+        if (approvedCountEl) approvedCountEl.innerText = approved;
+        if (rejectedCountEl) rejectedCountEl.innerText = rejected;
+        if (approvedTop) approvedTop.innerText = approved;
+        if (rejectedTop) rejectedTop.innerText = rejected;
+        if (pendingCountEl) pendingCountEl.innerText = pending;
+        if (pendingHeaderEl) pendingHeaderEl.innerText = pending;
+      }
+
+      // Membership search filter
+      const memberSearch = document.getElementById("memberSearch");
+      if (memberSearch) {
+        memberSearch.addEventListener("input", () => {
+          const q = memberSearch.value.toLowerCase();
+          document.querySelectorAll("#pendingTable tbody tr").forEach((tr) => {
+            const name = tr.cells[0]?.innerText.toLowerCase() || "";
+            const club = tr.cells[1]?.innerText.toLowerCase() || "";
+            tr.style.display =
+              !q || name.includes(q) || club.includes(q) ? "" : "none";
+          });
+        });
+      }
+
+      // Attendance Modal
+      const attendanceModal = document.getElementById("attendanceModal");
+      function closeAttendanceModal() {
+        attendanceModal.style.display = "none";
+      }
+
+      function updateAttendanceCounts() {
+        const presentCount = document.querySelectorAll(
+          "#attendanceTable .present"
+        ).length;
+        const absentCount = document.querySelectorAll(
+          "#attendanceTable .absent"
+        ).length;
+        document.getElementById("presentCount").innerText = presentCount;
+        document.getElementById("absentCount").innerText = absentCount;
+      }
+
+      function markPresent(btn) {
+        const row = btn.closest("tr");
+        const statusCell = row.querySelector(".status");
+        statusCell.innerText = "Present";
+        statusCell.classList.remove("absent");
+        statusCell.classList.add("present");
+        updateAttendanceCounts();
+      }
+
+      function markAbsent(btn) {
+        const row = btn.closest("tr");
+        const statusCell = row.querySelector(".status");
+        statusCell.innerText = "Absent";
+        statusCell.classList.remove("present");
+        statusCell.classList.add("absent");
+        updateAttendanceCounts();
+      }
+
+      // Attendance search and filter
+      const attnSearch = document.getElementById("attnSearch");
+      const attnFilter = document.getElementById("attnFilter");
+      function applyAttendanceFilters() {
+        const q = (attnSearch.value || "").toLowerCase();
+        const filter = attnFilter.value; // all | present | absent | not_marked
+        document.querySelectorAll("#attendanceTable tbody tr").forEach((tr) => {
+          const name = tr.cells[0].innerText.toLowerCase();
+          const statusEl = tr.querySelector(".status");
+          const statusText = statusEl ? statusEl.innerText.toLowerCase() : "";
+          const matchesSearch = !q || name.includes(q);
+          const matchesFilter =
+            filter === "all" ||
+            (filter === "present" && statusText === "present") ||
+            (filter === "absent" && statusText === "absent") ||
+            (filter === "not_marked" && statusText === "not marked");
+          tr.style.display = matchesSearch && matchesFilter ? "" : "none";
+        });
+      }
+      if (attnSearch && attnFilter) {
+        attnSearch.addEventListener("input", applyAttendanceFilters);
+        attnFilter.addEventListener("change", applyAttendanceFilters);
+      }
+
+      // Export visible attendance rows to CSV
+      const attnExportBtn = document.getElementById("attnExport");
+      function exportAttendanceCSV() {
+        const rows = Array.from(
+          document.querySelectorAll("#attendanceTable tbody tr")
+        ).filter((tr) => getComputedStyle(tr).display !== "none");
+        const data = [["Name", "Status"]];
+        rows.forEach((tr) => {
+          const name = (tr.cells[0]?.innerText || "").trim();
+          const status = (tr.querySelector(".status")?.innerText || "").trim();
+          data.push([name, status]);
+        });
+        const csv = data
+          .map((r) =>
+            r.map((v) => '"' + String(v).replace(/"/g, '""') + '"').join(",")
+          )
+          .join("\r\n");
+        const blob = new Blob(["\uFEFF" + csv], {
+          type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        a.href = url;
+        a.download = `attendance-${yyyy}-${mm}-${dd}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      if (attnExportBtn) {
+        attnExportBtn.addEventListener("click", exportAttendanceCSV);
+      }
+      const ctx = document.getElementById("analyticsChart").getContext("2d");
+      let analyticsChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Jan", "Feb", "Mar", "Apr", "May"],
+          datasets: [
+            {
+              label: "Attendance %",
+              data: [90, 85, 80, 95, 88],
+              backgroundColor: "#8e0e00",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, max: 100 },
+          },
+        },
+      });
+
+      function refreshChart() {
+        analyticsChart.data.datasets[0].data = Array.from(
+          { length: 5 },
+          () => Math.floor(Math.random() * 21) + 80
+        );
+        analyticsChart.update();
+      }
+
+      // Create Post Modal
+      const postModal = document.getElementById("postModal");
+      const postForm = document.getElementById("postForm");
+      const postList = document.getElementById("postList");
+
+      function createPost() {
+        postModal.style.display = "flex";
+      }
+
+      function closePostModal() {
+        postModal.style.display = "none";
+      }
+
+      postForm.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const title = document.getElementById("postTitle").value;
+        const message = document.getElementById("postMessage").value;
+        const audience = document.getElementById("postAudience").value;
+
+        // Create post item with delete button
+        const li = document.createElement("li");
+        li.classList.add("post-item");
+        li.innerHTML = `
+    <div style="word-break:break-word; max-width:100%; white-space:pre-line;">
+      <strong>${title}</strong> - <span class="post-item-message">${message}</span> <em>(${audience})</em>
+    </div>
+  <button class="delete-post" title="Remove post"><i class='ri-close-line' style='font-size:18px; vertical-align:middle;'></i></button>
+  `;
+
+        // Add delete functionality with confirmation
+        li.querySelector(".delete-post").addEventListener("click", () => {
+          if (confirm("Are you sure you want to delete this post?")) {
+            li.remove();
+          }
+        });
+
+        postList.appendChild(li);
+
+        postForm.reset();
+        closePostModal();
+      });
+
+      // Calendar Setup
+      const calendarEl = document.getElementById("calendar");
+      const events = [
+        { date: "2025-09-15", name: "General Assembly" },
+        { date: "2025-09-22", name: "Leadership Training" },
+      ];
+
+      function generateCalendar(year, month) {
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        calendarEl.innerHTML = "";
+
+        for (let i = 0; i < firstDay; i++) {
+          const blank = document.createElement("div");
+          calendarEl.appendChild(blank);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+          const dayEl = document.createElement("div");
+          const dateStr = `${year}-${String(month + 1).padStart(
+            2,
+            "0"
+          )}-${String(day).padStart(2, "0")}`;
+
+          dayEl.classList.add("calendar-day");
+          dayEl.textContent = day;
+
+          const event = events.find((e) => e.date === dateStr);
+          if (event) {
+            dayEl.classList.add("event");
+            dayEl.setAttribute("data-event", event.name);
+            dayEl.addEventListener("click", () => {
+              document.querySelector(
+                "#attendanceModal h3"
+              ).innerText = `Attendance Management – ${event.name}`;
+              attendanceModal.style.display = "flex";
+            });
+          }
+
+          calendarEl.appendChild(dayEl);
+        }
+      }
+      generateCalendar(2025, 8);
+    </script>
+  </body>
+</html>
