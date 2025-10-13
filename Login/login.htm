@@ -275,72 +275,21 @@
 
       sign_in_btn.addEventListener("click", () => {
         container.classList.remove("sign-up-mode");
+        // Clear the role selection to force user to choose
         if (signInRole) {
-          // force user to choose a role each time
           signInRole.value = "";
-          signInRole.focus();
-          // also attempt to open immediately (not just on focus)
-          if (typeof signInRole.showPicker === "function") {
-            try {
-              signInRole.showPicker();
-            } catch (e) {}
-          } else {
-            try {
-              signInRole.dispatchEvent(
-                new KeyboardEvent("keydown", {
-                  key: "ArrowDown",
-                  bubbles: true,
-                })
-              );
-            } catch (e) {}
-            try {
-              signInRole.dispatchEvent(
-                new MouseEvent("mousedown", {
-                  bubbles: true,
-                  cancelable: true,
-                  view: window,
-                })
-              );
-            } catch (e) {}
-          }
         }
+        // Clear other form fields
+        const signinUmtcId = document.querySelector("#signin-umtcid");
+        const signinPassword = document.querySelector("#signin-password");
+        if (signinUmtcId) signinUmtcId.value = "";
+        if (signinPassword) signinPassword.value = "";
       });
 
-      // Try to open the role dropdown automatically when it receives focus
+      // Simple focus handler for role dropdown
       if (signInRole) {
-        const tryOpenSelect = (sel) => {
-          try {
-            if (typeof sel.showPicker === "function") {
-              sel.showPicker();
-              return;
-            }
-          } catch (e) {}
-          try {
-            sel.dispatchEvent(
-              new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })
-            );
-          } catch (e) {}
-          try {
-            sel.dispatchEvent(
-              new MouseEvent("mousedown", {
-                bubbles: true,
-                cancelable: true,
-                view: window,
-              })
-            );
-          } catch (e) {}
-        };
         signInRole.addEventListener("focus", () => {
-          // small timeout improves reliability across browsers
-          setTimeout(() => tryOpenSelect(signInRole), 0);
-        });
-        // On initial load, if we're already on sign-in, focus and try to open once
-        window.addEventListener("DOMContentLoaded", () => {
-          const isSignInVisible = !container.classList.contains("sign-up-mode");
-          if (isSignInVisible) {
-            signInRole.focus();
-            setTimeout(() => tryOpenSelect(signInRole), 0);
-          }
+          // Just focus, let user click to open dropdown naturally
         });
       }
 
