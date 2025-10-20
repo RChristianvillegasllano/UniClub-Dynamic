@@ -40,7 +40,7 @@
               <input
                 type="text"
                 id="signin-umtcid"
-                placeholder="UMTC ID (6 digits)"
+                placeholder="UMTC ID "
                 inputmode="numeric"
                 pattern="[0-9]{6}"
                 maxlength="6"
@@ -85,7 +85,7 @@
                 <input
                   type="text"
                   id="signup-umtcid"
-                  placeholder="UMTC ID (6 digits)"
+                  placeholder="UMTC ID"
                   inputmode="numeric"
                   pattern="[0-9]{6}"
                   maxlength="6"
@@ -97,7 +97,7 @@
                 <input
                   type="email"
                   id="signup-email"
-                  placeholder="University Email (@umindanao.edu.ph)"
+                  placeholder="University Email"
                   required
                 />
               </div>
@@ -214,51 +214,55 @@
       const signInRole = document.querySelector("#signin-role");
       const rememberCheckbox = document.querySelector("#remember-me");
       const forgotLink = document.querySelector("#forgot-password-link");
-      
+
       // UMTC ID input restrictions - only allow numbers
       const umtcIdInput = document.querySelector("#signin-umtcid");
       if (umtcIdInput) {
-        umtcIdInput.addEventListener("input", function(e) {
+        umtcIdInput.addEventListener("input", function (e) {
           // Remove any non-numeric characters
-          this.value = this.value.replace(/[^0-9]/g, '');
-          
+          this.value = this.value.replace(/[^0-9]/g, "");
+
           // Limit to 6 digits
           if (this.value.length > 6) {
             this.value = this.value.slice(0, 6);
           }
         });
-        
+
         // Prevent pasting non-numeric content
-        umtcIdInput.addEventListener("paste", function(e) {
+        umtcIdInput.addEventListener("paste", function (e) {
           e.preventDefault();
-          const paste = (e.clipboardData || window.clipboardData).getData('text');
-          const numericOnly = paste.replace(/[^0-9]/g, '').slice(0, 6);
+          const paste = (e.clipboardData || window.clipboardData).getData(
+            "text"
+          );
+          const numericOnly = paste.replace(/[^0-9]/g, "").slice(0, 6);
           this.value = numericOnly;
         });
       }
-      
+
       // UMTC ID input restrictions for signup - only allow numbers
       const signupUmtcIdInput = document.querySelector("#signup-umtcid");
       if (signupUmtcIdInput) {
-        signupUmtcIdInput.addEventListener("input", function(e) {
+        signupUmtcIdInput.addEventListener("input", function (e) {
           // Remove any non-numeric characters
-          this.value = this.value.replace(/[^0-9]/g, '');
-          
+          this.value = this.value.replace(/[^0-9]/g, "");
+
           // Limit to 6 digits
           if (this.value.length > 6) {
             this.value = this.value.slice(0, 6);
           }
         });
-        
+
         // Prevent pasting non-numeric content
-        signupUmtcIdInput.addEventListener("paste", function(e) {
+        signupUmtcIdInput.addEventListener("paste", function (e) {
           e.preventDefault();
-          const paste = (e.clipboardData || window.clipboardData).getData('text');
-          const numericOnly = paste.replace(/[^0-9]/g, '').slice(0, 6);
+          const paste = (e.clipboardData || window.clipboardData).getData(
+            "text"
+          );
+          const numericOnly = paste.replace(/[^0-9]/g, "").slice(0, 6);
           this.value = numericOnly;
         });
       }
-      
+
       // Signup step elements
       const signupForm = document.querySelector("#sign-up-form");
       const steps = signupForm ? signupForm.querySelectorAll(".step") : [];
@@ -361,15 +365,13 @@
 
         // Hardcoded accounts for testing
         const hardcodedAccounts = {
-          admin: [
-            { id: "123456", password: "admin123", name: "Admin User" }
-          ],
+          admin: [{ id: "123456", password: "admin123", name: "Admin User" }],
           officer: [
-            { id: "234567", password: "officer123", name: "Officer User" }
+            { id: "234567", password: "officer123", name: "Officer User" },
           ],
           member: [
-            { id: "345678", password: "member123", name: "Student Member" }
-          ]
+            { id: "345678", password: "member123", name: "Student Member" },
+          ],
         };
 
         // Validate credentials against hardcoded accounts
@@ -379,12 +381,14 @@
           return;
         }
 
-        const validAccount = roleAccounts.find(account => 
-          account.id === umtcId && account.password === password
+        const validAccount = roleAccounts.find(
+          (account) => account.id === umtcId && account.password === password
         );
 
         if (!validAccount) {
-          alert(`Invalid credentials for ${role}. Please check your UMTC ID and password.`);
+          alert(
+            `Invalid credentials for ${role}. Please check your UMTC ID and password.`
+          );
           return;
         }
 
@@ -402,15 +406,21 @@
         // Show success message and redirect based on role
         switch (role) {
           case "member":
-            alert(`Welcome ${validAccount.name}! Signed in as Member (ID: ${umtcId})`);
+            alert(
+              `Welcome ${validAccount.name}! Signed in as Member (ID: ${umtcId})`
+            );
             window.location.href = "../Student/stundent.htm";
             break;
           case "officer":
-            alert(`Welcome ${validAccount.name}! Signed in as Officer (ID: ${umtcId})`);
+            alert(
+              `Welcome ${validAccount.name}! Signed in as Officer (ID: ${umtcId})`
+            );
             window.location.href = "../Officers/index.htm";
             break;
           case "admin":
-            alert(`Welcome ${validAccount.name}! Signed in as Admin (ID: ${umtcId})`);
+            alert(
+              `Welcome ${validAccount.name}! Signed in as Admin (ID: ${umtcId})`
+            );
             window.location.href = "../Admin/Admin.htm";
             break;
           default:
