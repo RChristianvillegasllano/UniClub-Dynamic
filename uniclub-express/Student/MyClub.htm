@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Clubs - UniClub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../Student/main-style.css" />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                500: "#e74c3c",
+                600: "#c0392b",
+              },
+              secondary: {
+                500: "#e67e22",
+              },
+              accent: {
+                500: "#f39c12",
+              },
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      body {
+        background: linear-gradient(135deg, #e74c3c 0%, #e67e22 100%);
+        min-height: 100vh;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .pulse-ring {
+        animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes pulse-ring {
+        0%,
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(1.1);
+        }
+      }
+      .club-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      .club-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+      }
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 50;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        animation: fadeIn 0.3s;
+      }
+      .modal.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-content {
+        background: white;
+        border-radius: 16px;
+        max-width: 700px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        animation: slideUp 0.3s;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes slideUp {
+        from {
+          transform: translateY(50px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .announcement-item {
+        border-left: 4px solid #e74c3c;
+      }
+    </style>
+  </head>
+  <body class="font-sans">
+    <!-- Navigation -->
+    <nav class="relative z-50 glass-card">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center space-x-4">
+            <div class="relative">
+              <div
+                id="logoCircle"
+                class="w-12 h-12 rounded-md overflow-hidden flex items-center justify-center"
+              >
+                <img
+                  src="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png"
+                  alt="UniClub Logo"
+                  class="object-cover w-full h-full"
+                />
+              </div>
+            </div>
+            <div>
+              <h1 class="text-xl font-bold text-white">UniClub</h1>
+              <p class="text-xs text-white/80">University of Mindanao</p>
+            </div>
+          </div>
+
+          <div class="hidden md:flex items-center space-x-6">
+            <a
+              href="stundent.htm"
+              id="navDiscover"
+              class="text-white/90 hover:text-white transition-colors font-medium"
+              >Discover</a
+            >
+            <a
+              href="MyClub.htm"
+              id="navMyClubs"
+              class="text-white/90 hover:text-white transition-colors font-medium"
+              >My Clubs</a
+            >
+            <a
+              href="#"
+              id="navEvents"
+              class="text-white/90 hover:text-white transition-colors font-medium"
+              >Events</a
+            >
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <div class="relative">
+              <button
+                id="notifBell"
+                class="text-white/90 hover:text-white transition-colors relative"
+              >
+                <i class="fas fa-bell text-lg"></i>
+                <span
+                  id="notifCount"
+                  class="absolute -top-2 -right-2 w-5 h-5 bg-accent-500 rounded-full flex items-center justify-center text-xs text-white font-bold"
+                  >0</span
+                >
+              </button>
+              <div
+                id="notifDropdown"
+                class="hidden absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-lg z-50 py-2"
+              >
+                <div class="px-4 py-2 font-semibold text-primary-600 border-b">
+                  Notifications
+                </div>
+                <ul id="notifList" class="max-h-60 overflow-y-auto"></ul>
+                <div class="px-4 py-2 text-xs text-gray-400 border-t">
+                  Club join requests and approvals will appear here.
+                </div>
+              </div>
+            </div>
+            <!-- Student Profile -->
+            <div class="relative">
+              <div class="profile cursor-pointer" id="topProfile">
+                <img src="https://i.pravatar.cc/50" alt="Profile" />
+                <span>Student</span>
+              </div>
+              <!-- Profile quick panel -->
+              <div
+                id="profilePanel"
+                style="
+                  display: none;
+                  position: absolute;
+                  right: 0;
+                  top: 72px;
+                  background: #fff;
+                  border: 1px solid #e5e7eb;
+                  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+                  border-radius: 10px;
+                  z-index: 2000;
+                  min-width: 260px;
+                  padding: 12px;
+                "
+              >
+                <button class="close-small" id="profileCloseBtn" title="Close">
+                  ✖
+                </button>
+                <div
+                  style="
+                    display: flex;
+                    gap: 12px;
+                    align-items: center;
+                    padding: 8px;
+                  "
+                >
+                  <img
+                    src="https://i.pravatar.cc/64"
+                    alt="Profile"
+                    style="width: 48px; height: 48px; border-radius: 50%"
+                  />
+                  <div>
+                    <div style="font-weight: 700; color: #2563eb">Student</div>
+                    <div style="font-size: 13px; color: #666">
+                      Role: Student Member
+                    </div>
+                    <div style="font-size: 13px; color: #666">
+                      student@example.com
+                    </div>
+                  </div>
+                </div>
+                <div
+                  style="
+                    border-top: 1px solid #f0f0f0;
+                    margin-top: 8px;
+                    padding-top: 8px;
+                    display: flex;
+                    gap: 8px;
+                    justify-content: space-between;
+                  "
+                >
+                  <button class="btn btn-light" id="editProfileBtn">
+                    Edit Profile
+                  </button>
+                  <button class="btn" id="logoutBtn">Logout</button>
+                </div>
+                <div
+                  style="
+                    margin-top: 10px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                  "
+                >
+                  <div style="display: flex; gap: 8px; align-items: center">
+                    <a
+                      id="emailBtn"
+                      class="btn"
+                      href="mailto:student@example.com"
+                      style="
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                      "
+                    >
+                      <span>Email</span>
+                      <button
+                        id="emailCopyBtn"
+                        type="button"
+                        title="Copy email"
+                        aria-label="Copy email"
+                        style="
+                          border: none;
+                          background: transparent;
+                          padding: 4px;
+                          display: inline-flex;
+                          align-items: center;
+                          justify-content: center;
+                          border-radius: 4px;
+                          cursor: pointer;
+                        "
+                      >
+                        <i class="fas fa-copy" style="font-size: 12px"></i>
+                      </button>
+                    </a>
+                  </div>
+                  <div style="display: flex; gap: 8px; align-items: center">
+                    <button
+                      id="changePasswordBtn"
+                      class="btn btn-light"
+                      style="
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 8px;
+                        width: 100%;
+                        justify-content: center;
+                      "
+                    >
+                      <i class="fas fa-key" style="font-size: 12px"></i>
+                      <span>Change Password</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <!-- Header -->
+      <div class="text-center mb-12">
+        <h1 class="text-5xl font-bold text-white mb-4">My Clubs</h1>
+        <p class="text-white text-lg opacity-90">
+          Stay connected with your clubs and never miss an update
+        </p>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div
+          class="bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 text-center"
+        >
+          <div class="text-4xl font-bold text-white mb-2">4</div>
+          <div class="text-white opacity-90">Active Memberships</div>
+        </div>
+        <div
+          class="bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 text-center"
+        >
+          <div class="text-4xl font-bold text-white mb-2">7</div>
+          <div class="text-white opacity-90">Upcoming Events</div>
+        </div>
+        <div
+          class="bg-white bg-opacity-20 backdrop-blur-sm rounded-2xl p-6 text-center"
+        >
+          <div class="text-4xl font-bold text-white mb-2">12</div>
+          <div class="text-white opacity-90">Unread Messages</div>
+        </div>
+      </div>
+
+      <!-- Clubs Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Computer Science Society -->
+        <div
+          class="club-card bg-white rounded-2xl p-6 shadow-lg cursor-pointer"
+          onclick="openModal('cs')"
+        >
+          <div class="flex justify-between items-start mb-4">
+            <div class="bg-blue-100 rounded-xl p-3">
+              <svg
+                class="w-8 h-8 text-blue-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full"
+                >5 new</span
+              >
+            </div>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">
+            Computer Science Society
+          </h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Advancing technology and programming skills through workshops,
+            hackathons, and networking events.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Programming</span
+            >
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Tech</span
+            >
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-600">
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                />
+              </svg>
+              <span>340 members</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span>Hackathon 2024</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drama Club -->
+        <div
+          class="club-card bg-white rounded-2xl p-6 shadow-lg cursor-pointer"
+          onclick="openModal('drama')"
+        >
+          <div class="flex justify-between items-start mb-4">
+            <div class="bg-purple-100 rounded-xl p-3">
+              <svg
+                class="w-8 h-8 text-purple-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 100-2 1 1 0 000 2zm7-1a1 1 0 11-2 0 1 1 0 012 0zm-7.536 5.879a1 1 0 001.415 0 3 3 0 014.242 0 1 1 0 001.415-1.415 5 5 0 00-7.072 0 1 1 0 000 1.415z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full"
+                >3 new</span
+              >
+            </div>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">Drama Club</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Express yourself through theatrical performances, workshops, and
+            creative storytelling.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Theater</span
+            >
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Performance</span
+            >
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-600">
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                />
+              </svg>
+              <span>89 members</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span>Romeo & Juliet</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Environmental Warriors -->
+        <div
+          class="club-card bg-white rounded-2xl p-6 shadow-lg cursor-pointer"
+          onclick="openModal('env')"
+        >
+          <div class="flex justify-between items-start mb-4">
+            <div class="bg-green-100 rounded-xl p-3">
+              <svg
+                class="w-8 h-8 text-green-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 2a1 1 0 011 1v1.323l3.954 1.582 1.599-.8a1 1 0 01.894 1.79l-1.233.616 1.738 5.42a1 1 0 01-.285 1.05A3.989 3.989 0 0115 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.715-5.349L11 6.477V16h2a1 1 0 110 2H7a1 1 0 110-2h2V6.477L6.237 7.582l1.715 5.349a1 1 0 01-.285 1.05A3.989 3.989 0 015 15a3.989 3.989 0 01-2.667-1.019 1 1 0 01-.285-1.05l1.738-5.42-1.233-.617a1 1 0 01.894-1.788l1.599.799L9 4.323V3a1 1 0 011-1z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full"
+                >2 new</span
+              >
+            </div>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">
+            Environmental Warriors
+          </h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Protecting our planet through sustainability initiatives and
+            community outreach programs.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Environment</span
+            >
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Community</span
+            >
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-600">
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                />
+              </svg>
+              <span>203 members</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span>Tree Planting</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gaming Guild -->
+        <div
+          class="club-card bg-white rounded-2xl p-6 shadow-lg cursor-pointer"
+          onclick="openModal('gaming')"
+        >
+          <div class="flex justify-between items-start mb-4">
+            <div class="bg-indigo-100 rounded-xl p-3">
+              <svg
+                class="w-8 h-8 text-indigo-600"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z"
+                />
+              </svg>
+            </div>
+            <div class="flex items-center space-x-1">
+              <span class="bg-red-500 text-white text-xs px-2 py-1 rounded-full"
+                >2 new</span
+              >
+            </div>
+          </div>
+          <h3 class="text-xl font-bold text-gray-800 mb-2">Gaming Guild</h3>
+          <p class="text-gray-600 text-sm mb-4">
+            Competitive gaming, tournaments, and building the next generation of
+            esports athletes.
+          </p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Gaming</span
+            >
+            <span
+              class="bg-gray-100 text-gray-700 text-xs px-3 py-1 rounded-full"
+              >Esports</span
+            >
+          </div>
+          <div class="flex items-center justify-between text-sm text-gray-600">
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z"
+                />
+              </svg>
+              <span>445 members</span>
+            </div>
+            <div class="flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path
+                  fill-rule="evenodd"
+                  d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+              <span>LoL Championship</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Computer Science Society -->
+    <div id="csModal" class="modal">
+      <div class="modal-content">
+        <div
+          class="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-t-2xl text-white"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h2 class="text-2xl font-bold mb-2">Computer Science Society</h2>
+              <p class="opacity-90">340 members • Joined Sep 2024</p>
+            </div>
+            <button
+              onclick="closeModal('cs')"
+              class="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">📢 Announcements</h3>
+          <div class="space-y-4">
+            <div class="announcement-item bg-red-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  Hackathon 2024 Registration Open!
+                </h4>
+                <span class="text-xs text-gray-500">2 days ago</span>
+              </div>
+              <p class="text-gray-700 text-sm mb-2">
+                Registration for our annual hackathon is now open! Join us on
+                December 15-17 for 48 hours of coding, innovation, and prizes
+                worth $5,000.
+              </p>
+              <a
+                href="#"
+                class="text-blue-600 text-sm font-semibold hover:underline"
+                >Register Now →</a
+              >
+            </div>
+            <div class="announcement-item bg-blue-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  Workshop: Advanced React Patterns
+                </h4>
+                <span class="text-xs text-gray-500">5 days ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                Join us this Friday at 3 PM in Room 305 for a workshop on
+                advanced React patterns including hooks, context, and
+                performance optimization.
+              </p>
+            </div>
+            <div class="announcement-item bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  New Study Group Sessions
+                </h4>
+                <span class="text-xs text-gray-500">1 week ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                We're starting weekly study groups for Data Structures and
+                Algorithms. Sessions every Wednesday from 6-8 PM.
+              </p>
+            </div>
+            <div class="announcement-item bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  Club Meeting Minutes - October
+                </h4>
+                <span class="text-xs text-gray-500">2 weeks ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                Minutes from our October general meeting are now available.
+                Check out what we discussed and upcoming project plans.
+              </p>
+            </div>
+            <div class="announcement-item bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">Welcome New Members!</h4>
+                <span class="text-xs text-gray-500">3 weeks ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                We're excited to welcome 45 new members this semester! Join us
+                for our orientation session next week.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Drama Club -->
+    <div id="dramaModal" class="modal">
+      <div class="modal-content">
+        <div
+          class="bg-gradient-to-r from-purple-500 to-purple-600 p-6 rounded-t-2xl text-white"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h2 class="text-2xl font-bold mb-2">Drama Club</h2>
+              <p class="opacity-90">89 members • Joined Aug 2024</p>
+            </div>
+            <button
+              onclick="closeModal('drama')"
+              class="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">📢 Announcements</h3>
+          <div class="space-y-4">
+            <div class="announcement-item bg-red-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  Romeo & Juliet Opening Night - Jan 10!
+                </h4>
+                <span class="text-xs text-gray-500">1 day ago</span>
+              </div>
+              <p class="text-gray-700 text-sm mb-2">
+                Our production of Romeo & Juliet opens January 10th! Final
+                rehearsals this week. Cast and crew, please review your
+                schedules.
+              </p>
+              <a
+                href="#"
+                class="text-purple-600 text-sm font-semibold hover:underline"
+                >View Schedule →</a
+              >
+            </div>
+            <div class="announcement-item bg-purple-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  Costume Fitting This Saturday
+                </h4>
+                <span class="text-xs text-gray-500">3 days ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                All cast members need to attend costume fitting this Saturday at
+                10 AM in Theater Hall. Please be on time!
+              </p>
+            </div>
+            <div class="announcement-item bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">Voice Training Workshop</h4>
+                <span class="text-xs text-gray-500">1 week ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                Professional voice coach Maria Santos will be conducting a
+                workshop on vocal projection and breathing techniques next
+                Tuesday.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Environmental Warriors -->
+    <div id="envModal" class="modal">
+      <div class="modal-content">
+        <div
+          class="bg-gradient-to-r from-green-500 to-green-600 p-6 rounded-t-2xl text-white"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h2 class="text-2xl font-bold mb-2">Environmental Warriors</h2>
+              <p class="opacity-90">203 members • Joined Sep 2024</p>
+            </div>
+            <button
+              onclick="closeModal('env')"
+              class="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">📢 Announcements</h3>
+          <div class="space-y-4">
+            <div class="announcement-item bg-red-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  Tree Planting Drive - This Sunday!
+                </h4>
+                <span class="text-xs text-gray-500">1 day ago</span>
+              </div>
+              <p class="text-gray-700 text-sm mb-2">
+                Join us this Sunday at 6 AM at Mount Apo foothills for our
+                annual tree planting drive. We aim to plant 500 trees! Bring
+                gloves and water.
+              </p>
+              <a
+                href="#"
+                class="text-green-600 text-sm font-semibold hover:underline"
+                >Sign Up →</a
+              >
+            </div>
+            <div class="announcement-item bg-green-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">Beach Cleanup Success!</h4>
+                <span class="text-xs text-gray-500">4 days ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                Thank you to everyone who participated in last weekend's beach
+                cleanup! We collected 200kg of trash and made a real difference.
+              </p>
+            </div>
+            <div class="announcement-item bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">Sustainability Seminar</h4>
+                <span class="text-xs text-gray-500">1 week ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                Dr. Ana Reyes will speak about climate change and sustainable
+                practices next Thursday at 4 PM in the Science Building.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Gaming Guild -->
+    <div id="gamingModal" class="modal">
+      <div class="modal-content">
+        <div
+          class="bg-gradient-to-r from-indigo-500 to-indigo-600 p-6 rounded-t-2xl text-white"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <h2 class="text-2xl font-bold mb-2">Gaming Guild</h2>
+              <p class="opacity-90">445 members • Joined Jul 2024</p>
+            </div>
+            <button
+              onclick="closeModal('gaming')"
+              class="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="p-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">📢 Announcements</h3>
+          <div class="space-y-4">
+            <div class="announcement-item bg-red-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  LoL Championship Tournament - Register Now!
+                </h4>
+                <span class="text-xs text-gray-500">Today</span>
+              </div>
+              <p class="text-gray-700 text-sm mb-2">
+                Our League of Legends championship is back! Form your team of 5
+                and compete for the grand prize of ₱50,000. Registration closes
+                October 15.
+              </p>
+              <a
+                href="#"
+                class="text-indigo-600 text-sm font-semibold hover:underline"
+                >Register Team →</a
+              >
+            </div>
+            <div class="announcement-item bg-indigo-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">
+                  Practice Sessions This Week
+                </h4>
+                <span class="text-xs text-gray-500">2 days ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                Gaming lounge is open for practice sessions Monday-Friday 5-9
+                PM. Come practice with your team before the tournament!
+              </p>
+            </div>
+            <div class="announcement-item bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-start mb-2">
+                <h4 class="font-bold text-gray-800">New Gaming PCs Arrived!</h4>
+                <span class="text-xs text-gray-500">1 week ago</span>
+              </div>
+              <p class="text-gray-700 text-sm">
+                We've upgraded our gaming lounge with 10 new high-performance
+                PCs. RTX 4070 graphics, 32GB RAM, and 240Hz monitors!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function openModal(club) {
+        const modalId = club + "Modal";
+        document.getElementById(modalId).classList.add("active");
+        document.body.style.overflow = "hidden";
+      }
+
+      function closeModal(club) {
+        const modalId = club + "Modal";
+        document.getElementById(modalId).classList.remove("active");
+        document.body.style.overflow = "auto";
+      }
+
+      // Close modal when clicking outside
+      window.onclick = function (event) {
+        if (event.target.classList.contains("modal")) {
+          event.target.classList.remove("active");
+          document.body.style.overflow = "auto";
+        }
+      };
+
+      // Close modal with Escape key
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          const modals = document.querySelectorAll(".modal.active");
+          modals.forEach((modal) => {
+            modal.classList.remove("active");
+            document.body.style.overflow = "auto";
+          });
+        }
+      });
+    </script>
+    <script src="../Javascript/Main-Script.js"></script>
+  </body>
+</html>

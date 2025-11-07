@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Student | UniClub Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/img/uniclub-logo.png" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-gray-50 font-sans text-slate-800">
+  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar (uniform) -->
+    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/students'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+
+    <!-- Main Content -->
+    <main class="flex flex-col gap-4">
+      <!-- Header -->
+      <header class="mb-6 flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-800">Edit Student</h1>
+        <a href="/admin/students"
+           class="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+          <i data-lucide="arrow-left"></i> Back
+        </a>
+      </header>
+
+      <!-- Edit Student Form -->
+      <section class="bg-white p-10 rounded-2xl border border-gray-200 shadow-sm max-w-3xl mx-auto w-full">
+        <% if (error) { %>
+          <div class="bg-red-100 border border-red-400 text-red-700 p-3 rounded mb-4 text-sm">
+            <%= error %>
+          </div>
+        <% } %>
+
+        <form action="/admin/students/edit/<%= student.id %>" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold mb-2">Full Name</label>
+            <input type="text" name="name" value="<%= student.name %>" required
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-2">Email</label>
+            <input type="email" name="email" value="<%= student.email %>" required pattern="^[A-Za-z0-9._%+-]+@umindanao\.edu\.ph$" title="Use your @umindanao.edu.ph email"
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-2">Student ID</label>
+            <input type="text" name="studentid" value="<%= student.studentid || '' %>"
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-2">Department</label>
+            <select name="department" required
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
+              <option value="">Select Department</option>
+              <option value="Department of Accounting Education" <%= (student.department === 'Department of Accounting Education') ? 'selected' : '' %>>Department of Accounting Education</option>
+              <option value="Department of Arts and Sciences Education" <%= (student.department === 'Department of Arts and Sciences Education') ? 'selected' : '' %>>Department of Arts and Sciences Education</option>
+              <option value="Department of Business Administration Education" <%= (student.department === 'Department of Business Administration Education') ? 'selected' : '' %>>Department of Business Administration Education</option>
+              <option value="Department of Computing Education" <%= (student.department === 'Department of Computing Education') ? 'selected' : '' %>>Department of Computing Education</option>
+              <option value="Department of Criminal Justice Education" <%= (student.department === 'Department of Criminal Justice Education') ? 'selected' : '' %>>Department of Criminal Justice Education</option>
+              <option value="Department of Engineering Education" <%= (student.department === 'Department of Engineering Education') ? 'selected' : '' %>>Department of Engineering Education</option>
+              <option value="Department of Hospitality Education" <%= (student.department === 'Department of Hospitality Education') ? 'selected' : '' %>>Department of Hospitality Education</option>
+              <option value="Department of Teacher Education" <%= (student.department === 'Department of Teacher Education') ? 'selected' : '' %>>Department of Teacher Education</option>
+            </select>
+          </div>
+
+			<div>
+				<label class="block text-sm font-semibold mb-2">Program</label>
+				<select name="program" required
+					class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
+					<option value="">Select Program</option>
+					<option value="Bachelor of Science in Accountancy" <%= (student.program === 'Bachelor of Science in Accountancy') ? 'selected' : '' %>>Bachelor of Science in Accountancy</option>
+					<option value="Bachelor of Science in Management Accounting" <%= (student.program === 'Bachelor of Science in Management Accounting') ? 'selected' : '' %>>Bachelor of Science in Management Accounting</option>
+					<option value="Bachelor of Science in Business Administration - Financial Management" <%= (student.program === 'Bachelor of Science in Business Administration - Financial Management') ? 'selected' : '' %>>Bachelor of Science in Business Administration - Financial Management</option>
+					<option value="Bachelor of Science in Business Administration - Human Resource Management" <%= (student.program === 'Bachelor of Science in Business Administration - Human Resource Management') ? 'selected' : '' %>>Bachelor of Science in Business Administration - Human Resource Management</option>
+					<option value="Bachelor of Science in Business Administration - Marketing Management" <%= (student.program === 'Bachelor of Science in Business Administration - Marketing Management') ? 'selected' : '' %>>Bachelor of Science in Business Administration - Marketing Management</option>
+					<option value="Bachelor of Science in Computer Engineering" <%= (student.program === 'Bachelor of Science in Computer Engineering') ? 'selected' : '' %>>Bachelor of Science in Computer Engineering</option>
+					<option value="Bachelor of Science in Electrical Engineering" <%= (student.program === 'Bachelor of Science in Electrical Engineering') ? 'selected' : '' %>>Bachelor of Science in Electrical Engineering</option>
+					<option value="Bachelor of Science in Electronics & Communications Engineering" <%= (student.program === 'Bachelor of Science in Electronics & Communications Engineering') ? 'selected' : '' %>>Bachelor of Science in Electronics & Communications Engineering</option>
+					<option value="Bachelor of Elementary Education" <%= (student.program === 'Bachelor of Elementary Education') ? 'selected' : '' %>>Bachelor of Elementary Education</option>
+					<option value="Bachelor of Physical Education" <%= (student.program === 'Bachelor of Physical Education') ? 'selected' : '' %>>Bachelor of Physical Education</option>
+					<option value="Bachelor of Secondary Education - Major in English" <%= (student.program === 'Bachelor of Secondary Education - Major in English') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in English</option>
+					<option value="Bachelor of Secondary Education - Major in Filipino" <%= (student.program === 'Bachelor of Secondary Education - Major in Filipino') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in Filipino</option>
+					<option value="Bachelor of Secondary Education - Major in General Science" <%= (student.program === 'Bachelor of Secondary Education - Major in General Science') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in General Science</option>
+					<option value="Bachelor of Secondary Education - Major in Mathematics" <%= (student.program === 'Bachelor of Secondary Education - Major in Mathematics') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in Mathematics</option>
+					<option value="Bachelor of Secondary Education - Major in Social Studies" <%= (student.program === 'Bachelor of Secondary Education - Major in Social Studies') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in Social Studies</option>
+					<option value="Bachelor of Arts Major in English Language" <%= (student.program === 'Bachelor of Arts Major in English Language') ? 'selected' : '' %>>Bachelor of Arts Major in English Language</option>
+					<option value="Bachelor of Science in Psychology" <%= (student.program === 'Bachelor of Science in Psychology') ? 'selected' : '' %>>Bachelor of Science in Psychology</option>
+					<option value="Bachelor of Science in Information Technology" <%= (student.program === 'Bachelor of Science in Information Technology') ? 'selected' : '' %>>Bachelor of Science in Information Technology</option>
+					<option value="Bachelor of Science in Computer Science" <%= (student.program === 'Bachelor of Science in Computer Science') ? 'selected' : '' %>>Bachelor of Science in Computer Science</option>
+					<option value="Bachelor of Science in Criminology" <%= (student.program === 'Bachelor of Science in Criminology') ? 'selected' : '' %>>Bachelor of Science in Criminology</option>
+					<option value="Bachelor of Science in Hospitality Management" <%= (student.program === 'Bachelor of Science in Hospitality Management') ? 'selected' : '' %>>Bachelor of Science in Hospitality Management</option>
+					<option value="Bachelor of Science in Tourism Management" <%= (student.program === 'Bachelor of Science in Tourism Management') ? 'selected' : '' %>>Bachelor of Science in Tourism Management</option>
+				</select>
+          </div>
+
+          
+
+          <div class="md:col-span-2">
+            <label class="block text-sm font-semibold mb-2">Year Level</label>
+            <select name="year_level" required
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
+              <option value="1st Year" <%= student.year_level === "1st Year" ? "selected" : "" %>>1st Year</option>
+              <option value="2nd Year" <%= student.year_level === "2nd Year" ? "selected" : "" %>>2nd Year</option>
+              <option value="3rd Year" <%= student.year_level === "3rd Year" ? "selected" : "" %>>3rd Year</option>
+              <option value="4th Year" <%= student.year_level === "4th Year" ? "selected" : "" %>>4th Year</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-2">
+          <button type="submit"
+              class="w-full py-3 bg-[#a10109d1] text-white font-semibold rounded-xl hover:bg-[#870107] transition duration-200">
+            Update Student
+          </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Footer -->
+      <footer class="text-center text-xs text-slate-400 py-4 border-t mt-8">
+        &copy; <%= new Date().getFullYear() %> UniClub Management System. All rights reserved.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    window.lucide && window.lucide.replace();
+  </script>
+</body>
+</html>

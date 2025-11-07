@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title || "Server Error" %></title>
+    <meta charset="utf-8" />
+  </head>
+  <body>
+    <h1>500 - Server Error</h1>
+    <% if (error) { %>
+      <pre><%= error.message %></pre>
+    <% } else { %>
+      <p>Something went wrong.</p>
+    <% } %>
+    <p><a href="/">Go home</a></p>
+  </body>
+</html>

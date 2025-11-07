@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Requirement | UniClub Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/img/uniclub-logo.png" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-gray-50 font-sans text-slate-800">
+  <div class="flex h-screen overflow-hidden">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col">
+      <div class="p-4 flex items-center gap-3 border-b">
+        <img src="/img/uniclub-logo.png" class="w-10 h-10" alt="UniClub Logo">
+        <h2 class="font-bold text-[#a10109d1] text-lg">UniClub Admin</h2>
+      </div>
+      <nav class="flex-1 p-3 space-y-1">
+        <a href="/admin/dashboard" class="block p-2 rounded hover:bg-red-50">🏠 Dashboard</a>
+        <a href="/admin/students" class="block p-2 rounded hover:bg-red-50">👩‍🎓 Students</a>
+        <a href="/admin/officers" class="block p-2 rounded hover:bg-red-50">👥 Officers</a>
+        <a href="/admin/clubs" class="block p-2 rounded hover:bg-red-50">🏛️ Clubs</a>
+        <a href="/admin/requirements" class="block p-2 rounded bg-red-100 text-[#a10109d1] font-semibold">📋 Requirements</a>
+        <a href="/admin/messages" class="block p-2 rounded hover:bg-red-50">💬 Messages</a>
+        <form method="POST" action="/admin/logout" class="mt-8">
+          <button type="submit" class="w-full p-2 rounded bg-red-600 text-white hover:bg-red-700 transition">Logout</button>
+        </form>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6">
+      <header class="mb-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Edit Requirement</h1>
+          <p class="text-sm text-slate-500">Update this club requirement’s details</p>
+        </div>
+        <a href="/admin/requirements"
+           class="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+          <i data-lucide="arrow-left"></i> Back
+        </a>
+      </header>
+
+      <!-- Form Section -->
+      <section class="bg-white p-6 rounded-xl shadow">
+        <form action="/admin/requirements/edit/<%= requirement.id %>" method="POST" class="space-y-5">
+          <!-- Requirement Name -->
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Requirement</label>
+            <input type="text" name="requirement" value="<%= requirement.requirement %>" required
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+          </div>
+
+          <!-- Club Dropdown -->
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Club</label>
+            <select name="club_id" required
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+              <% clubs.forEach(c => { %>
+                <option value="<%= c.id %>" <%= c.id === requirement.club_id ? 'selected' : '' %>><%= c.name %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <!-- Due Date -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Due Date</label>
+              <input type="date" name="due_date"
+                     value="<%= requirement.due_date ? new Date(requirement.due_date).toISOString().split('T')[0] : '' %>"
+                     required
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Status</label>
+              <select name="status"
+                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <option value="Pending" <%= requirement.status === "Pending" ? "selected" : "" %>>Pending</option>
+                <option value="Submitted" <%= requirement.status === "Submitted" ? "selected" : "" %>>Submitted</option>
+                <option value="Approved" <%= requirement.status === "Approved" ? "selected" : "" %>>Approved</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="submit"
+                    class="px-6 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#870107] transition">
+              <i data-lucide="save" class="inline w-4 h-4 mr-1"></i> Update Requirement
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Footer -->
+      <footer class="text-center text-xs text-slate-400 py-4 border-t mt-8">
+        &copy; <%= new Date().getFullYear() %> UniClub Management System. All rights reserved.
+      </footer>
+    </main>
+  </div>
+
+  <script>window.lucide && window.lucide.replace();</script>
+</body>
+</html>

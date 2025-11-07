@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Officer | UniClub Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/img/uniclub-logo.png" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-gray-50 font-sans text-slate-800">
+  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar (uniform) -->
+    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/officers'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+
+    <!-- Main Content -->
+    <main class="flex flex-col gap-4">
+      <!-- Header -->
+      <header class="mb-6 flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Edit Officer</h1>
+          <p class="text-sm text-slate-500">Update officer details below</p>
+        </div>
+        <a href="/admin/officers"
+           class="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+          <i data-lucide="arrow-left"></i> Back
+        </a>
+      </header>
+
+      <!-- Form Section -->
+      <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <form action="/admin/officers/edit/<%= officer.id %>" method="POST" class="space-y-5" id="officerEditForm">
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Full Name</label>
+            <input type="text" name="name" required value="<%= officer.name %>"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Student ID</label>
+            <input type="text" name="studentid" required value="<%= officer.studentid %>"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Club</label>
+            <select name="club" required
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+              <% if (clubs && clubs.length > 0) { %>
+                <% clubs.forEach(c => { %>
+                  <option value="<%= c.name %>" <%= officer.club_name === c.name ? 'selected' : '' %>><%= c.name %></option>
+                <% }) %>
+              <% } else { %>
+                <option disabled>No clubs available</option>
+              <% } %>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Role</label>
+            <input type="text" name="role" required value="<%= officer.role %>"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Department</label>
+              <input type="text" name="department" value="<%= officer.department || '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Program</label>
+              <input type="text" name="program" value="<%= officer.program || '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+            </div>
+          </div>
+
+          <!-- Permissions -->
+          <div class="border-t pt-4">
+            <h3 class="text-sm font-semibold text-slate-700 mb-2">Permissions</h3>
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <p class="text-xs text-slate-500 mb-2">Actions</p>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="create" class="perm-action"> Create</label>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="update" class="perm-action"> Update</label>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="edit" class="perm-action"> Edit</label>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="delete" class="perm-action"> Delete</label>
+              </div>
+              <div>
+                <p class="text-xs text-slate-500 mb-2">Modules</p>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="attendance" class="perm-module"> Attendance</label>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="member_approvals" class="perm-module"> Member Approvals</label>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="club_records" class="perm-module"> Club Records</label>
+                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="analytics" class="perm-module"> Analytics</label>
+              </div>
+            </div>
+            <input type="hidden" name="permissions" id="permissionsEditField" value='<%- JSON.stringify(officer.permissions || {}) %>'>
+            <p class="text-xs text-slate-500 mt-2">Defaults adjust by Role. Modify as needed.</p>
+          </div>
+
+          <div class="flex justify-end">
+            <button type="submit"
+                    class="px-6 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#870107] transition">
+              <i data-lucide="save" class="inline w-4 h-4 mr-1"></i> Update Officer
+            </button>
+          </div>
+        </form>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+          <p class="text-red-500 text-sm mt-4"><%= error %></p>
+        <% } %>
+      </section>
+
+      <!-- Footer -->
+      <footer class="text-center text-xs text-slate-400 py-4 border-t mt-8">
+        &copy; <%= new Date().getFullYear() %> UniClub Management System. All rights reserved.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    window.lucide && window.lucide.replace();
+    (function(){
+      const form = document.getElementById('officerEditForm');
+      const roleInput = form.querySelector('input[name="role"]');
+      const permField = document.getElementById('permissionsEditField');
+      const actionBoxes = Array.from(form.querySelectorAll('.perm-action'));
+      const moduleBoxes = Array.from(form.querySelectorAll('.perm-module'));
+      function writePerm(actions, modules){ permField.value = JSON.stringify({ actions, modules }); }
+      function readFromUI(){
+        const actions = {}; actionBoxes.forEach(cb => actions[cb.value] = cb.checked);
+        const modules = {}; moduleBoxes.forEach(cb => modules[cb.value] = cb.checked);
+        writePerm(actions, modules);
+      }
+      function setByRole(role){
+        const r = (role || '').toLowerCase();
+        const actions = { view:false, create:false, update:false, edit:false, delete:false };
+        const modules = { attendance:false, member_approvals:false, club_records:false, analytics:false };
+        if (r === 'president' || r === 'chair' || r === 'admin') { Object.keys(actions).forEach(k => actions[k] = true); Object.keys(modules).forEach(k => modules[k] = true); }
+        else if (r === 'secretary') { actions.view = actions.create = actions.update = true; modules.attendance = true; modules.member_approvals = true; modules.club_records = true; }
+        else if (r === 'vp' || r === 'vice president') { actions.view = actions.create = actions.update = actions.edit = true; modules.attendance = true; modules.member_approvals = true; modules.club_records = true; }
+        else { actions.view = true; }
+        actionBoxes.forEach(cb => cb.checked = !!actions[cb.value]);
+        moduleBoxes.forEach(cb => cb.checked = !!modules[cb.value]);
+        writePerm(actions, modules);
+      }
+      // initialize from existing
+      try {
+        const existing = JSON.parse(permField.value || '{}');
+        const actions = existing.actions || {}; const modules = existing.modules || {};
+        actionBoxes.forEach(cb => { cb.checked = !!actions[cb.value]; });
+        moduleBoxes.forEach(cb => { cb.checked = !!modules[cb.value]; });
+      } catch(e) { /* ignore */ }
+      // bind
+      roleInput && roleInput.addEventListener('change', (e)=> setByRole(e.target.value));
+      actionBoxes.forEach(cb => cb.addEventListener('change', readFromUI));
+      moduleBoxes.forEach(cb => cb.addEventListener('change', readFromUI));
+      // ensure hidden updated at submit
+      form.addEventListener('submit', readFromUI);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login | UniClub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="/img/uniclub-logo.png" />
+    <style>
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(30px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes gradientShift {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+      
+      .fade-in {
+        animation: fadeIn 1s ease-out forwards;
+      }
+      
+      .animated-bg {
+        background: linear-gradient(135deg, #7F1D1D 0%, #B91C1C 25%, #DC2626 50%, #EF4444 75%, #FBBF24 100%);
+        background-size: 200% 200%;
+        animation: gradientShift 10s ease infinite;
+      }
+      
+      .glass-card {
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(20px);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      }
+      
+      .input-focus-effect {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      
+      .input-focus-effect:focus {
+        border-color: #B91C1C;
+        box-shadow: 0 0 0 4px rgba(185, 28, 28, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+      }
+      
+      .btn-gradient {
+        position: relative;
+        background: linear-gradient(135deg, #B91C1C 0%, #DC2626 25%, #EF4444 50%, #F59E0B 75%, #FBBF24 100%);
+        background-size: 200% 200%;
+        background-position: 0% 50%;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+      }
+      
+      .btn-gradient::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.6s;
+      }
+      
+      .btn-gradient:hover {
+        background-position: 100% 50%;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(185, 28, 28, 0.5), 0 8px 10px -6px rgba(251, 191, 36, 0.3);
+      }
+      
+      .btn-gradient:hover::before {
+        left: 100%;
+      }
+      
+      .btn-gradient:active {
+        transform: translateY(0);
+        box-shadow: 0 5px 15px -3px rgba(185, 28, 28, 0.4);
+      }
+      
+      .logo-glow {
+        filter: drop-shadow(0 4px 8px rgba(185, 28, 28, 0.3));
+      }
+      
+      .divider-gradient {
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #B91C1C, #FBBF24, transparent);
+      }
+      
+      .input-icon {
+        transition: color 0.3s ease;
+      }
+      
+      .input-focus-effect:focus ~ .input-icon-wrapper .input-icon {
+        color: #B91C1C;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen animated-bg flex items-center justify-center text-gray-800 p-4">
+    
+    <div class="glass-card p-12 rounded-3xl w-full max-w-md border border-white/20 fade-in">
+      <!-- Logo and Header -->
+      <div class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
+          UniClub Admin Portal
+        </h1>
+        <p class="text-gray-600 text-sm font-medium mb-4">
+          Secure Access to Club Management System
+        </p>
+        <div class="divider-gradient w-24 mx-auto"></div>
+      </div>
+
+      <!-- Error Message -->
+      <% if (error) { %>
+        <div class="bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 text-red-800 text-sm p-4 rounded-xl mb-8 shadow-sm">
+          <div class="flex items-start">
+            <svg class="w-5 h-5 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+              <p class="font-semibold mb-1">Authentication Failed</p>
+              <p class="text-red-700"><%= error %></p>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+      <!-- Login Form -->
+      <form action="/admin/login" method="POST" class="space-y-6">
+        <div>
+          <label class="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide text-xs">
+            Username
+          </label>
+          <div class="relative group">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none input-icon-wrapper">
+              <svg class="w-5 h-5 text-gray-400 input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+              </svg>
+            </div>
+            <input
+              type="text"
+              name="username"
+              required
+              class="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:outline-none input-focus-effect bg-white text-gray-900 font-medium"
+              placeholder="Enter your username"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide text-xs">
+            Password
+          </label>
+          <div class="relative group">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none input-icon-wrapper">
+              <svg class="w-5 h-5 text-gray-400 input-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+            </div>
+            <input
+              type="password"
+              name="password"
+              required
+              class="w-full pl-12 pr-4 py-3.5 rounded-xl border-2 border-gray-200 focus:outline-none input-focus-effect bg-white text-gray-900 font-medium"
+              placeholder="Enter your password"
+            />
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button
+            type="submit"
+            class="w-full py-4 text-white font-bold rounded-xl btn-gradient text-base tracking-wide uppercase"
+          >
+            Sign In
+          </button>
+        </div>
+      </form>
+
+      <!-- Footer -->
+      <div class="mt-10 pt-8 border-t border-gray-200">
+        <div class="text-center space-y-2">
+          <p class="text-sm font-bold text-gray-700">
+            UniClub Management System
+          </p>
+          <p class="text-xs text-gray-400 mt-3">
+            &copy; <%= new Date().getFullYear() %> All Rights Reserved
+          </p>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

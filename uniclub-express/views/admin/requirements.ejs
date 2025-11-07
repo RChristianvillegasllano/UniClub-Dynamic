@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title><%= title || 'Requirements | UniClub' %></title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { brand: { 700:'#b91c1c' }}}}}
+  </script>
+  </head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <%- include('../layouts/adminSidebar', { currentPath, messages: [] }) %>
+
+    <!-- Main -->
+    <main class="flex flex-col gap-6">
+      <!-- Page title -->
+      <div>
+        <h1 class="text-2xl font-semibold">Requirements</h1>
+      </div>
+
+      <!-- Management heading -->
+      <div class="text-gray-600">Requirements &amp; Activities Management</div>
+
+      <!-- Officer Requirements Uploads -->
+      <section class="bg-white border border-gray-200 rounded-2xl shadow-sm">
+        <div class="flex items-center justify-between px-5 py-4">
+          <h2 class="text-lg font-semibold">Officer Requirements Uploads</h2>
+          <form method="get" action="/admin/requirements">
+            <button class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">Refresh</button>
+          </form>
+        </div>
+
+        <div class="px-6 pb-6">
+          <% const _requirements = (typeof requirements !== 'undefined' && Array.isArray(requirements)) ? requirements : []; %>
+          <% if (_requirements.length === 0) { %>
+            <div class="text-gray-500 text-sm py-10 text-center">
+              No officer uploads found. Officers can upload requirements from their dashboard.
+            </div>
+          <% } else { %>
+            <div class="overflow-auto rounded-xl border border-gray-200">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Requirement</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Club</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Due</th>
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 bg-white">
+                  <% _requirements.forEach(r => { %>
+                    <tr>
+                      <td class="px-4 py-3 text-sm"><%= r.requirement %></td>
+                      <td class="px-4 py-3">
+                        <% if (r.club_name) { %>
+                          <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                            <%= r.club_name %>
+                          </span>
+                        <% } else { %>
+                          <span class="text-gray-400 text-sm">—</span>
+                        <% } %>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-gray-600"><%= r.due_date || '—' %></td>
+                      <td class="px-4 py-3">
+                        <% 
+                          const rs = (r.status || 'Pending').toLowerCase();
+                          const rClasses =
+                            rs === 'confirmed' ? 'bg-green-100 text-green-700' :
+                            rs === 'scheduled' ? 'bg-blue-100 text-blue-700' :
+                            rs === 'cancelled' || rs === 'canceled' ? 'bg-red-100 text-red-700' :
+                            'bg-yellow-100 text-yellow-700';
+                        %>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= rClasses %>">
+                          <%= r.status || 'Pending' %>
+                        </span>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } %>
+        </div>
+      </section>
+
+      <!-- Upcoming Activities -->
+      <section class="bg-white border border-gray-200 rounded-2xl shadow-sm">
+        <div class="px-5 py-4">
+          <h2 class="text-lg font-semibold">Upcoming Activities</h2>
+        </div>
+
+        <div class="px-5 pb-6">
+          <% const _activities = (typeof activities !== 'undefined' && Array.isArray(activities)) ? activities : []; %>
+          <div class="overflow-auto rounded-xl border border-gray-200">
+            <table class="min-w-full">
+              <!-- Red header row like the screenshot -->
+              <thead>
+                <tr class="bg-red-800 text-white">
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Activity</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Club</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Location</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Status</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 bg-white">
+                <% if (_activities.length) { %>
+                  <% _activities.forEach(a => { 
+                       const s = (a.status || 'Scheduled').toLowerCase();
+                       const sClass = s === 'confirmed' ? 'bg-green-100 text-green-700'
+                                     : s === 'scheduled' ? 'bg-blue-100 text-blue-700'
+                                     : s === 'cancelled' || s === 'canceled' ? 'bg-red-100 text-red-700'
+                                     : 'bg-yellow-100 text-yellow-700';
+                  %>
+                    <tr>
+                      <td class="px-4 py-3 text-sm font-medium text-gray-900"><%= a.activity %></td>
+                      <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
+                          <%= a.club_name || '—' %>
+                        </span>
+                      </td>
+                      <td class="px-4 py-3 text-sm text-gray-700"><%= a.date || '—' %></td>
+                      <td class="px-4 py-3 text-sm text-gray-700"><%= a.location || '—' %></td>
+                      <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= sClass %>">
+                          <%= a.status || 'Scheduled' %>
+                        </span>
+                      </td>
+                      <td class="px-4 py-3">
+                        <div class="flex items-center gap-2">
+                          <!-- Using events edit/delete since activities map to events -->
+                          <a href="/admin/events/edit/<%= a.id %>"
+                             class="inline-flex items-center px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">
+                            Edit
+                          </a>
+                          <form method="post" action="/admin/events/delete/<%= a.id %>">
+                            <button type="submit"
+                              class="inline-flex items-center px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold"
+                              onclick="return confirm('Delete this activity?');">
+                              Delete
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="6" class="px-4 py-10 text-center text-gray-500 text-sm">
+                      No upcoming activities.
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

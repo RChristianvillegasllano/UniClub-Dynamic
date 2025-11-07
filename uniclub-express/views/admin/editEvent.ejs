@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'Edit Event | UniClub Admin' %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-50 font-sans text-slate-800">
+  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar (uniform) -->
+    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/events'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+
+    <main class="flex flex-col gap-4">
+      <header class="mb-2 flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-slate-800">Edit Event</h1>
+        <a href="/admin/events" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Back</a>
+      </header>
+
+<form action="/admin/events/edit/<%= event.id %>" method="POST" class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+  <% if (error) { %>
+    <div class="p-3 bg-red-100 text-red-700 rounded"><%= error %></div>
+  <% } %>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <label class="block text-sm text-slate-600 mb-1">Event Name</label>
+      <input
+        type="text"
+        name="name"
+        value="<%= event.name %>"
+        required
+        class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-[#a10109d1]"
+      />
+    </div>
+
+<div>
+  <label class="block text-sm text-slate-600 mb-1">Club</label>
+  <select
+    name="club_id"
+    required
+    class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-[#a10109d1]"
+  >
+    <% if (clubs && clubs.length > 0) { %>
+      <% clubs.forEach(c => { %>
+        <option value="<%= c.id %>" <%= c.id === event.club_id ? 'selected' : '' %>>
+          <%= c.name %>
+        </option>
+      <% }) %>
+    <% } else { %>
+      <option disabled>No clubs available</option>
+    <% } %>
+  </select>
+</div>
+
+
+    <div>
+      <label class="block text-sm text-slate-600 mb-1">Date</label>
+      <input
+        type="date"
+        name="date"
+        value="<%= event.date ? new Date(event.date).toISOString().split('T')[0] : '' %>"
+        required
+        class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-[#a10109d1]"
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm text-slate-600 mb-1">Location</label>
+      <input
+        type="text"
+        name="location"
+        value="<%= event.location || '' %>"
+        class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-[#a10109d1]"
+      />
+    </div>
+  </div>
+
+  <div>
+    <label class="block text-sm text-slate-600 mb-1">Description</label>
+    <textarea
+      name="description"
+      rows="4"
+      class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-[#a10109d1]"
+    ><%= event.description || '' %></textarea>
+  </div>
+
+  <div>
+    <label class="block text-sm text-slate-600 mb-1">Status</label>
+    <select
+      name="status"
+      class="w-full border px-3 py-2 rounded focus:ring-2 focus:ring-[#a10109d1]"
+    >
+      <option value="Scheduled" <%= event.status === "Scheduled" ? "selected" : "" %>>Scheduled</option>
+      <option value="Ongoing" <%= event.status === "Ongoing" ? "selected" : "" %>>Ongoing</option>
+      <option value="Completed" <%= event.status === "Completed" ? "selected" : "" %>>Completed</option>
+    </select>
+  </div>
+
+  <div class="flex justify-end gap-3">
+    <a href="/admin/events" class="px-4 py-2 border rounded-md text-slate-600 hover:bg-slate-100">Cancel</a>
+    <button
+      type="submit"
+      class="px-4 py-2 bg-[#a10109d1] text-white rounded-md hover:bg-[#8a0108]"
+    >
+      Update Event
+    </button>
+  </div>
+  </form>
+
+      <footer class="text-center text-xs text-slate-400 py-4 border-t mt-2">
+        &copy; <%= new Date().getFullYear() %> UniClub Management System. All rights reserved.
+      </footer>
+    </main>
+  </div>
+  <script>window.lucide && window.lucide.replace();</script>
+</body>
+</html>

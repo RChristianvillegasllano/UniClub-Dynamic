@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reports | UniClub Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" href="/img/uniclub-logo.png" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="bg-gray-50 font-sans text-slate-800">
+  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/reports'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+
+    <!-- Main -->
+    <main class="flex flex-col gap-6">
+      <header class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-800">Reports</h1>
+          <p class="text-sm text-slate-500">Generate and export detailed reports</p>
+        </div>
+      </header>
+
+      <!-- Report Type Selector -->
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <h2 class="text-lg font-semibold mb-4">Select Report Type</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <a href="/admin/reports?type=overview" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'overview' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">📊</div>
+            <div class="font-semibold text-sm">Overview</div>
+          </a>
+          <a href="/admin/reports?type=students" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'students' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">👩‍🎓</div>
+            <div class="font-semibold text-sm">Students</div>
+          </a>
+          <a href="/admin/reports?type=clubs" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'clubs' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">🏛️</div>
+            <div class="font-semibold text-sm">Clubs</div>
+          </a>
+          <a href="/admin/reports?type=officers" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'officers' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">👔</div>
+            <div class="font-semibold text-sm">Officers</div>
+          </a>
+          <a href="/admin/reports?type=events" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'events' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">🎉</div>
+            <div class="font-semibold text-sm">Events</div>
+          </a>
+          <a href="/admin/reports?type=requirements" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'requirements' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">📋</div>
+            <div class="font-semibold text-sm">Requirements</div>
+          </a>
+          <a href="/admin/reports?type=activities" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'activities' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">🎯</div>
+            <div class="font-semibold text-sm">Activities</div>
+          </a>
+          <a href="/admin/reports?type=messages" 
+             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'messages' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
+            <div class="text-2xl mb-2">💬</div>
+            <div class="font-semibold text-sm">Messages</div>
+          </a>
+        </div>
+      </section>
+
+      <!-- Filters -->
+      <% if (reportType !== 'overview') { %>
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <h2 class="text-lg font-semibold mb-4">Filters</h2>
+        <form method="get" action="/admin/reports" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <input type="hidden" name="type" value="<%= reportType %>">
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+            <input type="date" name="startDate" value="<%= filters.startDate %>" 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+            <input type="date" name="endDate" value="<%= filters.endDate %>" 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+          </div>
+          
+          <% if (reportType === 'clubs' || reportType === 'events' || reportType === 'officers' || reportType === 'requirements') { %>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Club</label>
+            <select name="club_id" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+              <option value="">All Clubs</option>
+              <% clubs.forEach(club => { %>
+                <option value="<%= club.id %>" <%= filters.club_id == club.id ? 'selected' : '' %>><%= club.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <% } %>
+          
+          <% if (reportType === 'events' || reportType === 'requirements' || reportType === 'activities') { %>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select name="status" 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+              <option value="">All Statuses</option>
+              <option value="Active" <%= filters.status === 'Active' ? 'selected' : '' %>>Active</option>
+              <option value="Pending" <%= filters.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+              <option value="Completed" <%= filters.status === 'Completed' ? 'selected' : '' %>>Completed</option>
+              <option value="Cancelled" <%= filters.status === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+            </select>
+          </div>
+          <% } %>
+          
+          <div class="flex items-end gap-2">
+            <button type="submit" 
+                    class="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg font-semibold transition">
+              Apply Filters
+            </button>
+            <a href="/admin/reports?type=<%= reportType %>" 
+               class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition">
+              Clear
+            </a>
+          </div>
+        </form>
+      </section>
+      <% } %>
+
+      <!-- Report Content -->
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold"><%= reportTitle %></h2>
+          <% if (reportType !== 'overview' && Array.isArray(reportData) && reportData.length > 0) { %>
+          <a href="/admin/reports/export?type=<%= reportType %>&startDate=<%= filters.startDate %>&endDate=<%= filters.endDate %>&club_id=<%= filters.club_id %>&status=<%= filters.status %>" 
+             class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition">
+            <i data-lucide="download"></i> Export CSV
+          </a>
+          <% } %>
+        </div>
+
+        <!-- Overview Report -->
+        <% if (reportType === 'overview') { %>
+          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
+              <div class="text-sm text-red-700 font-medium mb-1">Total Students</div>
+              <div class="text-3xl font-bold text-red-800"><%= reportData.students || 0 %></div>
+            </div>
+            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+              <div class="text-sm text-blue-700 font-medium mb-1">Total Clubs</div>
+              <div class="text-3xl font-bold text-blue-800"><%= reportData.clubs || 0 %></div>
+            </div>
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+              <div class="text-sm text-green-700 font-medium mb-1">Total Events</div>
+              <div class="text-3xl font-bold text-green-800"><%= reportData.events || 0 %></div>
+            </div>
+            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+              <div class="text-sm text-purple-700 font-medium mb-1">Total Officers</div>
+              <div class="text-3xl font-bold text-purple-800"><%= reportData.officers || 0 %></div>
+            </div>
+            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
+              <div class="text-sm text-orange-700 font-medium mb-1">Total Requirements</div>
+              <div class="text-3xl font-bold text-orange-800"><%= reportData.requirements || 0 %></div>
+            </div>
+            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
+              <div class="text-sm text-indigo-700 font-medium mb-1">Total Messages</div>
+              <div class="text-3xl font-bold text-indigo-800"><%= reportData.messages || 0 %></div>
+            </div>
+          </div>
+        <% } else if (Array.isArray(reportData) && reportData.length > 0) { %>
+          <!-- Table Reports -->
+          <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-sm">
+              <thead class="bg-slate-100 text-slate-700">
+                <tr>
+                  <% 
+                    const firstRow = reportData[0];
+                    const keys = Object.keys(firstRow);
+                    keys.forEach(key => {
+                      if (key !== 'id' || reportType === 'students' || reportType === 'officers') {
+                  %>
+                    <th class="p-3 text-left font-semibold capitalize"><%= key.replace(/_/g, ' ') %></th>
+                  <% 
+                      }
+                    });
+                  %>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <% reportData.forEach(row => { %>
+                  <tr class="hover:bg-slate-50">
+                    <% 
+                      keys.forEach(key => {
+                        if (key !== 'id' || reportType === 'students' || reportType === 'officers') {
+                          const value = row[key];
+                          const displayValue = value === null || value === undefined ? '—' : value;
+                          const isDate = typeof value === 'object' && value instanceof Date;
+                          const dateStr = isDate ? value.toLocaleDateString() : String(displayValue);
+                    %>
+                      <td class="p-3">
+                        <% if (key === 'status' || key === 'read') { %>
+                          <span class="px-2 py-1 text-xs rounded <%= 
+                            displayValue === 'Active' || displayValue === true ? 'bg-green-100 text-green-700' : 
+                            displayValue === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 
+                            displayValue === 'Completed' ? 'bg-blue-100 text-blue-700' : 
+                            displayValue === 'Cancelled' || displayValue === false ? 'bg-red-100 text-red-700' : 
+                            'bg-slate-200 text-slate-600' 
+                          %>">
+                            <%= displayValue === true ? 'Read' : displayValue === false ? 'Unread' : displayValue %>
+                          </span>
+                        <% } else { %>
+                          <%= dateStr %>
+                        <% } %>
+                      </td>
+                    <% 
+                        }
+                      });
+                    %>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-4 text-sm text-gray-600">
+            Total records: <strong><%= reportData.length %></strong>
+          </div>
+        <% } else { %>
+          <div class="text-center py-12">
+            <div class="text-4xl mb-4">📭</div>
+            <p class="text-gray-500 text-lg">No data found for this report</p>
+            <p class="text-gray-400 text-sm mt-2">Try adjusting your filters or select a different report type</p>
+          </div>
+        <% } %>
+      </section>
+    </main>
+  </div>
+
+  <script> 
+    if (window.lucide) {
+      window.lucide.replace();
+    }
+  </script>
+</body>
+</html>
+
+

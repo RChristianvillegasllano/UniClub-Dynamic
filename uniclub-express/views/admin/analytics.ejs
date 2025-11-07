@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title><%= title || 'Analytics | UniClub' %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { brand: { 700:'#b91c1c' }}}}}
+  </script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/analytics'), messages: [] }) %>
+
+    <main class="flex flex-col gap-6">
+      <!-- Title / Refresh -->
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-semibold">Analytics</h1>
+        <form method="get" action="/admin/analytics">
+          <button class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold">
+            Refresh Data
+          </button>
+        </form>
+      </div>
+
+      <!-- Cards -->
+      <section class="bg-gray-50 rounded-2xl">
+        <div class="grid md:grid-cols-4 gap-4">
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+            <p class="text-gray-500">Club Distribution</p>
+            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= totalClubs || 0 %></p>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+            <p class="text-gray-500">Department Activity</p>
+            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= activeDepts || 0 %></p>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+            <p class="text-gray-500">Role Distribution</p>
+            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= uniqueRoles || 0 %></p>
+          </div>
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+            <p class="text-gray-500">Growth Rate</p>
+            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= (typeof growthRate !== 'undefined' ? growthRate : 0) %>%</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Charts Row -->
+      <section class="grid lg:grid-cols-2 gap-6">
+        <!-- Membership / roles pie -->
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+          <h2 class="text-lg font-semibold mb-3">Club Membership Distribution</h2>
+          <div class="rounded-xl bg-gray-50 border border-gray-200 p-4">
+            <canvas id="deptPie" height="120"></canvas>
+          </div>
+        </div>
+
+        <!-- Monthly trend -->
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+          <h2 class="text-lg font-semibold mb-3">Monthly Activity Trends</h2>
+          <div class="rounded-xl bg-gray-50 border border-gray-200 p-4">
+            <canvas id="monthlyLine" height="120"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Department Analytics table -->
+      <section class="bg-white border border-gray-200 rounded-2xl shadow-sm">
+        <div class="px-5 py-4">
+          <h2 class="text-lg font-semibold">Department Analytics</h2>
+        </div>
+        <div class="px-5 pb-6">
+          <div class="overflow-auto rounded-xl border border-gray-200">
+            <table class="min-w-full">
+              <thead>
+                <tr class="bg-red-800 text-white">
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Department</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Total Officers</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Active Clubs</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Activity Score</th>
+                  <th class="px-4 py-3 text-left text-sm font-semibold">Trend</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 bg-white">
+                <% const _dept = (typeof deptAnalytics !== 'undefined' && Array.isArray(deptAnalytics)) ? deptAnalytics : []; %>
+                <% if (_dept.length) { %>
+                  <% _dept.forEach(d => { %>
+                    <tr>
+                      <td class="px-4 py-3 text-sm font-medium text-gray-900"><%= d.department %></td>
+                      <td class="px-4 py-3 text-sm text-gray-700"><%= d.total_officers %></td>
+                      <td class="px-4 py-3 text-sm text-gray-700"><%= d.active_clubs %></td>
+                      <td class="px-4 py-3 text-sm text-gray-700"><%= d.activityScore %></td>
+                      <td class="px-4 py-3">
+                        <% const t = d.trend;
+                           const pill = t === 'up' ? 'bg-green-100 text-green-700'
+                                       : t === 'down' ? 'bg-red-100 text-red-700'
+                                       : 'bg-gray-100 text-gray-700';
+                           const label = t === 'up' ? 'Rising' : (t === 'down' ? 'Falling' : 'Flat');
+                        %>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= pill %>"><%= label %></span>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="5" class="px-4 py-10 text-center text-gray-500 text-sm">
+                      No department analytics yet.
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Chart.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    // Data from server
+    const clubDeptLabels = <%- JSON.stringify(clubDeptLabels || []) %>;
+    const clubDeptCounts = <%- JSON.stringify(clubDeptCounts || []) %>;
+    const monthlyLabels  = <%- JSON.stringify(monthlyLabels  || []) %>;
+    const monthlyCounts  = <%- JSON.stringify(monthlyCounts  || []) %>;
+
+    // Pie (departments by clubs)
+    const pieCtx = document.getElementById('deptPie');
+    if (pieCtx && clubDeptLabels.length) {
+      new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+          labels: clubDeptLabels,
+          datasets: [{ data: clubDeptCounts }]
+        },
+        options: {
+          plugins: { legend: { position: 'bottom' } },
+          cutout: '65%'
+        }
+      });
+    }
+
+    // Line (monthly activity)
+    const lineCtx = document.getElementById('monthlyLine');
+    if (lineCtx && monthlyLabels.length) {
+      new Chart(lineCtx, {
+        type: 'line',
+        data: {
+          labels: monthlyLabels,
+          datasets: [{
+            label: 'Events',
+            data: monthlyCounts,
+            fill: false,
+            tension: 0.35
+          }]
+        },
+        options: {
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true } }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+
