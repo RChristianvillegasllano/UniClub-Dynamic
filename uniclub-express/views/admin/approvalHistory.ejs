@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+    <title><%= title || 'Approval History | UniClub Admin' %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* Mobile sidebar toggle */
+      @media (max-width: 1024px) {
+        .sidebar-hidden {
+          transform: translateX(-100%);
+        }
+      }
+
+      /* Officer avatar */
+      .officer-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+      }
+
+      /* Table row hover */
+      .history-row {
+        transition: background-color 0.18s ease, transform 0.18s ease;
+      }
+
+      .history-row:hover {
+        background-color: #f8fafc !important;
+        transform: translateX(2px);
+      }
+
+      /* Status badges */
+      .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+      }
+
+      .status-active {
+        background-color: #d1fae5;
+        color: #065f46;
+      }
+
+      .status-rejected {
+        background-color: #fee2e2;
+        color: #991b1b;
+      }
+
+      .status-inactive {
+        background-color: #e5e7eb;
+        color: #374151;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans text-slate-800">
+    <!-- Mobile menu button -->
+    <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+    <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+      <!-- Sidebar -->
+      <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+        <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/approvals'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+      </div>
+      <!-- Overlay for mobile -->
+      <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
+
+      <!-- Main Content -->
+      <main class="flex flex-col gap-6 lg:mt-0 mt-16">
+        <!-- Page Header -->
+        <div class="mb-2">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900 mb-1">Approval History</h1>
+              <p class="text-base text-gray-600">View all processed approval requests</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <a href="/admin/approvals" class="px-4 py-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold transition-colors">
+                <i data-lucide="arrow-left" class="w-4 h-4 inline mr-1"></i> Back to Approvals
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Total Processed</p>
+                <p class="text-3xl font-bold text-gray-900"><%= stats.total || 0 %></p>
+              </div>
+              <div class="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                <i data-lucide="file-check" class="w-6 h-6 text-blue-600"></i>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Approved</p>
+                <p class="text-3xl font-bold text-green-600"><%= stats.approved || 0 %></p>
+              </div>
+              <div class="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-6 h-6 text-green-600"></i>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Rejected</p>
+                <p class="text-3xl font-bold text-red-600"><%= stats.rejected || 0 %></p>
+              </div>
+              <div class="w-12 h-12 rounded-lg bg-red-100 flex items-center justify-center">
+                <i data-lucide="x-circle" class="w-6 h-6 text-red-600"></i>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs uppercase tracking-wide text-gray-500 mb-1">Inactive</p>
+                <p class="text-3xl font-bold text-gray-600"><%= stats.inactive || 0 %></p>
+              </div>
+              <div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                <i data-lucide="user-x" class="w-6 h-6 text-gray-600"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- History Table -->
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm">
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="text-xl font-bold text-gray-900">Processed Approvals</h2>
+              <div class="flex items-center gap-2">
+                <input type="text" id="searchInput" placeholder="Search by name, role, club..." 
+                       class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[200px]">
+                <select id="statusFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  <option value="">All Statuses</option>
+                  <option value="Active">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <% if (history && history.length > 0) { %>
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead>
+                    <tr class="bg-gray-100 border-b border-gray-200">
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Officer</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Role</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Club</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Processed</th>
+                      <th class="px-4 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyTableBody">
+                    <% history.forEach((officer) => { %>
+                      <tr class="history-row border-b border-gray-100 odd:bg-white even:bg-gray-50">
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-3">
+                            <div class="officer-avatar">
+                              <%= (officer.first_name?.[0] || '') + (officer.last_name?.[0] || '') %>
+                            </div>
+                            <div>
+                              <div class="font-semibold text-gray-900"><%= officer.name || `${officer.first_name || ''} ${officer.last_name || ''}`.trim() || 'Unknown' %></div>
+                              <div class="text-xs text-gray-500">ID: <%= officer.studentid || '—' %></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="text-sm text-gray-700"><%= officer.role || '—' %></span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="text-sm text-gray-700"><%= officer.club_name || '—' %></span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <% 
+                            const statusClass = officer.status === 'Active' ? 'status-active' : 
+                                                officer.status === 'Rejected' ? 'status-rejected' : 
+                                                'status-inactive';
+                            const statusText = officer.status === 'Active' ? 'Approved' : 
+                                                officer.status || 'Unknown';
+                          %>
+                          <span class="status-badge <%= statusClass %>"><%= statusText %></span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <div class="text-sm text-gray-600">
+                            <%= officer.updated_at ? new Date(officer.updated_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 
+                                officer.created_at ? new Date(officer.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—' %>
+                          </div>
+                          <div class="text-xs text-gray-400">
+                            <%= officer.updated_at ? new Date(officer.updated_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : 
+                                officer.created_at ? new Date(officer.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '' %>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3">
+                          <a href="/admin/officers?officer=<%= officer.id %>" 
+                             class="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                            View Details
+                          </a>
+                        </td>
+                      </tr>
+                    <% }) %>
+                  </tbody>
+                </table>
+              </div>
+            <% } else { %>
+              <div class="text-center py-16">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <i data-lucide="file-x" class="w-8 h-8 text-gray-400"></i>
+                </div>
+                <p class="text-gray-600 text-lg font-semibold mb-2">No approval history found</p>
+                <p class="text-gray-400 text-sm">Processed approvals will appear here</p>
+                <a href="/admin/approvals" class="inline-block mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-semibold transition-colors">
+                  View Pending Approvals
+                </a>
+              </div>
+            <% } %>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      // Mobile sidebar toggle
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        if (sidebar && overlay) {
+          sidebar.classList.toggle('sidebar-hidden');
+          overlay.classList.toggle('hidden');
+        }
+      }
+      document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+      document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+      // Search and filter functionality
+      const searchInput = document.getElementById('searchInput');
+      const statusFilter = document.getElementById('statusFilter');
+      const tableBody = document.getElementById('historyTableBody');
+
+      function filterTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const statusValue = statusFilter.value;
+        const rows = tableBody.querySelectorAll('tr');
+
+        rows.forEach(row => {
+          const text = row.textContent.toLowerCase();
+          const statusBadge = row.querySelector('.status-badge');
+          const rowStatus = statusBadge ? statusBadge.textContent.trim() : '';
+
+          const matchesSearch = !searchTerm || text.includes(searchTerm);
+          const matchesStatus = !statusValue || 
+            (statusValue === 'Active' && rowStatus === 'Approved') ||
+            (statusValue === 'Rejected' && rowStatus === 'Rejected') ||
+            (statusValue === 'Inactive' && rowStatus === 'Inactive');
+
+          row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+        });
+      }
+
+      searchInput?.addEventListener('input', filterTable);
+      statusFilter?.addEventListener('change', filterTable);
+
+      // Initialize Lucide icons
+      if (window.lucide) {
+        window.lucide.replace();
+      }
+    </script>
+  </body>
+</html>
+

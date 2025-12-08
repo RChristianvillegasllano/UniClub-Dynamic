@@ -3,63 +3,456 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <title>Manage Students | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="stylesheet" href="/styles/table.css" />
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+
+    /* Profile avatar - matching officers page */
+    .profile-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* Enhanced row hover with transform and shadow */
+    .student-row {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .student-row:hover {
+      background-color: #eff6ff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+    }
+
+    /* Soft shadows */
+    .shadow-soft {
+      box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    /* Status badge styles - matching officers */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .status-badge:hover {
+      transform: translateY(-1px);
+    }
+
+    .status-active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-graduated {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .status-inactive {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Status menu - matching officers */
+    .status-menu {
+      position: fixed;
+      background: #ffffff;
+      border-radius: 0.85rem;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+      border: 1px solid #e2e8f0;
+      padding: 0.35rem;
+      z-index: 1200;
+      width: 190px;
+    }
+
+    .status-menu button {
+      width: 100%;
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 0.45rem 0.7rem;
+      border-radius: 0.6rem;
+      font-size: 0.78rem;
+      color: #1f2937;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .status-menu button:hover {
+      background: #f8fafc;
+      transform: translateX(2px);
+    }
+
+    /* Inline editing styles */
+    .editable-cell {
+      cursor: pointer;
+      position: relative;
+      padding: 0.25rem 0.5rem;
+      margin: -0.25rem -0.5rem;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .editable-cell:hover {
+      background-color: #f0f9ff;
+    }
+
+    .editable-cell.editing {
+      padding: 0;
+    }
+
+    .editable-cell input,
+    .editable-cell select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 2px solid #3b82f6;
+      border-radius: 4px;
+      font-size: inherit;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .editable-cell input:focus,
+    .editable-cell select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Bulk actions bar */
+    .bulk-actions-bar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: white;
+      border-bottom: 2px solid #e5e7eb;
+      padding: 0.75rem 1rem;
+      margin: -1.5rem -1.5rem 1rem -1.5rem;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    /* Visual anchor for few rows */
+    .table-anchor {
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .table-anchor tbody {
+      flex: 1;
+    }
+
+    /* Modal backdrop */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1300;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 1rem;
+      padding: 1.5rem 1.75rem;
+      width: min(420px, 90vw);
+      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 9999px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .badge-slate {
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .badge-blue {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/students'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/students'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main Content -->
-    <main class="flex flex-col gap-4">
-      <header class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold text-slate-800">Manage Students</h1>
-          <p class="text-sm text-slate-500">View, add, and manage all registered students.</p>
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
+      <% 
+        var _filters = (typeof filters !== 'undefined' && filters) ? filters : {};
+        var _pagination = (typeof pagination !== 'undefined' && pagination) ? pagination : { page: 1, totalPages: 1, total: (students && students.length) || 0, limit: 15 };
+        var _programs = (typeof programs !== 'undefined' && Array.isArray(programs)) ? programs : [];
+        var _departments = (typeof departments !== 'undefined' && Array.isArray(departments)) ? departments : [];
+        var _yearLevels = (typeof yearLevels !== 'undefined' && Array.isArray(yearLevels)) ? yearLevels : [];
+      %>
+      <!-- Header -->
+      <header class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-4">
+          <img src="/img/logo.png" alt="UniClub Logo" class="h-12 w-12 sm:h-14 sm:w-14 flex-shrink-0 object-contain rounded-lg shadow-sm">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-800">Manage Students</h1>
+            <p class="text-sm text-slate-500">View, add, and manage all registered students.</p>
+          </div>
         </div>
-        <a href="/admin/students/add" class="flex items-center gap-2 px-4 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#870107] transition">
-          <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Student
-        </a>
+        <div class="flex items-center gap-2">
+          <a href="/admin/students/add" 
+             class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Student
+          </a>
+        </div>
       </header>
 
+      <!-- Filters -->
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6">
+        <form method="get" action="/admin/students" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3" data-dept-program id="filterForm">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Search</label>
+            <input type="text" name="search" value="<%= _filters.search || '' %>" placeholder="Name, Email, or Student ID" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" id="liveSearchInput" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">
+              Program
+              <span class="text-slate-400 text-xs ml-1" title="Filter students by their academic program">ℹ️</span>
+            </label>
+            <select name="program" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-program-select data-current="<%= _filters.program || '' %>" title="Select a program to filter students">
+              <option value="">All Programs</option>
+              <% _programs.forEach(prog => { %>
+                <option value="<%= prog %>" <%= (_filters.program === prog) ? 'selected' : '' %>><%= prog %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Year Level</label>
+            <select name="year_level" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" title="Filter by academic year level">
+              <option value="">All Year Levels</option>
+              <% _yearLevels.forEach(yl => { %>
+                <option value="<%= yl %>" <%= (_filters.year_level === yl) ? 'selected' : '' %>><%= yl %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Department</label>
+            <select name="department" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-dept-select title="Filter by department">
+              <option value="">All Departments</option>
+              <% _departments.forEach(dept => { %>
+                <option value="<%= dept %>" <%= (_filters.department === dept) ? 'selected' : '' %>><%= dept %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
+            <select name="status" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" title="Filter by student status">
+              <option value="">All Status</option>
+              <option value="Active" <%= (_filters.status === 'Active') ? 'selected' : '' %>>Active</option>
+              <option value="Graduated" <%= (_filters.status === 'Graduated') ? 'selected' : '' %>>Graduated</option>
+              <option value="Inactive" <%= (_filters.status === 'Inactive') ? 'selected' : '' %>>Inactive</option>
+            </select>
+          </div>
+          <div class="flex items-end gap-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex-1">Search</button>
+            <a href="/admin/students" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</a>
+          </div>
+        </form>
+      </section>
+
       <!-- Students Table -->
-      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6 table-anchor" data-table-container>
         <% if (students.length > 0) { %>
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-              <thead class="bg-slate-100 text-left">
-                <tr>
-                  <th class="p-3">Name</th>
-                  <th class="p-3">Email</th>
-                  <th class="p-3">Program</th>
-                  <th class="p-3">Year Level</th>
+          <!-- Bulk Actions Bar (hidden by default) -->
+          <div class="bulk-actions-bar hidden" id="bulkActionsBar">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-slate-700" id="bulkSelectionCount">0 selected</span>
+              <div class="flex gap-2">
+                <button type="button" class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition" id="bulkEmailBtn" title="Email selected students">
+                  <i data-lucide="mail" class="w-4 h-4 inline mr-1"></i> Email Selected
+                </button>
+                <button type="button" class="px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 transition" id="bulkDeleteBtn" title="Delete selected students">
+                  <i data-lucide="trash-2" class="w-4 h-4 inline mr-1"></i> Delete Selected
+                </button>
+                <button type="button" class="px-3 py-1.5 bg-slate-200 text-slate-700 text-sm rounded-lg hover:bg-slate-300 transition" id="bulkDeselectBtn">
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick table controls -->
+          <div class="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-slate-600">Quick search</label>
+              <input type="text" placeholder="Filter rows..." class="px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" data-table-search />
+            </div>
+            <div class="flex items-center gap-3 text-sm text-slate-600 flex-wrap">
+              <span data-pager-info>Showing</span>
+              <select class="px-2 py-1 border border-slate-300 rounded-md" data-page-size>
+                <option value="10">10</option>
+                <option value="15" selected>15</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+              <span>per page</span>
+              <button class="pager-btn px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-50 transition" data-pager-prev>← Prev</button>
+              <button class="pager-btn px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-50 transition" data-pager-next>Next →</button>
+            </div>
+          </div>
+          <div class="overflow-x-auto rounded-lg border border-slate-200">
+            <table class="w-full border-collapse text-sm" data-enhanced-table>
+              <thead class="bg-slate-100 text-left text-slate-700">
+                <tr class="text-xs">
+                  <th class="p-3" style="width: 40px;">
+                    <input type="checkbox" id="selectAll" class="rounded border-slate-300" title="Select all students">
+                  </th>
+                  <th class="p-3" data-sortable aria-sort="none">
+                    <div class="flex items-center gap-2">
+                      <span>Name</span>
+                      <span data-sort-indicator class="text-slate-400">↕</span>
+                    </div>
+                  </th>
+                  <th class="p-3" data-sortable aria-sort="none">
+                    <div class="flex items-center gap-2">
+                      <span>Email</span>
+                      <span data-sort-indicator class="text-slate-400">↕</span>
+                    </div>
+                  </th>
+                  <th class="p-3" data-sortable aria-sort="none">
+                    <div class="flex items-center gap-2">
+                      <span>Program</span>
+                      <span data-sort-indicator class="text-slate-400">↕</span>
+                    </div>
+                  </th>
+                  <th class="p-3" data-sortable aria-sort="none">
+                    <div class="flex items-center gap-2">
+                      <span>Year Level</span>
+                      <span data-sort-indicator class="text-slate-400">↕</span>
+                    </div>
+                  </th>
+                  <th class="p-3" data-sortable aria-sort="none">
+                    <div class="flex items-center gap-2">
+                      <span>Status</span>
+                      <span data-sort-indicator class="text-slate-400">↕</span>
+                    </div>
+                  </th>
                   <th class="p-3">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y">
-                <% students.forEach(student => { %>
-                  <tr class="hover:bg-slate-50">
-                    <td class="p-3"><%= student.name %></td>
-                    <td class="p-3"><%= student.email %></td>
-                    <td class="p-3"><%= student.program %></td>
-                    <td class="p-3"><%= student.year_level %></td>
-                    <td class="p-3 flex gap-2">
-                      <a href="/admin/students/edit/<%= student.id %>" class="px-3 py-1 rounded-md bg-blue-500 text-white text-xs hover:bg-blue-600">Edit</a>
-                      <form action="/admin/students/delete/<%= student.id %>" method="POST" onsubmit="return confirm('Are you sure you want to delete this student?');">
-                        <button class="px-3 py-1 rounded-md bg-red-500 text-white text-xs hover:bg-red-600">Delete</button>
-                      </form>
+                <% students.forEach(student => { 
+                  const status = (student.status || 'Active');
+                  const initials = (student.name || '').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                %>
+                  <tr class="student-row" data-student-id="<%= student.id %>">
+                    <td class="p-3">
+                      <input type="checkbox" class="student-checkbox rounded border-slate-300" value="<%= student.id %>">
+                    </td>
+                    <td class="p-3">
+                      <div class="flex items-center">
+                        <div class="profile-avatar"><%= initials %></div>
+                        <span class="editable-cell" data-field="name" data-student-id="<%= student.id %>" data-original="<%= student.name %>"><%= student.name %></span>
+                      </div>
+                    </td>
+                    <td class="p-3">
+                      <span class="editable-cell" data-field="email" data-student-id="<%= student.id %>" data-original="<%= student.email %>"><%= student.email %></span>
+                    </td>
+                    <td class="p-3">
+                      <span class="editable-cell" data-field="program" data-student-id="<%= student.id %>" data-original="<%= student.program || '' %>"><%= student.program || '—' %></span>
+                    </td>
+                    <td class="p-3">
+                      <span class="editable-cell" data-field="year_level" data-student-id="<%= student.id %>" data-original="<%= student.year_level || '' %>"><%= student.year_level || '—' %></span>
+                    </td>
+                    <td class="p-3">
+                      <button type="button"
+                              class="status-badge <%= status.toLowerCase() === 'active' ? 'status-active' : (status.toLowerCase() === 'graduated' ? 'status-graduated' : 'status-inactive') %>"
+                              data-status-pill
+                              data-status="<%= status %>"
+                              data-student-id="<%= student.id %>"
+                              title="Click to update status">
+                        <span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>
+                        <%= status %>
+                      </button>
+                    </td>
+                    <td class="p-3">
+                      <div class="flex justify-center gap-2">
+                        <a href="/admin/students/edit/<%= student.id %>" 
+                           class="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition shadow-sm flex items-center gap-1.5" 
+                           title="Edit student">
+                          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
+                        </a>
+                        <button type="button" 
+                                onclick="showDeleteModal(<%= student.id %>, '<%= student.name.replace(/'/g, "\\'") %>')"
+                                class="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition shadow-sm flex items-center gap-1.5" 
+                                title="Delete student">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
+          <!-- Keep server pagination note for total context -->
+          <div class="mt-3 text-xs text-slate-500">Server total: <strong><%= _pagination.total %></strong> students</div>
         <% } else { %>
-          <p class="text-slate-500 text-sm text-center">No students registered yet.</p>
+          <p class="text-center text-slate-500 py-6">No students found. <% if (_filters.search || _filters.program || _filters.year_level || _filters.department || _filters.status) { %>Try adjusting your filters.<% } else { %>Add your first student to get started!<% } %></p>
         <% } %>
       </section>
 
@@ -70,8 +463,465 @@
     </main>
   </div>
 
+  <!-- Delete Confirmation Modal -->
+  <div id="deleteModal" class="modal-backdrop">
+    <div class="modal-card">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+          <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-gray-900">Delete Student</h3>
+          <p class="text-sm text-gray-500">This action cannot be undone.</p>
+        </div>
+      </div>
+      <p class="text-sm text-gray-700 mb-6">
+        Are you sure you want to delete <strong id="deleteStudentName"></strong>? This will permanently remove the student from the system.
+      </p>
+      <div class="flex gap-3 justify-end">
+        <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-medium">
+          Cancel
+        </button>
+        <form id="deleteForm" method="POST" class="inline">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium">
+            Delete Student
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[9999] space-y-2"></div>
+
   <script>
-    window.lucide && window.lucide.replace();
+    // Toast notification system
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const icons = {
+        success: '<i data-lucide="check-circle" class="w-5 h-5"></i>',
+        error: '<i data-lucide="x-circle" class="w-5 h-5"></i>',
+        warning: '<i data-lucide="alert-triangle" class="w-5 h-5"></i>',
+        info: '<i data-lucide="info" class="w-5 h-5"></i>'
+      };
+      
+      const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        warning: 'bg-amber-50 border-amber-200 text-amber-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+      };
+
+      toast.className = `${colors[type] || colors.info} border-l-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] max-w-[500px] animate-[slideIn_0.3s_ease]`;
+      toast.innerHTML = `
+        ${icons[type] || icons.info}
+        <span class="flex-1 font-medium text-sm">${message}</span>
+        <button onclick="this.parentElement.remove()" class="text-current opacity-60 hover:opacity-100">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      `;
+
+      container.appendChild(toast);
+      
+      // Re-render lucide icons
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+
+      // Auto remove after duration
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+
+      return toast;
+    }
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
   </script>
+
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+    
+    // Live search - submit form as user types (with debounce)
+    let searchTimeout;
+    const liveSearchInput = document.getElementById('liveSearchInput');
+    if (liveSearchInput) {
+      liveSearchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          document.getElementById('filterForm').submit();
+        }, 500); // Submit after 500ms of no typing
+      });
+    }
+
+    // Bulk selection
+    const selectAllCheckbox = document.getElementById('selectAll');
+    const studentCheckboxes = document.querySelectorAll('.student-checkbox');
+    const bulkActionsBar = document.getElementById('bulkActionsBar');
+    const bulkSelectionCount = document.getElementById('bulkSelectionCount');
+    const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+    const bulkEmailBtn = document.getElementById('bulkEmailBtn');
+    const bulkDeselectBtn = document.getElementById('bulkDeselectBtn');
+
+    function updateBulkActions() {
+      const selected = Array.from(studentCheckboxes).filter(cb => cb.checked);
+      const count = selected.length;
+      
+      if (count > 0) {
+        bulkActionsBar.classList.remove('hidden');
+        bulkSelectionCount.textContent = `${count} selected`;
+      } else {
+        bulkActionsBar.classList.add('hidden');
+      }
+      
+      if (selectAllCheckbox) {
+        selectAllCheckbox.indeterminate = count > 0 && count < studentCheckboxes.length;
+        selectAllCheckbox.checked = count === studentCheckboxes.length && studentCheckboxes.length > 0;
+      }
+    }
+
+    if (selectAllCheckbox) {
+      selectAllCheckbox.addEventListener('change', function() {
+        studentCheckboxes.forEach(cb => cb.checked = this.checked);
+        updateBulkActions();
+      });
+    }
+
+    studentCheckboxes.forEach(cb => {
+      cb.addEventListener('change', updateBulkActions);
+    });
+
+    // Delete modal functions
+    let currentDeleteId = null;
+    
+    function showDeleteModal(studentId, studentName) {
+      const modal = document.getElementById('deleteModal');
+      const nameSpan = document.getElementById('deleteStudentName');
+      
+      currentDeleteId = studentId;
+      nameSpan.textContent = studentName;
+      modal.classList.add('active');
+    }
+
+    function closeDeleteModal() {
+      const modal = document.getElementById('deleteModal');
+      modal.classList.remove('active');
+      currentDeleteId = null;
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('deleteModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeDeleteModal();
+      }
+    });
+
+    // Handle delete form submission
+    const deleteForm = document.getElementById('deleteForm');
+    if (deleteForm) {
+      deleteForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!currentDeleteId) {
+          showToast('Error: No student selected for deletion', 'error');
+          return;
+        }
+
+        const submitBtn = deleteForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Deleting...';
+
+        try {
+          // Get CSRF token from the form
+          const csrfToken = deleteForm.querySelector('input[name="_csrf"]')?.value || '';
+          
+          // Use FormData for CSRF compatibility
+          const formData = new FormData();
+          formData.append('_csrf', csrfToken);
+          
+          const response = await fetch(`/admin/students/delete/${currentDeleteId}`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json'
+            },
+            body: formData,
+            credentials: 'same-origin'
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            const errorMessage = data.error || 'Failed to delete student. Please try again.';
+            throw new Error(errorMessage);
+          }
+
+          // Success - close modal, show toast and reload page
+          closeDeleteModal();
+          showToast(data.message || 'Student deleted successfully', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } catch (error) {
+          console.error('Error deleting student:', error);
+          showToast('Error: ' + error.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+      });
+    }
+
+    if (bulkDeleteBtn) {
+      bulkDeleteBtn.addEventListener('click', async function() {
+        const selected = Array.from(studentCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+        if (selected.length === 0) return;
+        
+        // Show confirmation modal instead of browser confirm
+        if (!confirm(`Are you sure you want to delete ${selected.length} student(s)?`)) return;
+        
+        try {
+          const response = await fetch('/admin/students/bulk-delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: selected })
+          });
+          
+          const data = await response.json();
+          if (data.success) {
+            showToast(data.message || `Successfully deleted ${selected.length} student(s)`, 'success');
+            setTimeout(() => location.reload(), 1500);
+          } else {
+            showToast('Error: ' + (data.error || 'Failed to delete students'), 'error');
+          }
+        } catch (error) {
+          showToast('Error: ' + error.message, 'error');
+        }
+      });
+    }
+
+    if (bulkEmailBtn) {
+      bulkEmailBtn.addEventListener('click', function() {
+        const selected = Array.from(studentCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+        if (selected.length === 0) return;
+        showToast(`Email functionality would send emails to ${selected.length} selected student(s). This feature can be implemented with your email service.`, 'info');
+      });
+    }
+
+    if (bulkDeselectBtn) {
+      bulkDeselectBtn.addEventListener('click', function() {
+        studentCheckboxes.forEach(cb => cb.checked = false);
+        if (selectAllCheckbox) selectAllCheckbox.checked = false;
+        updateBulkActions();
+      });
+    }
+
+    // Status menu functionality - matching officers page
+    (function () {
+      const statusOptions = ["Active", "Graduated", "Inactive"];
+      const statusClassMap = {
+        "Active": "status-active",
+        "Graduated": "status-graduated",
+        "Inactive": "status-inactive"
+      };
+
+      function handleOutsideStatusMenu(event) {
+        if (!event.target.closest('.status-menu') && !event.target.closest('[data-status-pill]')) {
+          closeStatusMenu();
+        }
+      }
+
+      function closeStatusMenu() {
+        document.querySelectorAll('.status-menu').forEach(menu => menu.remove());
+        document.removeEventListener('click', handleOutsideStatusMenu);
+      }
+
+      function openStatusMenu(button) {
+        closeStatusMenu();
+        const studentId = button.dataset.studentId;
+        const currentStatus = button.dataset.status || "Active";
+        const rect = button.getBoundingClientRect();
+
+        const menu = document.createElement('div');
+        menu.className = 'status-menu';
+
+        statusOptions.forEach(status => {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.innerHTML = `
+            <span class="inline-flex h-2.5 w-2.5 rounded-full ${statusClassMap[status] || 'bg-slate-200'}"></span>
+            <span>${status}</span>
+          `;
+          if (status === currentStatus) {
+            option.style.fontWeight = '600';
+          }
+          option.addEventListener('click', () => updateStatus(studentId, status, button));
+          menu.appendChild(option);
+        });
+
+        document.body.appendChild(menu);
+        menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
+        menu.style.left = `${rect.left + window.scrollX}px`;
+
+        setTimeout(() => document.addEventListener('click', handleOutsideStatusMenu), 0);
+      }
+
+      async function updateStatus(id, status, button) {
+        try {
+          const response = await fetch(`/admin/students/${id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+          });
+          const result = await response.json();
+          if (!result.success) throw new Error(result.error || 'Failed to update status');
+          button.dataset.status = status;
+          button.className = `status-badge ${statusClassMap[status] || 'status-active'}`;
+          button.innerHTML = `<span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>${status}`;
+        } catch (error) {
+          showToast(error.message || 'Unable to update status right now.', 'error');
+        } finally {
+          closeStatusMenu();
+        }
+      }
+
+      document.querySelectorAll('[data-status-pill]').forEach(button => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          openStatusMenu(button);
+        });
+      });
+    })();
+
+    // Inline editing (excluding status which is handled above)
+    document.querySelectorAll('.editable-cell').forEach(cell => {
+      // Skip status cells as they use the pill menu
+      if (cell.classList.contains('status-cell') || cell.closest('[data-status-pill]')) return;
+      
+      cell.addEventListener('dblclick', function() {
+        if (this.classList.contains('editing')) return;
+        
+        const field = this.dataset.field;
+        const studentId = this.dataset.studentId;
+        const original = this.dataset.original;
+        const isName = field === 'name';
+        
+        if (isName) {
+          // Name editing would need special handling (first_name, last_name)
+          return; // Skip name editing for now, or implement split logic
+        }
+        
+        this.classList.add('editing');
+        const currentText = this.textContent.trim();
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentText;
+        
+        const oldContent = this.innerHTML;
+        this.innerHTML = '';
+        this.appendChild(input);
+        input.focus();
+        if (input.select) input.select();
+        
+        const save = async () => {
+          const newValue = input.value.trim();
+          if (newValue === original) {
+            this.innerHTML = oldContent;
+            this.classList.remove('editing');
+            return;
+          }
+          
+          try {
+            const response = await fetch(`/admin/students/${studentId}/field`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ field: field, value: newValue })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+              this.textContent = newValue;
+              this.dataset.original = newValue;
+            } else {
+              showToast('Error: ' + (data.error || 'Failed to update'), 'error');
+              this.innerHTML = oldContent;
+            }
+          } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+            this.innerHTML = oldContent;
+          }
+          
+          this.classList.remove('editing');
+        };
+        
+        const cancel = () => {
+          this.innerHTML = oldContent;
+          this.classList.remove('editing');
+        };
+        
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            save();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancel();
+          }
+        });
+      });
+    });
+
+    renderLucideIcons();
+  </script>
+  <script src="/js/departmentPrograms.js"></script>
+  <script src="/js/tableEnhancer.js"></script>
 </body>
 </html>

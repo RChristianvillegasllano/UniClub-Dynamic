@@ -5,19 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Add Requirement | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
 </head>
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/requirements'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/requirements'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main -->
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
       <header class="mb-6 flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800">Add Requirement</h1>
+          <h1 class="text-2xl font-bold text-slate-800"><%= title.includes('Create') ? 'Create Requirement' : 'Add Requirement' %></h1>
+          <p class="text-sm text-slate-500 mt-1">Define a new requirement for officers to complete</p>
         </div>
         <a href="/admin/requirements"
            class="flex items-center gap-2 px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
@@ -26,7 +45,8 @@
       </header>
 
       <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <form action="/admin/requirements/add" method="POST" class="space-y-5">
+        <form action="<%= title.includes('Create') ? '/admin/requirements/create' : '/admin/requirements/add' %>" method="POST" class="space-y-5">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Requirement</label>
             <input type="text" name="requirement" required class="w-full border border-slate-300 rounded-lg px-3 py-2">
@@ -58,8 +78,8 @@
 
           <div class="flex justify-end">
             <button type="submit"
-                    class="px-6 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#870107] transition">
-              <i data-lucide="save" class="inline w-4 h-4 mr-1"></i> Save Requirement
+                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
+              <i data-lucide="save" class="inline w-4 h-4 mr-1"></i> <%= title.includes('Create') ? 'Create Requirement' : 'Save Requirement' %>
             </button>
           </div>
         </form>
@@ -71,6 +91,19 @@
     </main>
   </div>
 
-  <script>window.lucide && window.lucide.replace();</script>
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+    window.lucide && window.lucide.replace();
+  </script>
 </body>
 </html>

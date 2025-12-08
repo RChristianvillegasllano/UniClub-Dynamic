@@ -15,11 +15,18 @@
   "dependencies": {
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "csurf": "^1.11.0",
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "express-rate-limit": "^7.1.5",
     "express-session": "^1.18.2",
-    "pg": "^8.16.3"
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "multer": "^2.0.2",
+    "mysql2": "^3.11.5",
+    "nodemailer": "^7.0.11"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

@@ -1,0 +1,1665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniClub — University of Mindanao</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0f1a;
+      overflow-x: hidden;
+    }
+
+    /* 3-Step Elevation System */
+    /* Level 1: Page background = darkest */
+    /* Level 2: Section containers = +6-8% lighter */
+    .section-container {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    /* Level 3: Inner cards = +10-12% lighter than background */
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .card-inner {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .card-inner:hover {
+      background: rgba(255, 255, 255, 0.11);
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Typography Hierarchy */
+    h1 {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 800;
+      font-size: 3rem;
+      line-height: 1.1;
+      color: #ffffff;
+    }
+
+    /* Section Headers - 20-22px / semi-bold */
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 600;
+      font-size: 1.375rem;
+      line-height: 1.3;
+      color: #ffffff;
+      margin-bottom: 1.5rem;
+    }
+
+    /* Card Titles - 16-18px / bold */
+    .card-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 700;
+      font-size: 1rem;
+      line-height: 1.4;
+      color: #ffffff;
+    }
+
+    /* Metadata - 13-14px / regular */
+    .text-meta {
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.5;
+    }
+
+    .text-secondary {
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.5;
+    }
+
+    .text-tertiary {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.65);
+      line-height: 1.4;
+    }
+
+    /* ===== GLASS EFFECT ===== */
+    .glass {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Card Base - Increased Contrast */
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Inner Card - Less Rounding */
+    .card-inner {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .card-inner:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    .glass-light {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* ===== GRADIENTS ===== */
+    .gradient-brand {
+      background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
+    }
+
+    .gradient-accent-blue {
+      background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+    }
+
+    .gradient-accent-purple {
+      background: linear-gradient(135deg, #7B1FA2 0%, #BA68C8 100%);
+    }
+
+    .gradient-accent-green {
+      background: linear-gradient(135deg, #00796B 0%, #26A69A 100%);
+    }
+
+    .gradient-accent-orange {
+      background: linear-gradient(135deg, #E65100 0%, #FF9800 100%);
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes fadeInRight {
+      from {
+        opacity: 0;
+        transform: translateX(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(198, 40, 40, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 40px rgba(198, 40, 40, 0.6);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-down {
+      animation: fadeInDown 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-left {
+      animation: fadeInLeft 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-right {
+      animation: fadeInRight 0.8s ease-out forwards;
+    }
+
+    .animate-slide-up {
+      animation: slideUp 0.6s ease-out forwards;
+    }
+
+    .pulse-glow {
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    .float-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .fade-in-on-scroll {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .fade-in-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== HOVER EFFECTS ===== */
+    .hover-lift {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .hover-scale {
+      transition: all 0.3s ease;
+    }
+
+    .hover-scale:hover {
+      transform: scale(1.05);
+    }
+
+    .hover-border-gradient:hover {
+      border-image: linear-gradient(135deg, #C62828, #E53935) 1;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn-primary {
+      background: #C62828;
+      color: white;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9375rem;
+    }
+
+    .btn-primary:hover {
+      background: #B71C1C;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-weight: 500;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      font-size: 0.9375rem;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 500;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: baseline;
+    }
+
+    .btn-link:hover {
+      color: rgba(255, 255, 255, 1);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* View all link - aligned with section header */
+    .section-header-link {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    /* Cards now defined in elevation system above */
+
+    /* ===== NAVBAR ===== */
+    #navbar {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+      transition: all 0.3s ease;
+    }
+
+    #navbar.scrolled {
+      background: rgba(15, 23, 42, 0.9);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      position: relative;
+      padding: 8px 0;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C62828;
+      transition: width 0.2s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .nav-link.active::after {
+      width: 100%;
+      background: #C62828;
+    }
+
+    /* Navbar spacing */
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* ===== BADGES ===== - Secondary, smaller, unified */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    .badge-success {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.2);
+    }
+
+    .badge-info {
+      background: rgba(59, 130, 246, 0.12);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    .badge-warning {
+      background: rgba(251, 191, 36, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(251, 191, 36, 0.2);
+    }
+
+    .badge-neutral {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #C62828, #E53935);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #E53935, #FF6B6B);
+    }
+
+    /* ===== MOBILE MENU ===== */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 70px;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(32px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+      z-index: 40;
+    }
+
+    .mobile-menu.active {
+      max-height: 500px;
+      display: block;
+    }
+
+    .mobile-menu-content {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ===== STAT CARD ===== */
+    .stat-card {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.2s ease;
+    }
+
+    .stat-card:hover {
+      background: rgba(255, 255, 255, 0.11);
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #FF6B6B, #FFA06B);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== SPACING SECTION ===== */
+    .spacing-section {
+      padding: 32px 0;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    /* Tablet-specific tokens */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      /* Container max-width for tablet */
+      .max-w-7xl {
+        max-width: 960px;
+      }
+
+      /* Section padding for tablet */
+      .spacing-section {
+        padding: 24px 0;
+      }
+
+      /* Card gap for tablet */
+      .card-gap-tablet {
+        gap: 16px;
+      }
+
+      /* Hero adjustments for tablet */
+      .hero-tablet {
+        padding-top: 24px;
+        padding-bottom: 20px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      /* Stats cards - shorter and wider on tablet */
+      .stat-card {
+        padding: 16px 20px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .stat-card > div:first-child {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        flex: 1;
+      }
+
+      .stat-value {
+        font-size: 28px;
+        margin: 0;
+        line-height: 1;
+      }
+
+      .stat-label {
+        margin-top: 4px;
+        text-align: left;
+        font-size: 0.75rem;
+      }
+
+      .stat-card .text-tertiary {
+        display: block;
+        margin-top: 0;
+        text-align: right;
+        font-size: 0.6875rem;
+        white-space: nowrap;
+      }
+
+      /* Quick Actions - 2 column grid on tablet */
+      .quick-actions-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .quick-actions-container .card-inner {
+        margin: 0;
+      }
+
+      /* Activity + Achievements side-by-side on tablet - handled by Tailwind md:grid-cols-2 */
+
+      /* Footer adjustments for tablet */
+      footer {
+        padding-top: 32px;
+        padding-bottom: 32px;
+      }
+
+      footer .grid {
+        gap: 24px;
+      }
+
+      /* Button height reduction on tablet */
+      .btn-primary,
+      .btn-secondary {
+        padding: 10px 20px;
+        font-size: 0.875rem;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .card {
+        padding: 16px;
+      }
+
+      .card-inner {
+        padding: 12px;
+      }
+
+      h1 {
+        font-size: 1.875rem;
+      }
+
+      .section-header {
+        font-size: 1.25rem;
+      }
+
+      .stat-value {
+        font-size: 24px;
+      }
+
+      .hidden-mobile {
+        display: none !important;
+      }
+
+      /* Line clamping for mobile */
+      .line-clamp-1 {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* Touch targets */
+      .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+      }
+
+      /* Nav spacing on mobile */
+      .nav-actions {
+        gap: 8px;
+      }
+    }
+
+    /* ===== ACHIEVEMENT BADGE ===== */
+    .achievement-item {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .achievement-item::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1), transparent 70%);
+      animation: shimmer 3s infinite;
+      pointer-events: none;
+    }
+
+    /* Activity icon block - standardized 40-48px */
+    .activity-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .activity-icon i {
+      font-size: 0.875rem;
+    }
+
+    /* ===== PROGRESS BAR ===== - Neutral color */
+    .progress-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: rgba(255, 255, 255, 0.5);
+      border-radius: 2px;
+      transition: width 0.6s ease;
+    }
+
+    .progress-label {
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.75);
+      margin-top: 6px;
+    }
+
+    /* ===== NOTIFICATION ===== */
+    .notification-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: linear-gradient(135deg, #C62828, #E53935);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px solid rgba(15, 23, 42, 0.8);
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    /* ===== INPUT FIELDS ===== */
+    .input-field {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 107, 107, 0.5);
+      box-shadow: 0 0 20px rgba(198, 40, 40, 0.2);
+    }
+
+    .input-field::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* ===== DROPDOWNS ===== */
+    .dropdown-menu {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      position: absolute;
+      min-width: 200px;
+      z-index: 50;
+    }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(198, 40, 40, 0.1);
+      color: #FF6B6B;
+      padding-left: 20px;
+    }
+
+    /* ===== PROFILE PILL ===== */
+    .profile-pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .profile-pill:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .profile-pill[aria-expanded="true"] {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .profile-pill[aria-expanded="true"] .profile-caret {
+      transform: rotate(180deg);
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* ===== PROFILE DROPDOWN ===== */
+    .profile-dropdown {
+      background: rgba(30, 35, 45, 0.96);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      width: 256px;
+    }
+
+    /* Match dropdown width to trigger button - align right edges */
+    #profileMenu {
+      right: 0;
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: "#C62828",
+            brandLight: "#E53935",
+            dark: "#0f172a",
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="min-h-screen">
+  <!-- ===== NAVBAR ===== -->
+  <nav id="navbar" class="sticky top-0 z-50 border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-20">
+        <!-- Logo -->
+        <a href="#" class="flex items-center gap-3 group">
+          <div class="w-10 h-10 bg-gradient-brand rounded-xl flex items-center justify-center text-white font-bold text-lg group-hover:scale-110 transition-transform">
+            U
+          </div>
+          <div class="hidden sm:block">
+            <p class="text-xs text-white/60 font-semibold tracking-widest">UNICLUB</p>
+            <p class="text-sm font-bold text-white">University of Mindanao</p>
+          </div>
+        </a>
+
+        <!-- Desktop Menu -->
+        <div class="hidden lg:flex items-center gap-8">
+          <a href="#" class="nav-link active">Dashboard</a>
+          <a href="#" class="nav-link">Discover</a>
+          <a href="#" class="nav-link">My Clubs</a>
+          <a href="#" class="nav-link">Events</a>
+        </div>
+
+        <!-- Right Side -->
+        <div class="nav-actions">
+          <!-- Search Button (Mobile Hidden) -->
+          <button class="btn-icon hidden sm:flex">
+            <i class="fas fa-search"></i>
+          </button>
+
+          <!-- Notifications -->
+          <button class="btn-icon relative">
+            <i class="fas fa-bell"></i>
+            <span class="notification-badge">3</span>
+          </button>
+
+          <!-- Profile -->
+          <div class="relative hidden sm:block pl-2 md:pl-3 border-l border-white/10">
+            <button id="profileBtn" class="flex items-center gap-1.5 hover:bg-white/5 px-1.5 py-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-transparent profile-pill" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu">
+              <div class="text-right hidden sm:block min-w-0">
+                <p class="text-xs font-medium text-white/85 truncate">Juan Carlos</p>
+              </div>
+              <div class="relative w-9 h-9 rounded-full overflow-hidden shrink-0 ring-1 ring-white/20">
+                <img
+                  src="/img/users/juan-carlos.jpg"
+                  alt="Profile"
+                  class="w-full h-full object-cover"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />
+                <div class="hidden w-full h-full items-center justify-center text-[10px] font-semibold text-white/70 bg-white/10">JC</div>
+              </div>
+              <svg class="w-3 h-3 text-white/60 transition-transform profile-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+
+            <div id="profileMenu" class="hidden absolute right-0 mt-1.5 overflow-hidden z-[9999] profile-dropdown">
+
+              <!-- Profile Summary (non-clickable) -->
+              <div class="px-4 py-3.5 border-b border-white/15">
+                <div class="flex items-center gap-3">
+                  <div class="relative w-9 h-9 rounded-full overflow-hidden shrink-0 ring-1 ring-white/20">
+                    <img
+                      src="/img/users/juan-carlos.jpg"
+                      alt="Profile"
+                      class="w-full h-full object-cover"
+                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                    />
+                    <div class="hidden w-full h-full items-center justify-center text-xs font-semibold text-white/70 bg-white/10">JC</div>
+                  </div>
+                  <div class="leading-tight">
+                    <p class="text-sm font-bold text-white">Juan Carlos Martin</p>
+                    <p class="text-xs text-white/65 font-medium">Computer Science</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Divider under profile header -->
+              <div class="h-px bg-white/15"></div>
+
+              <!-- Settings Section -->
+              <a href="/student/profile" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors">
+                <div class="w-9 h-9 rounded-lg bg-white/10 border border-white/10 grid place-items-center flex-shrink-0">
+                  <i class="fa-regular fa-user text-white/80 text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-white">Settings</p>
+                  <p class="text-xs text-white/65 font-normal">Edit account details</p>
+                </div>
+              </a>
+
+              <!-- Divider -->
+              <div class="h-px bg-white/10 my-1"></div>
+
+              <!-- Logout (Destructive) - Stronger divider above -->
+              <div class="h-px bg-white/20"></div>
+              <a href="/student/logout" class="flex items-center gap-3 px-4 py-3 hover:bg-red-500/15 transition-colors text-red-400 group">
+                <div class="w-9 h-9 rounded-lg bg-red-500/15 border border-red-500/20 grid place-items-center flex-shrink-0">
+                  <i class="fa-solid fa-right-from-bracket text-base text-red-400"></i>
+                </div>
+                <p class="text-sm font-semibold text-red-400">Logout</p>
+              </a>
+            </div>
+          </div>
+
+          <!-- Mobile Menu Toggle -->
+          <button id="mobile-menu-btn" class="lg:hidden btn-icon ml-1">
+            <i class="fas fa-bars"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu" class="mobile-menu">
+      <div class="mobile-menu-content">
+        <a href="#" class="nav-link text-base">Dashboard</a>
+        <a href="#" class="nav-link text-base">Discover</a>
+        <a href="#" class="nav-link text-base">My Clubs</a>
+        <a href="#" class="nav-link text-base">Events</a>
+        <hr class="border-white/10 my-2">
+        <a href="#" class="nav-link text-base">Profile Settings</a>
+        <a href="#" class="nav-link text-red-400 text-base">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== HERO SECTION ===== -->
+  <section class="pt-20 pb-8 sm:pt-16 sm:pb-12 md:pt-12 md:pb-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+    <!-- Background Elements -->
+    <div class="absolute -top-40 -right-40 w-80 h-80 bg-red-900/20 rounded-full blur-3xl opacity-50 -z-10"></div>
+    <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-900/20 rounded-full blur-3xl opacity-50 -z-10"></div>
+
+    <div class="max-w-7xl mx-auto">
+      <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        <!-- Left Content -->
+        <div class="space-y-4 sm:space-y-6 animate-fade-in-left">
+          <div>
+            <p class="text-xs sm:text-sm font-semibold text-transparent bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text mb-2 sm:mb-4">
+              ✨ Welcome Back
+            </p>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+              Hi, Juan Carlos<span class="hidden sm:inline"> 👋</span>
+            </h1>
+          </div>
+
+          <p class="text-sm sm:text-base text-meta leading-relaxed max-w-md">
+            Find clubs, track events, and stay involved.
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6">
+            <button class="btn-primary group w-full sm:w-auto">
+              <span class="flex items-center justify-center gap-2">
+                Explore Clubs
+                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+              </span>
+            </button>
+            <a href="#" class="text-center sm:text-left text-white/80 hover:text-white text-sm font-medium transition-colors flex items-center justify-center sm:justify-start gap-2">
+              <i class="fas fa-calendar text-xs"></i>
+              View Events
+            </a>
+          </div>
+
+          <!-- Quick Stats - Mobile: 2+1 grid, Tablet: horizontal row, Desktop: 3 columns -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:flex md:flex-row md:gap-4 gap-3 sm:gap-4 pt-6 sm:pt-8">
+            <div class="stat-card md:flex-1">
+              <div>
+                <div class="stat-value">3</div>
+                <div class="stat-label">Clubs Joined</div>
+              </div>
+              <div class="text-tertiary text-xs mt-1 hidden md:block">1 new this week</div>
+            </div>
+            <div class="stat-card md:flex-1">
+              <div>
+                <div class="stat-value">12</div>
+                <div class="stat-label">Events Attended</div>
+              </div>
+              <div class="text-tertiary text-xs mt-1 hidden md:block">Streak: 2 weeks active</div>
+            </div>
+            <div class="stat-card col-span-2 sm:col-span-1 md:flex-1">
+              <div>
+                <div class="stat-value">340</div>
+                <div class="stat-label">Points</div>
+              </div>
+              <div class="text-tertiary text-xs mt-1 hidden md:block">+40 this month</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Visual Card - Quick Actions (moved after stats on mobile, stays right on tablet+) -->
+        <div class="animate-fade-in-right order-3 lg:order-2 mt-6 lg:mt-0">
+          <div class="card" style="background: rgba(255, 255, 255, 0.14);">
+            <h3 class="card-title mb-5">Quick Actions</h3>
+
+            <div class="quick-actions-container">
+              <!-- Primary Action - Emphasized -->
+              <button class="card-inner w-full text-left group flex items-center justify-between bg-gradient-brand/15 border border-red-500/30 relative">
+                <span class="flex items-center gap-3">
+                  <div class="w-12 h-12 rounded-lg bg-gradient-brand flex items-center justify-center text-white flex-shrink-0">
+                    <i class="fas fa-compass"></i>
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="card-title block">Discover Clubs</span>
+                      <span class="badge badge-neutral text-[10px] px-1.5 py-0.5">Suggested</span>
+                    </div>
+                    <span class="text-secondary text-xs">Find new organizations</span>
+                  </div>
+                </span>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <!-- Secondary Actions -->
+              <button class="card-inner w-full text-left group flex items-center justify-between">
+                <span class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 flex-shrink-0">
+                    <i class="fas fa-message text-sm relative">
+                      <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">3</span>
+                    </i>
+                  </div>
+                  <span class="card-title">Messages</span>
+                </span>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <button class="card-inner w-full text-left group flex items-center justify-between">
+                <span class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center text-orange-400 flex-shrink-0">
+                    <i class="fas fa-calendar-days text-sm"></i>
+                  </div>
+                  <span class="card-title">Upcoming Events</span>
+                </span>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+
+              <button class="card-inner w-full text-left group flex items-center justify-between">
+                <span class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 flex-shrink-0">
+                    <i class="fas fa-bullhorn text-sm relative">
+                      <span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center text-white font-bold">2</span>
+                    </i>
+                  </div>
+                  <span class="card-title">Announcements</span>
+                </span>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ACTIVITY & ACHIEVEMENTS ===== -->
+  <section class="spacing-section px-4 sm:px-6 lg:px-8 relative">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+        <!-- Activity Feed -->
+        <div class="md:col-span-1 lg:col-span-2 fade-in-on-scroll">
+          <div class="card">
+            <div class="flex items-baseline justify-between mb-6">
+              <h2 class="section-header">Recent Activity</h2>
+              <a href="#" class="btn-link">See full activity →</a>
+            </div>
+
+            <div class="space-y-3">
+              <!-- Activity Item 1 -->
+              <div class="card-inner">
+                <div class="flex items-start gap-3">
+                  <div class="activity-icon bg-gradient-brand text-white">
+                    <i class="fas fa-plus"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2 mb-1">
+                      <p class="card-title">You joined AI Research Group</p>
+                      <span class="badge badge-success">New</span>
+                    </div>
+                    <p class="text-secondary text-sm sm:text-base">Explore machine learning and neural networks <span class="text-tertiary">· 2h ago</span></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Activity Item 2 -->
+              <div class="card-inner">
+                <div class="flex items-start gap-3">
+                  <div class="activity-icon bg-blue-500/30 text-blue-300">
+                    <i class="fas fa-check"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2 mb-1">
+                      <p class="card-title">Attended Tech Innovators Workshop</p>
+                      <span class="badge badge-info">Attended</span>
+                    </div>
+                    <p class="text-secondary text-sm sm:text-base">You marked attendance for this event <span class="text-tertiary">· 6h ago</span></p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Activity Item 3 - Hidden on mobile, show only 2 -->
+              <div class="card-inner hidden sm:block">
+                <div class="flex items-start gap-3">
+                  <div class="activity-icon bg-purple-500/30 text-purple-300">
+                    <i class="fas fa-star"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-2 mb-1">
+                      <p class="card-title">Promoted to Vice President</p>
+                      <span class="badge badge-warning">Role</span>
+                    </div>
+                    <p class="text-secondary text-sm sm:text-base">Congratulations! You've been promoted in Drama Society <span class="text-tertiary">· 1d ago</span></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Achievements -->
+        <div class="md:col-span-1 fade-in-on-scroll">
+          <div class="card">
+            <h2 class="section-header mb-6">Achievements</h2>
+
+            <div class="space-y-2 sm:space-y-3">
+              <!-- Achievement 1 - Earned -->
+              <div class="card-inner border border-green-500/15 bg-green-500/8 py-3 sm:py-4">
+                <div class="flex items-start gap-2 sm:gap-3">
+                  <div class="text-lg sm:text-xl">🌟</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <p class="card-title">Club Starter</p>
+                      <i class="fas fa-check-circle text-green-400 text-sm"></i>
+                    </div>
+                    <p class="text-secondary text-sm line-clamp-1">Joined your first club</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Achievement 2 (In Progress) -->
+              <div class="card-inner py-3 sm:py-4">
+                <div class="flex items-start gap-2 sm:gap-3 mb-1.5 sm:mb-2">
+                  <div class="text-lg sm:text-xl">🎯</div>
+                  <div class="flex-1 min-w-0">
+                    <p class="card-title">Event Enthusiast</p>
+                    <p class="text-secondary text-sm line-clamp-1">Attend 5 events</p>
+                  </div>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-bar-fill" style="width: 60%"></div>
+                </div>
+                <p class="progress-label text-xs sm:text-sm">3/5 events — 2 more for badge</p>
+              </div>
+
+              <!-- Achievement 3 (Locked) - Hidden on mobile, show only 2 -->
+              <div class="card-inner opacity-85 border border-white/10 py-3 sm:py-4 hidden sm:block">
+                <div class="flex items-start gap-2 sm:gap-3">
+                  <div class="text-lg sm:text-xl">🏆</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                      <p class="card-title">Club Leader</p>
+                      <i class="fas fa-lock text-white/40 text-xs"></i>
+                    </div>
+                    <p class="text-secondary text-sm line-clamp-1">Become a club officer</p>
+                    <p class="text-tertiary mt-1.5 text-xs">0/1 roles — <span class="text-white/70">Join a club as officer →</span></p>
+                  </div>
+                </div>
+              </div>
+
+              <a href="#" class="block text-center py-2 btn-link text-sm sm:text-base">
+                View all achievements →
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== CLUBS SECTION ===== -->
+  <section class="spacing-section px-4 sm:px-6 lg:px-8" style="padding-top: 32px; padding-bottom: 32px;">
+    <div class="max-w-7xl mx-auto">
+      <!-- Section Header -->
+      <div class="mb-8">
+        <h2 class="section-header fade-in-on-scroll">Your Clubs & Recommendations</h2>
+        <p class="text-meta mt-2 fade-in-on-scroll">Discover new communities and stay engaged with your favorite organizations</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-8">
+        <!-- Your Active Clubs -->
+        <div class="card fade-in-on-scroll">
+          <h3 class="card-title mb-6">Your Active Clubs</h3>
+
+          <div class="space-y-3">
+            <!-- Club Card 1 -->
+            <div class="card-inner group py-3 sm:py-4">
+              <div class="flex items-start gap-2 sm:gap-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-accent-purple flex items-center justify-center text-white flex-shrink-0">
+                  <i class="fas fa-laptop-code text-sm sm:text-base"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="card-title line-clamp-1">Tech Innovators Club</p>
+                  <p class="text-secondary text-sm mt-0.5 hidden sm:block">Most active this week</p>
+                  <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs">
+                    <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i>142</span>
+                    <span class="text-tertiary">·</span>
+                    <span class="flex items-center gap-1"><i class="fas fa-calendar text-[10px]"></i>2 events</span>
+                  </div>
+                </div>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Club Card 2 -->
+            <div class="card-inner group py-3 sm:py-4">
+              <div class="flex items-start gap-2 sm:gap-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-accent-green flex items-center justify-center text-white flex-shrink-0">
+                  <i class="fas fa-theater-masks text-sm sm:text-base"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="card-title line-clamp-1">Drama Society</p>
+                  <p class="text-secondary text-sm mt-0.5 hidden sm:block">Your leadership role</p>
+                  <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs">
+                    <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i>87</span>
+                    <span class="text-tertiary">·</span>
+                    <span class="flex items-center gap-1"><i class="fas fa-calendar text-[10px]"></i>3 events</span>
+                  </div>
+                </div>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Club Card 3 - Hidden on mobile, show only 2 -->
+            <div class="card-inner group py-3 sm:py-4 hidden sm:block">
+              <div class="flex items-start gap-2 sm:gap-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-accent-orange flex items-center justify-center text-white flex-shrink-0">
+                  <i class="fas fa-code text-sm sm:text-base"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="card-title line-clamp-1">Coding Squad</p>
+                  <p class="text-secondary text-sm mt-0.5 hidden sm:block">Recently joined</p>
+                  <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs">
+                    <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i>203</span>
+                    <span class="text-tertiary">·</span>
+                    <span class="flex items-center gap-1"><i class="fas fa-calendar text-[10px]"></i>4 events</span>
+                  </div>
+                </div>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <a href="#" class="block mt-6 text-center py-2 btn-link">
+            Manage my clubs →
+          </a>
+        </div>
+
+        <!-- Recommended Clubs -->
+        <div class="card fade-in-on-scroll">
+          <h3 class="card-title mb-6">Recommended For You</h3>
+
+          <div class="space-y-3">
+            <!-- Recommended Club 1 -->
+            <div class="card-inner group py-3 sm:py-4">
+              <div class="flex items-start gap-2 sm:gap-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-accent-blue flex items-center justify-center text-white flex-shrink-0">
+                  <i class="fas fa-robot text-sm sm:text-base"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-1.5 sm:gap-2 mb-0.5">
+                    <p class="card-title line-clamp-1">Robotics Club</p>
+                    <span class="badge badge-info">New</span>
+                  </div>
+                  <p class="text-secondary text-sm line-clamp-1 hidden sm:block">Build and compete with autonomous robots</p>
+                  <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs flex-wrap">
+                    <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i>48</span>
+                    <span class="text-tertiary">·</span>
+                    <span class="flex items-center gap-1"><i class="fas fa-lightning text-[10px]"></i>Tech</span>
+                    <span class="text-tertiary hidden sm:inline">·</span>
+                    <span class="text-tertiary hidden sm:inline">Dec 22</span>
+                  </div>
+                </div>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Recommended Club 2 -->
+            <div class="card-inner group py-3 sm:py-4">
+              <div class="flex items-start gap-2 sm:gap-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-brand flex items-center justify-center text-white flex-shrink-0">
+                  <i class="fas fa-gamepad text-sm sm:text-base"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="card-title line-clamp-1">Game Dev Guild</p>
+                  <p class="text-secondary text-sm line-clamp-1 hidden sm:block">Create games from concept to launch</p>
+                  <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs flex-wrap">
+                    <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i>67</span>
+                    <span class="text-tertiary">·</span>
+                    <span class="flex items-center gap-1"><i class="fas fa-palette text-[10px]"></i>Creative</span>
+                    <span class="text-tertiary hidden sm:inline">·</span>
+                    <span class="text-tertiary hidden sm:inline">Matches interests</span>
+                  </div>
+                </div>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Recommended Club 3 - Hidden on mobile, show only 2 -->
+            <div class="card-inner group py-3 sm:py-4 hidden sm:block">
+              <div class="flex items-start gap-2 sm:gap-3">
+                <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-accent-green flex items-center justify-center text-white flex-shrink-0">
+                  <i class="fas fa-brain text-sm sm:text-base"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-1.5 sm:gap-2 mb-0.5">
+                    <p class="card-title line-clamp-1">AI Research Group</p>
+                    <span class="badge badge-neutral">Popular</span>
+                  </div>
+                  <p class="text-secondary text-sm line-clamp-1 hidden sm:block">Explore machine learning and neural networks</p>
+                  <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs flex-wrap">
+                    <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i>92</span>
+                    <span class="text-tertiary">·</span>
+                    <span class="flex items-center gap-1"><i class="fas fa-flask text-[10px]"></i>Research</span>
+                    <span class="text-tertiary hidden sm:inline">·</span>
+                    <span class="text-tertiary hidden sm:inline">Active this week</span>
+                  </div>
+                </div>
+                <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <a href="#" class="block mt-6 text-center py-2 btn-link">
+            Browse recommendations →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="border-t border-white/10 py-12 md:py-8 px-4 sm:px-6 lg:px-8 mt-20">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-4 gap-6 md:gap-4 mb-8">
+        <!-- Brand -->
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 bg-gradient-brand rounded-lg flex items-center justify-center text-white font-bold">
+              U
+            </div>
+            <p class="text-white font-bold">UniClub</p>
+          </div>
+          <p class="text-sm text-white/60">Connect, Grow, and Create Memories Together</p>
+        </div>
+
+        <!-- Links -->
+        <div>
+          <h4 class="text-white font-bold mb-4">Product</h4>
+          <ul class="space-y-2 text-sm text-white/60">
+            <li><a href="#" class="hover:text-white transition-colors">Clubs</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Events</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Achievements</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Messages</a></li>
+          </ul>
+        </div>
+
+        <!-- Company -->
+        <div>
+          <h4 class="text-white font-bold mb-4">Company</h4>
+          <ul class="space-y-2 text-sm text-white/60">
+            <li><a href="#" class="hover:text-white transition-colors">About</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Blog</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Contact</a></li>
+            <li><a href="#" class="hover:text-white transition-colors">Support</a></li>
+          </ul>
+        </div>
+
+        <!-- Social -->
+        <div>
+          <h4 class="text-white font-bold mb-4">Follow Us</h4>
+          <div class="flex gap-3">
+            <button class="btn-icon">
+              <i class="fab fa-facebook"></i>
+            </button>
+            <button class="btn-icon">
+              <i class="fab fa-twitter"></i>
+            </button>
+            <button class="btn-icon">
+              <i class="fab fa-instagram"></i>
+            </button>
+            <button class="btn-icon">
+              <i class="fab fa-linkedin"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="border-t border-white/10 pt-8 flex flex-col sm:flex-row justify-between items-center">
+        <p class="text-sm text-white/60">© 2024 UniClub — University of Mindanao.  All rights reserved.</p>
+        <div class="flex gap-6 mt-4 sm:mt-0 text-sm text-white/60">
+          <a href="#" class="hover:text-white transition-colors">Privacy Policy</a>
+          <a href="#" class="hover:text-white transition-colors">Terms of Service</a>
+          <a href="#" class="hover:text-white transition-colors">Cookie Settings</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ===== MOBILE MENU ===== 
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    mobileMenuBtn.addEventListener('click', () => {
+      mobileMenu.classList.toggle('active');
+    });
+
+    // Close menu when clicking on links
+    mobileMenu.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', () => {
+        mobileMenu.classList.remove('active');
+      });
+    });
+
+    // ===== PROFILE DROPDOWN =====
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+
+    function closeProfileMenu() {
+      if (profileMenu) {
+        profileMenu.classList.add('hidden');
+        if (profileBtn) {
+          profileBtn.setAttribute('aria-expanded', 'false');
+        }
+      }
+    }
+
+    function openProfileMenu() {
+      if (profileMenu) {
+        profileMenu.classList.remove('hidden');
+        if (profileBtn) {
+          profileBtn.setAttribute('aria-expanded', 'true');
+        }
+      }
+    }
+
+    profileBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !profileMenu?.classList.contains('hidden');
+      if (isOpen) {
+        closeProfileMenu();
+      } else {
+        openProfileMenu();
+      }
+    });
+
+    // Close profile menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!profileMenu?.contains(e.target) && !profileBtn?.contains(e.target)) {
+        closeProfileMenu();
+      }
+    });
+
+    // Close profile menu on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeProfileMenu();
+      }
+    });
+
+    // ===== NAVBAR SCROLL EFFECT ===== 
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    });
+
+    // ===== SCROLL ANIMATIONS ===== 
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.fade-in-on-scroll').forEach(el => {
+      observer.observe(el);
+    });
+
+    // ===== STAGGER ANIMATION ===== 
+    document.querySelectorAll('[style*="animation-delay"]').forEach((el, index) => {
+      if (!el.style.animationDelay) {
+        el.style.animationDelay = `${index * 0.1}s`;
+      }
+    });
+
+    // ===== SMOOTH SCROLL ===== 
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    // ===== PAGE LOAD ANIMATION ===== 
+    window.addEventListener('load', () => {
+      document.body.style.opacity = '0';
+      document.body.style.transition = 'opacity 0.6s ease-in';
+      setTimeout(() => {
+        document.body.style.opacity = '1';
+      }, 100);
+    });
+  </script>
+</body>
+</html>

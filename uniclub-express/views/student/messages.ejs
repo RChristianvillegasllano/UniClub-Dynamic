@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title>Messages | UniClub</title>
+  <%
+    if (typeof conversations === 'undefined') {
+      conversations = [];
+    }
+    if (typeof activeConversation === 'undefined') {
+      activeConversation = null;
+    }
+    if (typeof activeMessages === 'undefined') {
+      activeMessages = [];
+    }
+    if (typeof clubs === 'undefined') {
+      clubs = [];
+    }
+    if (typeof announcements === 'undefined') {
+      announcements = [];
+    }
+    if (typeof unreadMessagesCount === 'undefined') {
+      unreadMessagesCount = 0;
+    }
+  %>
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+  
+  <!-- CRITICAL ANTI-FLICKER: Block rendering until theme is set -->
+  <script>
+    // This script MUST run synchronously - blocks all rendering
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      
+      // Set theme attribute immediately for CSS to use
+      html.setAttribute('data-theme', theme);
+      
+      // Apply theme class immediately
+      if (theme === 'light') {
+        html.classList.add('light-mode');
+      } else {
+        html.classList.remove('light-mode');
+      }
+      
+      // Set background colors inline with !important - overrides all CSS
+      if (theme === 'light') {
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+      } else {
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+      }
+    })();
+  </script>
+  
+  <!-- Blocking inline CSS that uses theme attribute -->
+  <style>
+    /* Set background based on data-theme attribute - prevents dark flash */
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f8fafc !important;
+    }
+    html[data-theme="dark"],
+    html:not([data-theme]) body {
+      background-color: #0a0f1a !important;
+    }
+    /* Hide body until it's ready */
+    body:not([data-theme-ready]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+    body[data-theme-ready] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.1s ease;
+    }
+  </style>
+
+  <!-- Apply theme to body once it exists -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      
+      function applyThemeToBody() {
+        if (!document.body) return;
+        
+        if (theme === 'light') {
+          document.body.classList.add('light-mode');
+          document.body.style.setProperty('background-color', '#f8fafc', 'important');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.style.setProperty('background-color', '#0a0f1a', 'important');
+        }
+        
+        // Mark body as ready
+        document.body.setAttribute('data-theme-ready', 'true');
+      }
+      
+      // Try immediately
+      if (document.body) {
+        applyThemeToBody();
+      } else {
+        // Watch for body creation
+        const observer = new MutationObserver(function(mutations) {
+          if (document.body) {
+            applyThemeToBody();
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        
+        // Fallback on DOMContentLoaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyThemeToBody);
+        }
+      }
+    })();
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      scroll-behavior: smooth;
+    }
+
+    body { 
+      background:#0a0f1a; 
+      font-family: 'Inter', system-ui, sans-serif;
+      color: white;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    body > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    body.light-mode::before {
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      opacity: 1;
+      z-index: 0;
+    }
+
+    body.light-mode {
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    body.light-mode main {
+      background: #f8fafc !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode main.bg-\[#0a0f1a\] {
+      background: #f8fafc !important;
+    }
+
+    body.light-mode .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-white\/80,
+    body.light-mode .text-white\/70,
+    body.light-mode .text-white\/60 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .text-white\/90,
+    body.light-mode .text-white\/85,
+    body.light-mode .text-white\/75,
+    body.light-mode .text-white\/65,
+    body.light-mode .text-white\/50,
+    body.light-mode .text-white\/40,
+    body.light-mode .text-white\/30,
+    body.light-mode .text-white\/20 {
+      color: #64748b !important;
+    }
+
+    /* All headings */
+    body.light-mode h1,
+    body.light-mode h2,
+    body.light-mode h3,
+    body.light-mode h4,
+    body.light-mode h5,
+    body.light-mode h6 {
+      color: #1e293b !important;
+    }
+
+    /* All text elements inherit properly */
+    body.light-mode p,
+    body.light-mode span,
+    body.light-mode label,
+    body.light-mode a,
+    body.light-mode div {
+      color: inherit;
+    }
+
+    /* Navbar Styles */
+    #navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+    }
+
+    body.light-mode #navbar {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .nav-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      position: relative;
+      padding: 8px 0;
+      text-decoration: none;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C62828;
+      transition: width 0.2s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .nav-link.active::after {
+      width: 100%;
+      background: #C62828;
+    }
+
+    body.light-mode .nav-link {
+      color: #475569;
+    }
+
+    body.light-mode .nav-link:hover,
+    body.light-mode .nav-link.active {
+      color: #1e293b;
+    }
+
+    body.light-mode .nav-link.active::after {
+      background: #C62828;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    body.light-mode .btn-icon {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    body.light-mode .btn-icon:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: #1e293b;
+    }
+
+    /* Ensure icons inside btn-icon are visible */
+    body.light-mode .btn-icon i {
+      color: #1e293b;
+    }
+
+    body.light-mode .btn-icon svg {
+      color: #1e293b;
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: #C62828;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .profile-dropdown {
+      background: rgba(30, 41, 59, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      min-width: 280px;
+      max-width: 320px;
+      overflow: hidden;
+    }
+
+    body.light-mode .profile-dropdown {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/65,
+    body.light-mode .profile-dropdown .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    .mobile-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: rgba(30, 41, 59, 0.98);
+      backdrop-filter: blur(32px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+      z-index: 40;
+    }
+
+    .mobile-menu.active {
+      max-height: 500px;
+      display: block !important;
+    }
+
+    body.light-mode .mobile-menu {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Messages Layout */
+    .messages-container {
+      display: flex;
+      height: calc(100vh - 80px);
+      max-height: calc(100vh - 80px);
+    }
+
+    .conversations-sidebar {
+      width: 30%;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      background: rgba(15, 23, 42, 0.5);
+    }
+
+    body.light-mode .conversations-sidebar {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-right-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    .conversation-view {
+      width: 70%;
+      display: flex;
+      flex-direction: column;
+      background: rgba(10, 15, 26, 0.3);
+    }
+
+    body.light-mode .conversation-view {
+      background: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    .conversation-item {
+      padding: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    body.light-mode .conversation-item {
+      border-bottom-color: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .conversation-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    body.light-mode .conversation-item:hover {
+      background: rgba(0, 0, 0, 0.04) !important;
+    }
+
+    .conversation-item.active {
+      background: rgba(198, 40, 40, 0.1);
+      border-left: 3px solid #C62828;
+    }
+
+    body.light-mode .conversation-item.active {
+      background: rgba(198, 40, 40, 0.12) !important;
+      border-left-color: #C62828 !important;
+    }
+
+    .unread-badge {
+      background: #C62828;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 12px;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .online-indicator {
+      width: 10px;
+      height: 10px;
+      background: #10b981;
+      border-radius: 50%;
+      border: 2px solid rgba(15, 23, 42, 0.8);
+    }
+
+    body.light-mode .online-indicator {
+      border-color: rgba(255, 255, 255, 0.9);
+    }
+
+    .message-bubble {
+      max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      margin-bottom: 8px;
+      word-wrap: break-word;
+    }
+
+    .message-bubble.sent {
+      background: rgba(198, 40, 40, 0.2);
+      margin-left: auto;
+      border-bottom-right-radius: 4px;
+    }
+
+    body.light-mode .message-bubble.sent {
+      background: rgba(198, 40, 40, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    .message-bubble.received {
+      background: rgba(255, 255, 255, 0.08);
+      margin-right: auto;
+      border-bottom-left-radius: 4px;
+      color: white;
+    }
+
+    body.light-mode .message-bubble.received {
+      background: rgba(0, 0, 0, 0.05) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .message-bubble.sent {
+      background: rgba(198, 40, 40, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    /* Message bubble text visibility in light mode */
+    body.light-mode .message-bubble.sent .text-white\/90,
+    body.light-mode .message-bubble.received .text-white\/90 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .message-bubble.sent p,
+    body.light-mode .message-bubble.received p {
+      color: #1e293b !important;
+    }
+
+    .messages-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    .message-input-area {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      background: rgba(15, 23, 42, 0.3);
+    }
+
+    body.light-mode .message-input-area {
+      border-top-color: rgba(0, 0, 0, 0.1) !important;
+      background: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    .message-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      font-family: inherit;
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    body.light-mode .message-textarea {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    .message-textarea:focus {
+      border-color: #C62828;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    body.light-mode .message-textarea:focus {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .filter-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    body.light-mode .filter-tab {
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #64748b;
+    }
+
+    .filter-tab.active {
+      background: rgba(198, 40, 40, 0.2);
+      border-color: #C62828;
+      color: white;
+    }
+
+    body.light-mode .filter-tab.active {
+      background: rgba(198, 40, 40, 0.15);
+      color: #1e293b;
+    }
+
+    /* Footer Light Mode */
+    body.light-mode footer {
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode footer .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode footer .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode footer a:hover {
+      color: #1e293b !important;
+    }
+
+    /* Messages Area Light Mode */
+    body.light-mode .messages-area {
+      background: transparent !important;
+    }
+
+    /* Online Status Light Mode */
+    body.light-mode .text-green-400 {
+      color: #10b981 !important;
+    }
+
+    /* Search Input Light Mode */
+    body.light-mode input::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode select {
+      color: #1e293b !important;
+    }
+
+    /* Profile dropdown icons light mode */
+    body.light-mode .profile-dropdown i,
+    body.light-mode .profile-dropdown svg {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    /* Profile dropdown icon container borders light mode */
+    body.light-mode .profile-dropdown .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-red-500\/20 {
+      border-color: rgba(239, 68, 68, 0.25) !important;
+    }
+
+    /* Profile dropdown icon container backgrounds light mode */
+    body.light-mode .profile-dropdown .bg-white\/10 {
+      background-color: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .bg-red-500\/15 {
+      background: rgba(239, 68, 68, 0.1) !important;
+    }
+
+    /* Profile dropdown dividers light mode */
+    body.light-mode .profile-dropdown .h-px.bg-white\/10,
+    body.light-mode .profile-dropdown .h-px.bg-white\/15,
+    body.light-mode .profile-dropdown .h-px.bg-white\/20 {
+      background: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Profile dropdown hover states light mode */
+    body.light-mode .profile-dropdown a:hover,
+    body.light-mode .profile-dropdown button:hover {
+      background-color: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-white\/5:hover {
+      background-color: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-red-500\/15:hover {
+      background-color: rgba(239, 68, 68, 0.15) !important;
+    }
+
+    /* Profile caret light mode */
+    body.light-mode .profile-caret {
+      color: #64748b !important;
+    }
+
+    body.light-mode .profile-pill[aria-expanded="true"] .profile-caret {
+      color: #1e293b !important;
+    }
+
+    /* Notification dropdown icons light mode */
+    body.light-mode #notificationMenu i {
+      color: #1e293b !important;
+    }
+
+    body.light-mode #notificationMenu .text-red-400 {
+      color: #C62828 !important;
+    }
+
+    body.light-mode select option {
+      background: white !important;
+      color: #1e293b !important;
+    }
+
+    /* Conversation item text - ensure all is visible */
+    body.light-mode .conversation-item * {
+      color: inherit;
+    }
+
+    body.light-mode .conversation-item .text-white,
+    body.light-mode .conversation-item .text-white\/70,
+    body.light-mode .conversation-item .text-white\/60,
+    body.light-mode .conversation-item .text-white\/50,
+    body.light-mode .conversation-item .text-white\/40 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .conversation-item .font-semibold,
+    body.light-mode .conversation-item .font-bold {
+      color: #1e293b !important;
+    }
+
+    /* Message bubbles text */
+    body.light-mode .message-bubble {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .message-bubble * {
+      color: inherit;
+    }
+
+    body.light-mode .message-bubble .text-white\/90,
+    body.light-mode .message-bubble .text-white\/70,
+    body.light-mode .message-bubble .text-white\/60,
+    body.light-mode .message-bubble .text-white\/40 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .message-bubble .font-semibold {
+      color: #1e293b !important;
+    }
+
+    /* Unread badge */
+    body.light-mode .unread-badge {
+      background: #C62828 !important;
+      color: white !important;
+    }
+
+    /* Filter tabs text */
+    body.light-mode .filter-tab {
+      color: #64748b !important;
+    }
+
+    body.light-mode .filter-tab.active {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .filter-tab span {
+      color: inherit;
+    }
+
+    /* All icons visible */
+    body.light-mode i,
+    body.light-mode .fas,
+    body.light-mode .far {
+      color: inherit;
+    }
+
+    body.light-mode .fa-comments,
+    body.light-mode .fa-search,
+    body.light-mode .fa-tag {
+      color: inherit !important;
+    }
+
+    /* Links */
+    body.light-mode a {
+      color: inherit;
+    }
+
+    body.light-mode a:hover {
+      color: #C62828 !important;
+    }
+
+    /* Input fields comprehensive */
+    body.light-mode input[type="text"],
+    body.light-mode input[type="search"],
+    body.light-mode textarea {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode input[type="text"]:focus,
+    body.light-mode input[type="search"]:focus,
+    body.light-mode textarea:focus {
+      background: rgba(255, 255, 255, 1) !important;
+      border-color: #C62828 !important;
+    }
+
+    /* Select dropdown comprehensive */
+    body.light-mode select {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode select:focus {
+      background: rgba(255, 255, 255, 1) !important;
+      border-color: #C62828 !important;
+    }
+
+    /* Ensure main background */
+    body.light-mode main {
+      background: #f8fafc !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode main.bg-\[#0a0f1a\] {
+      background: #f8fafc !important;
+    }
+
+    /* Message input button */
+    body.light-mode button[type="submit"].bg-red-500 {
+      background: #C62828 !important;
+      color: white !important;
+    }
+
+    body.light-mode button[type="submit"].bg-red-500:hover {
+      background: #B71C1C !important;
+    }
+
+    /* Any remaining text that might be black */
+    body.light-mode .text-black,
+    body.light-mode [class*="text-black"] {
+      color: #1e293b !important;
+    }
+
+    /* Empty state text */
+    body.light-mode .text-center p,
+    body.light-mode .text-center h3 {
+      color: #1e293b !important;
+    }
+
+    /* Date headers in messages */
+    body.light-mode .text-center .text-white\/40 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode .text-center .bg-white\/5 {
+      background: rgba(226, 232, 240, 0.8) !important;
+    }
+
+    /* Message timestamps */
+    body.light-mode .text-xs.text-white\/40 {
+      color: #94a3b8 !important;
+    }
+
+    /* Check double icon in messages */
+    body.light-mode .fa-check-double {
+      color: #94a3b8 !important;
+    }
+
+    /* Conversation header */
+    body.light-mode .conversation-view h3 {
+      color: #1e293b !important;
+    }
+
+    /* Ensure all text in conversation view */
+    body.light-mode .conversation-view * {
+      color: inherit;
+    }
+
+    body.light-mode .conversation-view .text-white {
+      color: #1e293b !important;
+    }
+
+    /* Send button in message input */
+    body.light-mode .bg-red-500 {
+      background: #C62828 !important;
+      color: white !important;
+    }
+
+    body.light-mode .bg-red-500:hover {
+      background: #B71C1C !important;
+    }
+
+    /* Avatar initials */
+    body.light-mode .bg-white\/10 {
+      background: rgba(226, 232, 240, 0.8) !important;
+    }
+
+    @media (max-width: 768px) {
+      .messages-container {
+        flex-direction: column;
+      }
+      
+      .conversations-sidebar {
+        width: 100%;
+        height: 40vh;
+      }
+      
+      .conversation-view {
+        width: 100%;
+        height: 60vh;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen text-white light-mode:text-[#1e293b]">
+  <!-- Shared Student Navigation -->
+  <%- include('../layouts/studentNav', { 
+    currentPath: '/student/messages',
+    student: typeof student !== 'undefined' ? student : {},
+    announcements: typeof announcements !== 'undefined' ? announcements : [],
+    csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : ''
+  }) %>
+
+  <!-- Main Content -->
+  <main class="min-h-screen bg-[#0a0f1a] light-mode:bg-[#f8fafc] light-mode:text-[#1e293b]" style="background: #0a0f1a;">
+    <div class="messages-container">
+      <!-- Conversations Sidebar (30%) -->
+      <div class="conversations-sidebar">
+        <!-- Header -->
+        <div class="p-6 border-b border-white/10 light-mode:border-[#e2e8f0]">
+          <h2 class="text-xl font-bold text-white light-mode:text-[#1e293b] flex items-center gap-2">
+            <i class="fas fa-comments text-red-400"></i>
+            Messages
+          </h2>
+        </div>
+
+        <!-- Search -->
+        <div class="p-4 border-b border-white/10 light-mode:border-[#e2e8f0]">
+          <div class="relative">
+            <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-white/40 light-mode:text-[#94a3b8] text-sm"></i>
+            <input 
+              type="text" 
+              id="searchMessages" 
+              placeholder="Search messages..." 
+              class="w-full pl-10 pr-4 py-2.5 rounded-lg bg-white/5 light-mode:bg-[#f1f5f9] border border-white/10 light-mode:border-[#cbd5e1] text-white light-mode:text-[#1e293b] placeholder-white/40 light-mode:placeholder-[#94a3b8] text-sm focus:outline-none focus:border-red-400 transition-colors"
+            >
+          </div>
+        </div>
+
+        <!-- Filter Tabs -->
+        <div class="px-4 py-3 border-b border-white/10 light-mode:border-[#e2e8f0] flex gap-2">
+          <button class="filter-tab active" data-filter="all">
+            All (<span id="allCount"><%= conversations.length %></span>)
+          </button>
+          <button class="filter-tab" data-filter="unread">
+            Unread (<span id="unreadCount"><%= conversations.filter(c => c.unread_count > 0).length %></span>)
+          </button>
+        </div>
+
+        <!-- Club Filter -->
+        <div class="px-4 py-3 border-b border-white/10 light-mode:border-[#e2e8f0]">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="fas fa-tag text-white/60 light-mode:text-[#64748b] text-xs"></i>
+            <span class="text-xs font-semibold text-white/70 light-mode:text-[#475569]">Filter by Club</span>
+          </div>
+          <select id="clubFilter" class="w-full px-3 py-2 rounded-lg bg-white/5 light-mode:bg-[#f1f5f9] border border-white/10 light-mode:border-[#cbd5e1] text-white light-mode:text-[#1e293b] text-sm focus:outline-none focus:border-red-400 transition-colors">
+            <option value="all">All Clubs</option>
+            <% if (clubs && clubs.length > 0) { %>
+              <% clubs.forEach(club => { %>
+                <option value="<%= club.id %>"><%= club.name %></option>
+              <% }) %>
+            <% } %>
+          </select>
+        </div>
+
+        <!-- Conversations List -->
+        <div class="flex-1 overflow-y-auto">
+          <% if (conversations && conversations.length > 0) { %>
+            <% conversations.forEach((conv, index) => { %>
+              <div 
+                class="conversation-item <%= activeConversation && activeConversation.id === conv.id ? 'active' : '' %>" 
+                data-conversation-id="<%= conv.id %>"
+                data-club-id="<%= conv.club_id %>"
+              >
+                <div class="flex items-start gap-3">
+                  <div class="relative">
+                    <div class="w-12 h-12 rounded-full overflow-hidden bg-white/10 light-mode:bg-[#e2e8f0] flex items-center justify-center flex-shrink-0">
+                      <% if (conv.photo) { %>
+                        <img src="<%= conv.photo %>" alt="<%= conv.name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <% } %>
+                      <div class="<%= conv.photo ? 'hidden' : 'flex' %> w-full h-full items-center justify-center text-sm font-semibold text-white/70 light-mode:text-[#64748b]">
+                        <%= conv.name ? conv.name.charAt(0).toUpperCase() : 'O' %>
+                      </div>
+                    </div>
+                    <% if (conv.is_online) { %>
+                      <div class="online-indicator absolute bottom-0 right-0"></div>
+                    <% } %>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between mb-1">
+                      <p class="text-sm font-semibold text-white light-mode:text-[#1e293b] truncate"><%= conv.name %></p>
+                      <% if (conv.unread_count > 0) { %>
+                        <span class="unread-badge"><%= conv.unread_count %></span>
+                      <% } %>
+                    </div>
+                    <p class="text-xs text-white/60 light-mode:text-[#64748b] mb-1"><%= conv.role %> • <%= conv.club_name %></p>
+                    <p class="text-xs text-white/50 light-mode:text-[#94a3b8] line-clamp-1"><%= conv.last_message || 'No messages yet' %></p>
+                    <p class="text-xs text-white/40 light-mode:text-[#cbd5e1] mt-1">
+                      <% 
+                        if (conv.last_message_time) {
+                          const msgDate = new Date(conv.last_message_time);
+                          const now = new Date();
+                          const diff = now - msgDate;
+                          const minutes = Math.floor(diff / 60000);
+                          const hours = Math.floor(diff / 3600000);
+                          const days = Math.floor(diff / 86400000);
+                          
+                          if (minutes < 1) { %>
+                            Just now
+                          <% } else if (minutes < 60) { %>
+                            <%= minutes %> min<%= minutes > 1 ? 's' : '' %> ago
+                          <% } else if (hours < 24) { %>
+                            <%= hours %> hour<%= hours > 1 ? 's' : '' %> ago
+                          <% } else if (days < 7) { %>
+                            <%= days %> day<%= days > 1 ? 's' : '' %> ago
+                          <% } else { %>
+                            <%= msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                          <% }
+                        }
+                      %>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <div class="p-8 text-center">
+              <i class="fas fa-comments text-4xl text-white/20 light-mode:text-[#cbd5e1] mb-3"></i>
+              <p class="text-sm text-white/60 light-mode:text-[#64748b] mb-2">No messages yet?</p>
+              <p class="text-xs text-white/50 light-mode:text-[#94a3b8] mb-4">Start a conversation with your club officers!</p>
+              <a href="/student/my-clubs" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-semibold transition-colors">
+                Message Club Officers →
+              </a>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Active Conversation View (70%) -->
+      <div class="conversation-view">
+        <% if (activeConversation) { %>
+          <!-- Conversation Header -->
+          <div class="p-6 border-b border-white/10 light-mode:border-[#e2e8f0] flex items-center justify-between bg-transparent light-mode:bg-[rgba(255,255,255,0.95)]">
+            <div class="flex items-center gap-4">
+              <div class="relative">
+                <div class="w-12 h-12 rounded-full overflow-hidden bg-white/10 light-mode:bg-[#e2e8f0] flex items-center justify-center flex-shrink-0">
+                  <% if (activeConversation.photo) { %>
+                    <img src="<%= activeConversation.photo %>" alt="<%= activeConversation.name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <% } %>
+                  <div class="<%= activeConversation.photo ? 'hidden' : 'flex' %> w-full h-full items-center justify-center text-sm font-semibold text-white/70 light-mode:text-[#64748b]">
+                    <%= activeConversation.name ? activeConversation.name.charAt(0).toUpperCase() : 'O' %>
+                  </div>
+                </div>
+                <% if (activeConversation.is_online) { %>
+                  <div class="online-indicator absolute bottom-0 right-0"></div>
+                <% } %>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white light-mode:text-[#1e293b]"><%= activeConversation.name %></h3>
+                <p class="text-sm text-white/60 light-mode:text-[#64748b]"><%= activeConversation.role %> • <%= activeConversation.club_name %></p>
+                <p class="text-xs text-green-400 mt-1 flex items-center gap-1">
+                  <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                  Online
+                </p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="btn-icon" title="Info">
+                <i class="fas fa-info-circle"></i>
+              </button>
+              <button class="btn-icon" title="Call">
+                <i class="fas fa-phone"></i>
+              </button>
+              <button class="btn-icon" title="Video">
+                <i class="fas fa-video"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Messages Area -->
+          <div class="messages-area" id="messagesArea">
+            <% if (activeMessages && activeMessages.length > 0) { %>
+              <% let currentDate = null; %>
+              <% activeMessages.forEach((msg, index) => { %>
+                <% 
+                  const msgDate = new Date(msg.created_at);
+                  const dateStr = msgDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  const isNewDate = currentDate !== dateStr;
+                  currentDate = dateStr;
+                  const isSent = msg.sender_id === student.id;
+                %>
+                <% if (isNewDate) { %>
+                  <div class="text-center my-4">
+                    <span class="text-xs text-white/40 light-mode:text-[#94a3b8] px-3 py-1 rounded-full bg-white/5 light-mode:bg-[#e2e8f0]">
+                      <%= dateStr.toUpperCase() %> • <%= msgDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) %>
+                    </span>
+                  </div>
+                <% } %>
+                <div class="flex <%= isSent ? 'justify-end' : 'justify-start' %> mb-4">
+                  <div class="message-bubble <%= isSent ? 'sent' : 'received' %>">
+                    <% if (!isSent) { %>
+                      <p class="text-xs font-semibold text-white/70 light-mode:text-[#475569] mb-1"><%= msg.sender_name %></p>
+                    <% } %>
+                    <p class="text-sm text-white/90 light-mode:text-[#1e293b] mb-1"><%= msg.content || msg.message %></p>
+                    <div class="flex items-center justify-end gap-1 mt-1">
+                      <span class="text-xs text-white/40 light-mode:text-[#94a3b8]">
+                        <%= msgDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) %>
+                      </span>
+                      <% if (isSent) { %>
+                        <i class="fas fa-check-double text-xs text-white/40 light-mode:text-[#94a3b8]"></i>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            <% } else { %>
+              <div class="flex items-center justify-center h-full">
+                <div class="text-center">
+                  <i class="fas fa-comments text-4xl text-white/20 light-mode:text-[#cbd5e1] mb-3"></i>
+                  <p class="text-sm text-white/60 light-mode:text-[#64748b]">No messages yet</p>
+                  <p class="text-xs text-white/50 light-mode:text-[#94a3b8] mt-1">Start the conversation!</p>
+                </div>
+              </div>
+            <% } %>
+          </div>
+
+          <!-- Message Input Area -->
+          <div class="message-input-area">
+            <textarea 
+              id="messageInput" 
+              class="message-textarea" 
+              placeholder="Type a message..."
+              rows="3"
+            ></textarea>
+            <div class="flex items-center justify-between mt-3">
+              <div class="flex items-center gap-2">
+                <button class="btn-icon" title="Attach">
+                  <i class="fas fa-paperclip"></i>
+                </button>
+                <button class="btn-icon" title="Emoji">
+                  <i class="fas fa-smile"></i>
+                </button>
+                <button class="btn-icon" title="Voice">
+                  <i class="fas fa-microphone"></i>
+                </button>
+              </div>
+              <button 
+                id="sendMessageBtn" 
+                class="px-6 py-2.5 rounded-lg bg-red-500 hover:bg-red-600 text-white font-semibold transition-colors flex items-center gap-2"
+                data-conversation-id="<%= activeConversation.id %>"
+              >
+                Send Message
+                <i class="fas fa-arrow-right text-xs"></i>
+              </button>
+            </div>
+          </div>
+        <% } else { %>
+          <!-- Empty State -->
+          <div class="flex items-center justify-center h-full">
+            <div class="text-center">
+              <i class="fas fa-comments text-6xl text-white/20 light-mode:text-[#cbd5e1] mb-4"></i>
+              <h3 class="text-xl font-bold text-white light-mode:text-[#1e293b] mb-2">Select a conversation</h3>
+              <p class="text-sm text-white/60 light-mode:text-[#64748b]">Choose a conversation from the list to start messaging</p>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 py-6 px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <img src="/img/logo.png" alt="UM Logo" class="w-6 h-6 object-contain">
+          <p class="text-white font-semibold text-sm">UniClub</p>
+        </div>
+        <p class="text-xs text-white/50">© 2024 University of Mindanao</p>
+        <div class="flex gap-4 text-xs text-white/50">
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Privacy</a>
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Helper function to format time ago
+    function formatTimeAgo(date) {
+      const now = new Date();
+      const diff = now - date;
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+
+      if (minutes < 1) return 'Just now';
+      if (minutes < 60) return `${minutes} min${minutes > 1 ? 's' : ''} ago`;
+      if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      if (days < 7) return `${days} day${days > 1 ? 's' : ''} ago`;
+      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // Profile and Notification Dropdowns are handled by the shared navbar component (studentNav.ejs)
+
+    // Conversation Selection
+    document.querySelectorAll('.conversation-item').forEach(item => {
+      item.addEventListener('click', function() {
+        const conversationId = this.dataset.conversationId;
+        if (conversationId) {
+          window.location.href = `/student/messages?conversation=${conversationId}`;
+        }
+      });
+    });
+
+    // Filter Tabs
+    document.querySelectorAll('.filter-tab').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+        this.classList.add('active');
+        const filter = this.dataset.filter;
+        filterConversations(filter);
+      });
+    });
+
+    // Club Filter
+    document.getElementById('clubFilter')?.addEventListener('change', function() {
+      filterConversations();
+    });
+
+    // Search
+    document.getElementById('searchMessages')?.addEventListener('input', function() {
+      filterConversations();
+    });
+
+    function filterConversations(filterType = null) {
+      const filterTypeValue = filterType || document.querySelector('.filter-tab.active')?.dataset.filter || 'all';
+      const clubFilter = document.getElementById('clubFilter')?.value || 'all';
+      const searchQuery = document.getElementById('searchMessages')?.value.toLowerCase() || '';
+
+      document.querySelectorAll('.conversation-item').forEach(item => {
+        const isUnread = item.querySelector('.unread-badge');
+        const clubId = item.dataset.clubId;
+        const text = item.textContent.toLowerCase();
+
+        let show = true;
+
+        // Filter by type
+        if (filterTypeValue === 'unread' && !isUnread) {
+          show = false;
+        }
+
+        // Filter by club
+        if (clubFilter !== 'all' && clubId !== clubFilter) {
+          show = false;
+        }
+
+        // Filter by search
+        if (searchQuery && !text.includes(searchQuery)) {
+          show = false;
+        }
+
+        item.style.display = show ? 'block' : 'none';
+      });
+    }
+
+    // Send Message
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+    const messageInput = document.getElementById('messageInput');
+
+    sendMessageBtn?.addEventListener('click', async function() {
+      const conversationId = this.dataset.conversationId;
+      const message = messageInput?.value.trim();
+
+      if (!message || !conversationId) return;
+
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+      try {
+        const response = await fetch('/student/messages/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            message: message
+          })
+        });
+
+        if (response.ok) {
+          messageInput.value = '';
+          // Reload page to show new message
+          window.location.reload();
+        } else {
+          alert('Failed to send message. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+        alert('Failed to send message. Please try again.');
+      }
+    });
+
+    messageInput?.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessageBtn?.click();
+      }
+    });
+
+    // Auto-scroll to bottom of messages
+    const messagesArea = document.getElementById('messagesArea');
+    if (messagesArea) {
+      messagesArea.scrollTop = messagesArea.scrollHeight;
+    }
+
+    // Theme toggle functionality is handled by the shared navbar component (studentNav.ejs)
+  </script>
+</body>
+</html>

@@ -5,17 +5,158 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Edit Student | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="/styles/table.css" />
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+
+    /* Toast Notification Styles */
+    #toastContainer {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .toast {
+      min-width: 320px;
+      max-width: 420px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.2);
+      z-index: 10000;
+      animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      pointer-events: auto;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(calc(100% + 24px));
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(calc(100% + 24px));
+        opacity: 0;
+      }
+    }
+
+    .toast-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .toast-error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .toast-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .toast-info {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .toast-icon {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .toast-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .toast-message {
+      font-size: 13px;
+      opacity: 0.95;
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .toast-close:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/students'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/students'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main Content -->
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
       <!-- Header -->
       <header class="mb-6 flex items-center justify-between">
         <h1 class="text-2xl font-bold text-slate-800">Edit Student</h1>
@@ -33,28 +174,54 @@
           </div>
         <% } %>
 
-        <form action="/admin/students/edit/<%= student.id %>" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div class="md:col-span-2">
-            <label class="block text-sm font-semibold mb-2">Full Name</label>
-            <input type="text" name="name" value="<%= student.name %>" required
+        <form action="/admin/students/edit/<%= student.id %>" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6" id="studentForm" data-dept-program>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div>
+            <label class="block text-sm font-semibold mb-2">First Name <span class="text-red-500">*</span></label>
+            <input type="text" name="first_name" id="firstName" value="<%= student.first_name || '' %>" required
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
+              placeholder="Enter first name"
+              pattern="[A-Za-z\s'-]+"
+              title="Only letters, spaces, hyphens, and apostrophes are allowed"
+              oninput="validateName('firstName', 'firstNameWarning')" />
+          </div>
+          <div>
+            <label class="block text-sm font-semibold mb-2">Last Name <span class="text-red-500">*</span></label>
+            <input type="text" name="last_name" id="lastName" value="<%= student.last_name || '' %>" required
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
+              placeholder="Enter last name"
+              pattern="[A-Za-z\s'-]+"
+              title="Only letters, spaces, hyphens, and apostrophes are allowed"
+              oninput="validateName('lastName', 'lastNameWarning')" />
+          </div>
+
+          <div>
+            <label class="block text-sm font-semibold mb-2">Birthdate <span class="text-red-500">*</span></label>
+            <input type="date" name="birthdate" id="birthdate" value="<%= student.birthdate ? new Date(student.birthdate).toISOString().split('T')[0] : '' %>" required
               class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none" />
           </div>
 
           <div>
-            <label class="block text-sm font-semibold mb-2">Email</label>
-            <input type="email" name="email" value="<%= student.email %>" required pattern="^[A-Za-z0-9._%+-]+@umindanao\.edu\.ph$" title="Use your @umindanao.edu.ph email"
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none" />
+            <label class="block text-sm font-semibold mb-2">Email <span class="text-red-500">*</span></label>
+            <input type="email" name="email" id="email" value="<%= student.email %>" required
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
+              placeholder="e.g., j.delacruz.111222.tc@umindanao.edu.ph"
+              onblur="validateEmail()" />
+            
           </div>
 
           <div>
-            <label class="block text-sm font-semibold mb-2">Student ID</label>
-            <input type="text" name="studentid" value="<%= student.studentid || '' %>"
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none" />
+            <label class="block text-sm font-semibold mb-2">Student ID <span class="text-red-500">*</span></label>
+            <input type="text" name="studentid" id="studentid" value="<%= student.studentid || '' %>" required
+              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
+              placeholder="e.g., 111222 (6 digits only)"
+              maxlength="6"
+              oninput="validateStudentId()" />
           </div>
 
           <div>
             <label class="block text-sm font-semibold mb-2">Department</label>
-            <select name="department" required
+            <select name="department" required data-dept-select
               class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
               <option value="">Select Department</option>
               <option value="Department of Accounting Education" <%= (student.department === 'Department of Accounting Education') ? 'selected' : '' %>>Department of Accounting Education</option>
@@ -70,49 +237,40 @@
 
 			<div>
 				<label class="block text-sm font-semibold mb-2">Program</label>
-				<select name="program" required
+				<select name="program" required data-program-select data-current="<%= student.program || '' %>"
 					class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
 					<option value="">Select Program</option>
-					<option value="Bachelor of Science in Accountancy" <%= (student.program === 'Bachelor of Science in Accountancy') ? 'selected' : '' %>>Bachelor of Science in Accountancy</option>
-					<option value="Bachelor of Science in Management Accounting" <%= (student.program === 'Bachelor of Science in Management Accounting') ? 'selected' : '' %>>Bachelor of Science in Management Accounting</option>
-					<option value="Bachelor of Science in Business Administration - Financial Management" <%= (student.program === 'Bachelor of Science in Business Administration - Financial Management') ? 'selected' : '' %>>Bachelor of Science in Business Administration - Financial Management</option>
-					<option value="Bachelor of Science in Business Administration - Human Resource Management" <%= (student.program === 'Bachelor of Science in Business Administration - Human Resource Management') ? 'selected' : '' %>>Bachelor of Science in Business Administration - Human Resource Management</option>
-					<option value="Bachelor of Science in Business Administration - Marketing Management" <%= (student.program === 'Bachelor of Science in Business Administration - Marketing Management') ? 'selected' : '' %>>Bachelor of Science in Business Administration - Marketing Management</option>
-					<option value="Bachelor of Science in Computer Engineering" <%= (student.program === 'Bachelor of Science in Computer Engineering') ? 'selected' : '' %>>Bachelor of Science in Computer Engineering</option>
-					<option value="Bachelor of Science in Electrical Engineering" <%= (student.program === 'Bachelor of Science in Electrical Engineering') ? 'selected' : '' %>>Bachelor of Science in Electrical Engineering</option>
-					<option value="Bachelor of Science in Electronics & Communications Engineering" <%= (student.program === 'Bachelor of Science in Electronics & Communications Engineering') ? 'selected' : '' %>>Bachelor of Science in Electronics & Communications Engineering</option>
-					<option value="Bachelor of Elementary Education" <%= (student.program === 'Bachelor of Elementary Education') ? 'selected' : '' %>>Bachelor of Elementary Education</option>
-					<option value="Bachelor of Physical Education" <%= (student.program === 'Bachelor of Physical Education') ? 'selected' : '' %>>Bachelor of Physical Education</option>
-					<option value="Bachelor of Secondary Education - Major in English" <%= (student.program === 'Bachelor of Secondary Education - Major in English') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in English</option>
-					<option value="Bachelor of Secondary Education - Major in Filipino" <%= (student.program === 'Bachelor of Secondary Education - Major in Filipino') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in Filipino</option>
-					<option value="Bachelor of Secondary Education - Major in General Science" <%= (student.program === 'Bachelor of Secondary Education - Major in General Science') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in General Science</option>
-					<option value="Bachelor of Secondary Education - Major in Mathematics" <%= (student.program === 'Bachelor of Secondary Education - Major in Mathematics') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in Mathematics</option>
-					<option value="Bachelor of Secondary Education - Major in Social Studies" <%= (student.program === 'Bachelor of Secondary Education - Major in Social Studies') ? 'selected' : '' %>>Bachelor of Secondary Education - Major in Social Studies</option>
-					<option value="Bachelor of Arts Major in English Language" <%= (student.program === 'Bachelor of Arts Major in English Language') ? 'selected' : '' %>>Bachelor of Arts Major in English Language</option>
-					<option value="Bachelor of Science in Psychology" <%= (student.program === 'Bachelor of Science in Psychology') ? 'selected' : '' %>>Bachelor of Science in Psychology</option>
-					<option value="Bachelor of Science in Information Technology" <%= (student.program === 'Bachelor of Science in Information Technology') ? 'selected' : '' %>>Bachelor of Science in Information Technology</option>
-					<option value="Bachelor of Science in Computer Science" <%= (student.program === 'Bachelor of Science in Computer Science') ? 'selected' : '' %>>Bachelor of Science in Computer Science</option>
-					<option value="Bachelor of Science in Criminology" <%= (student.program === 'Bachelor of Science in Criminology') ? 'selected' : '' %>>Bachelor of Science in Criminology</option>
-					<option value="Bachelor of Science in Hospitality Management" <%= (student.program === 'Bachelor of Science in Hospitality Management') ? 'selected' : '' %>>Bachelor of Science in Hospitality Management</option>
-					<option value="Bachelor of Science in Tourism Management" <%= (student.program === 'Bachelor of Science in Tourism Management') ? 'selected' : '' %>>Bachelor of Science in Tourism Management</option>
 				</select>
           </div>
 
           
 
-          <div class="md:col-span-2">
-            <label class="block text-sm font-semibold mb-2">Year Level</label>
+          <div>
+            <label class="block text-sm font-semibold mb-2">Year Level <span class="text-red-500">*</span></label>
             <select name="year_level" required
               class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
-              <option value="1st Year" <%= student.year_level === "1st Year" ? "selected" : "" %>>1st Year</option>
-              <option value="2nd Year" <%= student.year_level === "2nd Year" ? "selected" : "" %>>2nd Year</option>
-              <option value="3rd Year" <%= student.year_level === "3rd Year" ? "selected" : "" %>>3rd Year</option>
-              <option value="4th Year" <%= student.year_level === "4th Year" ? "selected" : "" %>>4th Year</option>
+              <option value="1" <%= (student.year_level === "1" || student.year_level === "1st Year") ? "selected" : "" %>>1st Year</option>
+              <option value="2" <%= (student.year_level === "2" || student.year_level === "2nd Year") ? "selected" : "" %>>2nd Year</option>
+              <option value="3" <%= (student.year_level === "3" || student.year_level === "3rd Year") ? "selected" : "" %>>3rd Year</option>
+              <option value="4" <%= (student.year_level === "4" || student.year_level === "4th Year") ? "selected" : "" %>>4th Year</option>
             </select>
           </div>
 
+          <!-- Validation Warnings -->
+          <div id="validationWarnings" class="md:col-span-2 hidden">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div class="flex items-start">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 mr-2 mt-0.5"></i>
+                <div class="flex-1">
+                  <h4 class="text-sm font-semibold text-yellow-800 mb-2">Validation Warnings:</h4>
+                  <ul id="warningList" class="text-sm text-yellow-700 list-disc list-inside space-y-1"></ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="md:col-span-2">
-          <button type="submit"
+          <button type="submit" id="submitBtn"
               class="w-full py-3 bg-[#a10109d1] text-white font-semibold rounded-xl hover:bg-[#870107] transition duration-200">
             Update Student
           </button>
@@ -129,6 +287,211 @@
 
   <script>
     window.lucide && window.lucide.replace();
+
+    // Email validation: j.lastname.6digits.xx.tc@umindanao.edu.ph
+    function validateEmail() {
+      const emailInput = document.getElementById('email');
+      const email = emailInput.value.trim();
+      const warningsDiv = document.getElementById('validationWarnings');
+      const warningList = document.getElementById('warningList');
+      
+      // Email format: firstinitial.lastname.6digits.tc@umindanao.edu.ph
+      const emailPattern = /^[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph$/i;
+      
+      if (email && !emailPattern.test(email)) {
+        emailInput.classList.add('border-red-500');
+        emailInput.classList.remove('border-gray-300');
+        
+        // Check if warning already exists
+        let emailWarning = document.getElementById('emailWarning');
+        if (!emailWarning) {
+          emailWarning = document.createElement('li');
+          emailWarning.id = 'emailWarning';
+          warningList.appendChild(emailWarning);
+        }
+        emailWarning.textContent = 'Email must follow format: firstinitial.lastname.6digitid.tc@umindanao.edu.ph (e.g., j.delacruz.111222.tc@umindanao.edu.ph or r.llano.141429.tc@umindanao.edu.ph)';
+        
+        warningsDiv.classList.remove('hidden');
+        return false;
+      } else {
+        emailInput.classList.remove('border-red-500');
+        emailInput.classList.add('border-gray-300');
+        
+        const emailWarning = document.getElementById('emailWarning');
+        if (emailWarning) {
+          emailWarning.remove();
+        }
+        
+        // Hide warnings if no warnings left
+        if (warningList.children.length === 0) {
+          warningsDiv.classList.add('hidden');
+        }
+        return true;
+      }
+    }
+
+    // Student ID validation: exactly 6 digits
+    function validateStudentId() {
+      const idInput = document.getElementById('studentid');
+      let id = idInput.value.trim();
+      
+      // Remove any non-digit characters
+      id = id.replace(/\D/g, '');
+      idInput.value = id;
+      
+      const warningsDiv = document.getElementById('validationWarnings');
+      const warningList = document.getElementById('warningList');
+      
+      if (id && id.length !== 6) {
+        idInput.classList.add('border-red-500');
+        idInput.classList.remove('border-gray-300');
+        
+        let idWarning = document.getElementById('idWarning');
+        if (!idWarning) {
+          idWarning = document.createElement('li');
+          idWarning.id = 'idWarning';
+          warningList.appendChild(idWarning);
+        }
+        idWarning.textContent = 'Student ID must be exactly 6 digits';
+        
+        warningsDiv.classList.remove('hidden');
+        return false;
+      } else {
+        idInput.classList.remove('border-red-500');
+        idInput.classList.add('border-gray-300');
+        
+        const idWarning = document.getElementById('idWarning');
+        if (idWarning) {
+          idWarning.remove();
+        }
+        
+        // Hide warnings if no warnings left
+        if (warningList.children.length === 0) {
+          warningsDiv.classList.add('hidden');
+        }
+        return true;
+      }
+    }
+
+    // Name validation: only letters, spaces, hyphens, and apostrophes
+    function validateName(inputId, warningId) {
+      const nameInput = document.getElementById(inputId);
+      const name = nameInput.value.trim();
+      const warningsDiv = document.getElementById('validationWarnings');
+      const warningList = document.getElementById('warningList');
+      
+      // Pattern: only letters, spaces, hyphens, and apostrophes
+      const namePattern = /^[A-Za-z\s'-]+$/;
+      
+      // Check for potentially malicious content (excluding apostrophe which is allowed)
+      const dangerousPatterns = /[<>\"&;{}[\]()=+*$%#@!`~|\\]/;
+      
+      if (name && (dangerousPatterns.test(name) || !namePattern.test(name))) {
+        nameInput.classList.add('border-red-500');
+        nameInput.classList.remove('border-gray-300');
+        
+        let nameWarning = document.getElementById(warningId);
+        if (!nameWarning) {
+          nameWarning = document.createElement('li');
+          nameWarning.id = warningId;
+          warningList.appendChild(nameWarning);
+        }
+        nameWarning.textContent = `${inputId === 'firstName' ? 'First' : 'Last'} name contains invalid characters. Only letters, spaces, hyphens (-), and apostrophes (') are allowed.`;
+        
+        warningsDiv.classList.remove('hidden');
+        return false;
+      } else {
+        nameInput.classList.remove('border-red-500');
+        nameInput.classList.add('border-gray-300');
+        
+        const nameWarning = document.getElementById(warningId);
+        if (nameWarning) {
+          nameWarning.remove();
+        }
+        
+        // Hide warnings if no warnings left
+        if (warningList.children.length === 0) {
+          warningsDiv.classList.add('hidden');
+        }
+        return true;
+      }
+    }
+
+    // Form submission validation
+    document.getElementById('studentForm').addEventListener('submit', function(e) {
+      const emailValid = validateEmail();
+      const idValid = validateStudentId();
+      const firstNameValid = validateName('firstName', 'firstNameWarning');
+      const lastNameValid = validateName('lastName', 'lastNameWarning');
+      
+      if (!emailValid || !idValid || !firstNameValid || !lastNameValid) {
+        e.preventDefault();
+        showToast('Please fix the validation errors before submitting.', 'error', 'Validation Error');
+        return false;
+      }
+    });
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+  </script>
+  <script src="/js/departmentPrograms.js"></script>
+
+  <!-- Toast Container -->
+  <div id="toastContainer"></div>
+
+  <script>
+    // Toast Notification Function
+    function showToast(message, type = 'error', title = null) {
+      const container = document.getElementById('toastContainer');
+      if (!container) {
+        const newContainer = document.createElement('div');
+        newContainer.id = 'toastContainer';
+        newContainer.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; pointer-events: none;';
+        document.body.appendChild(newContainer);
+        container = newContainer;
+      }
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+
+      const icons = {
+        success: '<i class="fas fa-check-circle"></i>',
+        error: '<i class="fas fa-exclamation-circle"></i>',
+        warning: '<i class="fas fa-exclamation-triangle"></i>',
+        info: '<i class="fas fa-info-circle"></i>'
+      };
+
+      const icon = icons[type] || icons.error;
+
+      toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+          ${title ? `<div class="toast-title">${title}</div>` : ''}
+          <div class="toast-message">${message}</div>
+        </div>
+        <div class="toast-close" onclick="this.parentElement.remove()">×</div>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 300);
+      }, 5000);
+    }
   </script>
 </body>
 </html>

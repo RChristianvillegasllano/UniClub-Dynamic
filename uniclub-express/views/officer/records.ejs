@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'Club Records | UniClub' %></title>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'] },
+          colors: {
+            primary: { 700: '#7a0e0e', 800: '#6a0c0c', 900: '#5b0a0a' }
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
+  <div class="flex h-screen">
+    <%- include('./partials/sidebar', {
+      activePage: 'records',
+      club: (typeof club !== 'undefined' ? club : null),
+      accessiblePages: (typeof accessiblePages !== 'undefined' ? accessiblePages : []),
+      officer: (typeof officer !== 'undefined' ? officer : null)
+    }) %>
+
+    <main class="flex-1 overflow-auto">
+      <header class="bg-white/90 backdrop-blur border-b border-gray-200 sticky top-0 z-10">
+        <div class="px-6 md:px-8 py-4 flex items-center justify-between">
+          <div>
+            <% 
+              const officerRole = (typeof officer !== 'undefined' && officer && officer.role) ? officer.role.toLowerCase() : '';
+              const isAuditor = officerRole.includes('auditor');
+              const isTreasurer = officerRole.includes('treasurer') || officerRole.includes('finance');
+              const isSecretary = officerRole.includes('secretary');
+            %>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+              <% if (isAuditor) { %>
+                Financial Records & Audit
+              <% } else if (isTreasurer) { %>
+                Financial Records
+              <% } else if (isSecretary) { %>
+                Meeting Minutes & Documents
+              <% } else { %>
+                Club Records
+              <% } %>
+            </h1>
+            <p class="text-gray-500 mt-1 text-sm">
+              <% if (isAuditor) { %>
+                Review financial transactions, audit reports, and compliance records.
+              <% } else if (isTreasurer) { %>
+                Manage financial transactions, budgets, and expense records.
+              <% } else if (isSecretary) { %>
+                View meeting minutes, documents, and organizational records.
+              <% } else { %>
+                View every member's profile, roles, and history in one place.
+              <% } %>
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <button class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              Download CSV
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="p-6 md:p-8 space-y-8">
+        <!-- Snapshot cards -->
+        <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+          <% 
+            let cards = [];
+            if (isAuditor) {
+              cards = [
+                { icon: 'file-check', label: 'Pending Reviews', value: 5, hint: 'Awaiting approval', tip: 'Review expenses regularly' },
+                { icon: 'pie-chart', label: 'Budget Used', value: '75%', hint: '₱37,500 / ₱50,000', tip: 'Monitor spending trends' },
+                { icon: 'file-text', label: 'Reports Due', value: 2, hint: 'This month', tip: 'Submit on time' },
+                { icon: 'alert-triangle', label: 'Compliance Flags', value: 1, hint: 'Needs attention', tip: 'Address issues promptly' }
+              ];
+            } else if (isTreasurer) {
+              cards = [
+                { icon: 'wallet', label: 'Total Budget', value: '₱50,000', hint: 'Annual allocation', tip: 'Track spending carefully' },
+                { icon: 'trending-up', label: 'Expenses This Month', value: '₱7,000', hint: 'December', tip: 'Stay within budget' },
+                { icon: 'receipt', label: 'Receipts Pending', value: 3, hint: 'Awaiting upload', tip: 'Keep receipts organized' },
+                { icon: 'file-text', label: 'Financial Reports', value: 4, hint: 'This quarter', tip: 'Maintain accurate records' }
+              ];
+            } else if (isSecretary) {
+              cards = [
+                { icon: 'file-text', label: 'Meeting Minutes', value: documentCount || 0, hint: 'Total records', tip: 'Keep minutes updated' },
+                { icon: 'folder-open', label: 'Documents Stored', value: documentCount || 0, hint: 'All files', tip: 'Organize by category' },
+                { icon: 'clock-8', label: 'Updates This Month', value: recentChanges || 0, hint: 'Last 30 days', tip: 'Track document changes' },
+                { icon: 'upload', label: 'Pending Uploads', value: 2, hint: 'Awaiting review', tip: 'Process uploads promptly' }
+              ];
+            } else {
+              cards = [
+                { icon: 'users', label: 'Total Members', value: totalMembers || 0, hint: 'All statuses', tip: 'Keep roster current to stay compliant' },
+                { icon: 'shield', label: 'Officer roles assigned', value: officerCount || 0, hint: 'Active roles', tip: 'Rotate leadership regularly' },
+                { icon: 'clock-8', label: 'Updates this month', value: recentChanges || 0, hint: 'Last 30 days', tip: 'Audit changes weekly' },
+                { icon: 'folder-open', label: 'Documents stored', value: documentCount || 0, hint: 'Member files', tip: 'Upload forms for safekeeping' }
+              ];
+            }
+          %>
+          <% cards.forEach((card) => { %>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 flex flex-col gap-3">
+              <div class="flex items-center gap-3">
+                <span class="w-10 h-10 rounded-2xl bg-primary-800/10 text-primary-900 flex items-center justify-center">
+                  <i data-lucide="<%= card.icon %>" class="w-5 h-5"></i>
+                </span>
+                <div>
+                  <p class="text-xs uppercase tracking-wide text-gray-500"><%= card.label %></p>
+                  <p class="text-xs text-gray-400"><%= card.hint %></p>
+                </div>
+              </div>
+              <div class="flex items-end justify-between">
+                <h3 class="text-3xl font-extrabold text-gray-900"><%= card.value %></h3>
+              </div>
+              <p class="text-xs text-gray-400"><%= card.tip %></p>
+            </div>
+          <% }) %>
+        </section>
+
+        <!-- Filters + search -->
+        <section class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
+          <form method="GET" action="/officer/records" id="filterForm" class="space-y-4">
+            <div class="flex flex-wrap gap-3 items-center justify-between">
+              <div class="flex flex-wrap gap-2">
+                <% const statusFilters = ['All', 'Active', 'Alumni', 'Pending']; %>
+                <% statusFilters.forEach((filter) => { 
+                  const isActive = ((typeof currentStatus !== 'undefined' ? currentStatus : 'All') === filter);
+                %>
+                  <button type="button" onclick="filterByStatus('<%= filter %>')" class="px-3 py-1.5 rounded-full text-sm font-semibold border <%= isActive ? 'border-primary-200 text-primary-800 bg-primary-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50' %>">
+                    <%= filter %>
+                  </button>
+                <% }) %>
+                <input type="hidden" name="status" id="statusFilter" value="<%= typeof currentStatus !== 'undefined' ? currentStatus : 'All' %>">
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <div class="relative">
+                  <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3.5"></i>
+                  <input type="search" name="search" placeholder="Search name, email, or ID" value="<%= typeof currentSearch !== 'undefined' ? currentSearch : '' %>" class="pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800" id="recordsSearch">
+                </div>
+                <select name="role" onchange="document.getElementById('filterForm').submit()" class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800">
+                  <option value="all roles" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'all roles') ? 'selected' : '' %>>All roles</option>
+                  <option value="officer" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'officer') ? 'selected' : '' %>>Officers</option>
+                  <option value="member" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'member') ? 'selected' : '' %>>Members</option>
+                </select>
+                <button type="submit" class="px-4 py-2 bg-red-700 text-white rounded-xl text-sm font-semibold hover:bg-red-800 transition-colors">
+                  Apply Filters
+                </button>
+                <% 
+                  var hasFilters = false;
+                  if (typeof currentStatus !== 'undefined' && currentStatus !== 'All') {
+                    hasFilters = true;
+                  } else if (typeof currentSearch !== 'undefined' && currentSearch) {
+                    hasFilters = true;
+                  } else if (typeof currentRoleFilter !== 'undefined' && currentRoleFilter !== 'all roles') {
+                    hasFilters = true;
+                  }
+                %>
+                <% if (hasFilters) { %>
+                  <a href="/officer/records" class="px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                    Clear
+                  </a>
+                <% } %>
+              </div>
+            </div>
+          </form>
+          <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <%= (typeof activeMembers !== 'undefined' ? activeMembers : 0) %> Active
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+              <%= (typeof pendingMembers !== 'undefined' ? pendingMembers : 0) %> Pending
+            </span>
+            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+              <%= (typeof alumniMembers !== 'undefined' ? alumniMembers : 0) %> Alumni
+            </span>
+          </div>
+        </section>
+
+        <!-- Directory table - Role-specific content -->
+        <section class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <div class="overflow-x-auto">
+            <% if (isAuditor) { %>
+            <!-- Auditor: Financial Transactions Table -->
+            <table class="min-w-full divide-y divide-gray-100">
+              <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th class="px-6 py-3 text-left">Transaction</th>
+                  <th class="px-6 py-3 text-left">Date</th>
+                  <th class="px-6 py-3 text-left">Amount</th>
+                  <th class="px-6 py-3 text-left">Status</th>
+                  <th class="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="px-6 py-4">
+                    <div>
+                      <p class="font-semibold text-gray-900">Event expenses</p>
+                      <p class="text-xs text-gray-500">Submitted by Treasurer</p>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">Dec 5, 2024</td>
+                  <td class="px-6 py-4"><span class="font-bold text-gray-900">₱5,000</span></td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
+                      Pending Review
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right space-x-2">
+                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">Review</button>
+                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">Approve</button>
+                  </td>
+                </tr>
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="px-6 py-4">
+                    <div>
+                      <p class="font-semibold text-gray-900">Office supplies</p>
+                      <p class="text-xs text-gray-500">Submitted by Treasurer</p>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">Dec 4, 2024</td>
+                  <td class="px-6 py-4"><span class="font-bold text-gray-900">₱1,200</span></td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
+                      Approved
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right space-x-2">
+                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">View</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <% } else if (isTreasurer) { %>
+            <!-- Treasurer: Financial Records Table -->
+            <table class="min-w-full divide-y divide-gray-100">
+              <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th class="px-6 py-3 text-left">Transaction</th>
+                  <th class="px-6 py-3 text-left">Date</th>
+                  <th class="px-6 py-3 text-left">Amount</th>
+                  <th class="px-6 py-3 text-left">Category</th>
+                  <th class="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="px-6 py-4">
+                    <div>
+                      <p class="font-semibold text-gray-900">Equipment purchase</p>
+                      <p class="text-xs text-gray-500">Receipt #12345</p>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">Dec 5, 2024</td>
+                  <td class="px-6 py-4"><span class="font-bold text-gray-900">₱5,000</span></td>
+                  <td class="px-6 py-4">
+                    <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-xs font-semibold">Equipment</span>
+                  </td>
+                  <td class="px-6 py-4 text-right space-x-2">
+                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">View</button>
+                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">Edit</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <% } else if (isSecretary) { %>
+            <!-- Secretary: Documents & Minutes Table -->
+            <table class="min-w-full divide-y divide-gray-100">
+              <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th class="px-6 py-3 text-left">Document</th>
+                  <th class="px-6 py-3 text-left">Type</th>
+                  <th class="px-6 py-3 text-left">Date</th>
+                  <th class="px-6 py-3 text-left">Status</th>
+                  <th class="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                <tr class="hover:bg-gray-50 transition">
+                  <td class="px-6 py-4">
+                    <div>
+                      <p class="font-semibold text-gray-900">Monthly Meeting Minutes</p>
+                      <p class="text-xs text-gray-500">December 2024</p>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span class="px-2 py-0.5 rounded-full bg-purple-50 text-purple-800 text-xs font-semibold">Minutes</span>
+                  </td>
+                  <td class="px-6 py-4">Dec 1, 2024</td>
+                  <td class="px-6 py-4">
+                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
+                      Published
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 text-right space-x-2">
+                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">View</button>
+                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">Edit</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <% } else { %>
+            <!-- Default: Member Records Table -->
+            <table class="min-w-full divide-y divide-gray-100">
+              <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th class="px-6 py-3 text-left">Member</th>
+                  <th class="px-6 py-3 text-left">Status</th>
+                  <th class="px-6 py-3 text-left">Roles</th>
+                  <th class="px-6 py-3 text-left">Last Activity</th>
+                  <th class="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
+                <% if (typeof members !== 'undefined' && members && members.length > 0) { %>
+                  <% members.forEach(function(member) { %>
+                    <tr class="hover:bg-gray-50 transition">
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                          <% if (member.profile_picture) { %>
+                            <img src="<%= member.profile_picture %>" alt="<%= member.name %>" class="w-10 h-10 rounded-full object-cover">
+                          <% } else { %>
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-semibold text-sm">
+                              <%= (member.initials || 'UC') %>
+                            </div>
+                          <% } %>
+                          <div>
+                            <p class="font-semibold text-gray-900"><%= member.name %></p>
+                            <p class="text-xs text-gray-500"><%= member.email %></p>
+                            <% if (member.studentid) { %>
+                              <p class="text-xs text-gray-400">ID: <%= member.studentid %></p>
+                            <% } %>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <% 
+                          const statusLower = (member.status || '').toLowerCase();
+                          let statusClass = 'bg-gray-50 text-gray-700';
+                          if (statusLower === 'approved' || statusLower === 'active') {
+                            statusClass = 'bg-green-50 text-green-700';
+                          } else if (statusLower === 'pending') {
+                            statusClass = 'bg-amber-50 text-amber-700';
+                          } else if (statusLower === 'alumni') {
+                            statusClass = 'bg-blue-50 text-blue-700';
+                          }
+                        %>
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold <%= statusClass %>">
+                          <%= member.status || 'Pending' %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4">
+                        <div class="flex flex-wrap gap-1">
+                          <% if (member.roles && member.roles.length > 0) { %>
+                            <% member.roles.forEach(function(role) { %>
+                              <span class="px-2 py-0.5 rounded-full bg-primary-50 text-primary-800 text-xs font-semibold">
+                                <%= role %>
+                              </span>
+                            <% }) %>
+                          <% } else { %>
+                            <span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs">Member</span>
+                          <% } %>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <p class="text-gray-700"><%= member.last_activity || '—' %></p>
+                        <p class="text-xs text-gray-500"><%= member.activity_detail || '' %></p>
+                      </td>
+                      <td class="px-6 py-4 text-right space-x-2">
+                        <button onclick="viewMember(<%= member.student_id || member.id %>)" class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50 transition-colors">View</button>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                      <div class="flex flex-col items-center gap-2">
+                        <i data-lucide="users" class="w-12 h-12 text-gray-300"></i>
+                        <p class="font-semibold">No members found</p>
+                        <p class="text-sm">Try adjusting your filters or search terms.</p>
+                      </div>
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+            <% } %>
+          </div>
+          <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
+            <p>Showing <%= members && members.length ? members.length : 0 %> members</p>
+            <div class="flex items-center gap-2">
+              <button class="px-2 py-1 rounded-lg border text-xs hover:bg-gray-50">Previous</button>
+              <button class="px-2 py-1 rounded-lg border text-xs hover:bg-gray-50">Next</button>
+            </div>
+          </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,320px)_1fr] gap-6">
+          <!-- Activity rail -->
+          <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-xs font-semibold tracking-[0.2em] text-primary-800 uppercase">Activity</p>
+                <h2 class="text-lg font-semibold text-gray-900">Recent changes</h2>
+              </div>
+              <button class="text-sm text-gray-500 hover:text-gray-800 flex items-center gap-1">
+                View all
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <ul class="space-y-3">
+              <% const activity = activityLog || [
+                { icon: 'shield', text: 'Ana Valdez promoted to Treasurer', meta: '2h ago' },
+                { icon: 'file-plus', text: 'Paperwork uploaded for Liam Cruz', meta: 'Yesterday' },
+                { icon: 'user-check', text: 'Mae Dela Cruz reactivated', meta: '2 days ago' },
+                { icon: 'tag', text: 'Tag “Events” added to 4 members', meta: '3 days ago' }
+              ]; %>
+              <% activity.forEach(function(item) { %>
+                <li class="flex gap-3">
+                  <span class="w-10 h-10 rounded-2xl bg-gray-50 flex items-center justify-center text-gray-600">
+                    <i data-lucide="<%= item.icon %>" class="w-4 h-4"></i>
+                  </span>
+                  <div>
+                    <p class="text-sm text-gray-800"><%= item.text %></p>
+                    <p class="text-xs text-gray-500"><%= item.meta %></p>
+                  </div>
+                </li>
+              <% }) %>
+            </ul>
+          </section>
+
+          <!-- Detail drawer placeholder -->
+          <section class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <p class="text-xs font-semibold tracking-[0.2em] text-primary-800 uppercase">Details</p>
+                <h2 class="text-lg font-semibold text-gray-900">Member overview</h2>
+                <p class="text-sm text-gray-500">Select a member to preview their info, roles, and files.</p>
+              </div>
+              <button class="text-sm font-semibold text-primary-800 hover:text-primary-900">Open in panel</button>
+            </div>
+            <div class="border border-dashed rounded-2xl p-6 text-center text-gray-400 text-sm">
+              <i data-lucide="user-circle" class="w-10 h-10 mx-auto mb-3"></i>
+              <p>Nothing selected yet</p>
+              <p class="text-xs">Click “View record” to load member details here.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+      sidebar.classList.remove('w-20');
+      sidebar.classList.add('w-64');
+      document.querySelectorAll('.sidebar-label').forEach(el => el.classList.remove('hidden'));
+      const brandText = document.getElementById('sidebarBrandText');
+      const brandLogo = document.getElementById('sidebarBrandLogo');
+      if (brandText) brandText.classList.remove('hidden');
+      if (brandLogo) brandLogo.classList.remove('hidden');
+    }
+
+    // Filter functionality
+    // Note: Records dropdown is handled by sidebar.ejs script
+    function filterByStatus(status) {
+      document.getElementById('statusFilter').value = status;
+      document.getElementById('filterForm').submit();
+    }
+
+    // View member details
+    function viewMember(memberId) {
+      // For now, just show an alert. In the future, this could open a modal or navigate to a detail page
+      alert('Member details feature coming soon! Member ID: ' + memberId);
+    }
+
+    // Search on Enter key
+    const searchInput = document.getElementById('recordsSearch');
+    if (searchInput) {
+      searchInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          document.getElementById('filterForm').submit();
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLucideIcons();
+      
+      // Ensure Records dropdown is initialized after icons are rendered
+      setTimeout(() => {
+        const recordsToggle = document.getElementById('recordsToggle');
+        const recordsGroup = document.getElementById('recordsGroup');
+        const recordsChevron = document.getElementById('recordsChevron');
+        
+        if (recordsToggle && recordsGroup) {
+          // Remove any existing listeners by cloning
+          const newToggle = recordsToggle.cloneNode(true);
+          recordsToggle.parentNode.replaceChild(newToggle, recordsToggle);
+          
+          // Set initial state
+          const isOnRecordsPage = window.location.pathname.includes('/records');
+          if (isOnRecordsPage) {
+            recordsGroup.classList.remove('hidden');
+            if (recordsChevron) {
+              recordsChevron.style.transform = 'rotate(180deg)';
+            }
+            newToggle.setAttribute('aria-expanded', 'true');
+          }
+          
+          // Add click handler
+          newToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const group = document.getElementById('recordsGroup');
+            const chevron = document.getElementById('recordsChevron');
+            
+            if (group) {
+              const isHidden = group.classList.contains('hidden');
+              group.classList.toggle('hidden');
+              
+              if (chevron) {
+                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+              }
+              
+              newToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            }
+          });
+        }
+      }, 100);
+    });
+  </script>
+</body>
+</html>
+

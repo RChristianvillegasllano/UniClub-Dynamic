@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniClub — University of Mindanao</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    body{ font-family: Inter, system-ui, sans-serif; }
+
+    .bg-grid{
+      background-image:
+        radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1px, transparent 0);
+      background-size: 28px 28px;
+    }
+
+    .glass-panel{
+      background: rgba(255,255,255,.72);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,.7);
+      box-shadow: 0 10px 30px rgba(15,23,42,.08);
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(28px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* Section containers for content anchoring - matching glass-panel style */
+    .content-panel {
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.7);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.6s ease-out forwards;
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.8s ease-out forwards;
+    }
+
+    .fade-in {
+      animation: fadeIn 1s ease-out forwards;
+    }
+
+    .animate-slide-in-right {
+      animation: slideInRight 0.6s ease-out forwards;
+    }
+
+    .fade-in-on-scroll {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .fade-in-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Hover effects */
+    .hover-lift {
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(15,23,42,.12);
+    }
+
+    /* Focus states for accessibility */
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid #7A0B0B;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+
+    /* Smooth transitions for all interactive elements */
+    a, button {
+      transition: all 0.2s ease;
+    }
+
+    /* Better touch targets for mobile */
+    @media (max-width: 768px) {
+      a, button {
+        min-height: 44px;
+        min-width: 44px;
+      }
+    }
+
+    /* Ensure minimum font size for readability */
+    body {
+      font-size: 16px;
+    }
+
+    /* Ensure small labels meet minimum size */
+    .text-xs {
+      font-size: 14px;
+    }
+
+    /* Color system - consistent accent usage */
+    .accent-event {
+      color: #d97706; /* amber-600 */
+    }
+
+    .accent-alert {
+      color: #dc2626; /* red-600 */
+    }
+
+    .accent-brand {
+      color: #7A0B0B; /* brand */
+    }
+
+    /* Active nav link indicator */
+    nav a[href="/student/dashboard"] {
+      position: relative;
+    }
+
+    nav a[href="/student/dashboard"]::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: white;
+      border-radius: 1px;
+    }
+
+
+    /* Notification badge */
+    .notification-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 18px;
+      height: 18px;
+      background: #ef4444;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      border: 2px solid white;
+      animation: pulse 2s infinite;
+    }
+
+    /* Loading skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+    }
+
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255,255,255,.1);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(122,11,11,.3);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(122,11,11,.5);
+    }
+
+    /* Mobile menu styles */
+    .mobile-menu {
+      display: none;
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transform: translateY(-10px);
+      z-index: 1000;
+      padding: 0;
+      margin-top: 0;
+      background: rgba(30, 30, 30, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                  opacity 0.3s ease-out, 
+                  visibility 0.3s ease-out, 
+                  transform 0.3s ease-out,
+                  padding 0.3s ease-out,
+                  margin-top 0.3s ease-out;
+    }
+
+    .mobile-menu.open {
+      display: block;
+      max-height: 400px;
+      opacity: 1 !important;
+      pointer-events: auto !important;
+      visibility: visible !important;
+      transform: translateY(0);
+      margin-top: 0.5rem;
+      padding: 1rem;
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: "#7A0B0B",
+            brandDark: "#4A0505",
+            ink: "#0F172A",
+            paper: "#F8FAFC"
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="min-h-screen text-ink relative overflow-x-hidden flex flex-col">
+
+  <!-- BACKGROUND: your gradient (more visible) -->
+  <div class="fixed inset-0 -z-10">
+    <!-- base gradient -->
+    <div class="absolute inset-0 bg-[linear-gradient(135deg,rgba(198,40,40,0.92),rgba(239,108,0,0.85))]"></div>
+
+    <!-- lighter veil so gradient shows but stays readable -->
+    <div class="absolute inset-0 bg-white/45"></div>
+
+    <!-- subtle blobs for depth -->
+    <div class="absolute -top-24 -left-24 w-[28rem] h-[28rem] bg-white/35 rounded-full blur-3xl"></div>
+    <div class="absolute top-10 -right-28 w-[24rem] h-[24rem] bg-white/35 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-[-9rem] left-1/3 w-[30rem] h-[30rem] bg-white/35 rounded-full blur-3xl"></div>
+  </div>
+
+  <!-- NAV (logged-in app nav) -->
+  <nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 fade-in">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 relative">
+      <div class="bg-white/85 backdrop-blur-xl border border-white/80 rounded-2xl px-4 sm:px-6 py-3 flex items-center justify-between shadow-sm">
+        <!-- Logo -->
+        <a href="/student/dashboard" class="flex items-center gap-2 sm:gap-3">
+          <div class="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0">
+            <img src="../uniclub-express/public/img/logo.png" alt="University of Mindanao Logo" class="w-full h-full object-contain" onerror="this.onerror=null; this.src='/img/logo.png';">
+          </div>
+          <div class="leading-tight">
+            <p class="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-slate-600 font-medium">UniClub</p>
+            <p class="text-xs sm:text-sm font-semibold text-ink">University of Mindanao</p>
+          </div>
+        </a>
+
+        <!-- Desktop Menu -->
+        <div class="hidden md:flex items-center gap-8 -mt-0.5">
+          <a href="/student/dashboard" class="text-sm font-medium text-ink hover:text-brand transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-transparent rounded px-2 py-1 relative">
+            <span class="absolute bottom-0 left-1 right-1 h-[2px] bg-brand rounded-full"></span>
+            Dashboard
+          </a>
+          <a href="/student/clubs/discover" class="text-sm font-medium text-slate-700 hover:text-brand transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-transparent rounded px-2 py-1">Discover</a>
+          <a href="/student/my-clubs" class="text-sm font-medium text-slate-700 hover:text-brand transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-transparent rounded px-2 py-1">My Clubs</a>
+          <a href="/student/events" class="text-sm font-medium text-slate-700 hover:text-brand transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-transparent rounded px-2 py-1">Events</a>
+        </div>
+
+        <!-- Profile & Notifications -->
+        <div class="hidden md:flex items-center gap-3 md:gap-5">
+          <!-- Notifications -->
+          <div class="relative">
+            <button id="notifBtn" class="relative p-2 hover:bg-slate-100 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-transparent" aria-haspopup="true" aria-expanded="false" aria-controls="notifMenu" title="2 new notifications">
+              <i class="fa-solid fa-bell text-slate-700 w-5 h-5"></i>
+              <span class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-red-600 text-white text-[10px] leading-4 rounded-full text-center font-bold">2</span>
+            </button>
+            <div id="notifMenu" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
+              <div class="px-3 py-2 border-b">
+                <p class="text-sm font-semibold text-gray-800">Notifications</p>
+              </div>
+              <ul class="max-h-80 overflow-auto">
+                <li class="px-3 py-2 hover:bg-gray-50 border-b border-gray-100">
+                  <p class="text-xs text-gray-500">No new notifications</p>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Profile -->
+          <div class="relative pl-2 md:pl-3 border-l border-slate-200">
+            <button id="profileBtn" class="flex items-center gap-2 hover:bg-slate-100 px-2 py-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-transparent" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu">
+              <div class="text-right hidden sm:block min-w-0">
+                <p class="text-sm font-semibold text-ink truncate">Juan Carlos</p>
+                <p class="text-xs text-slate-600 truncate">Computer Science</p>
+              </div>
+              <div class="relative w-11 h-11 rounded-full overflow-hidden shrink-0">
+                <img
+                  src="/img/users/juan-carlos.jpg"
+                  alt="Profile"
+                  class="w-full h-full object-cover ring-2 ring-red-600"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />
+                <div class="hidden w-full h-full items-center justify-center text-xs font-semibold text-gray-600 bg-gray-200 ring-2 ring-red-600">JC</div>
+              </div>
+            </button>
+
+            <div id="profileMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
+
+              <div class="px-4 py-3 border-b border-gray-100">
+                <div class="flex items-center gap-3">
+                  <div class="relative w-10 h-10 rounded-full overflow-hidden shrink-0">
+                    <img
+                      src="/img/users/juan-carlos.jpg"
+                      alt="Profile"
+                      class="w-full h-full object-cover ring-2 ring-red-600"
+                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                    />
+                    <div class="hidden w-full h-full items-center justify-center text-xs font-semibold text-gray-600 bg-gray-200 ring-2 ring-red-600">JC</div>
+                  </div>
+                  <div class="leading-tight">
+                    <p class="text-sm font-bold text-gray-900">Juan Carlos Martin</p>
+                    <p class="text-xs text-gray-500">Computer Science</p>
+                  </div>
+                </div>
+              </div>
+
+              <a href="/student/profile" class="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition">
+                <div class="w-8 h-8 rounded-lg bg-gray-100 grid place-items-center">
+                  <i class="fa-regular fa-user text-gray-700 text-sm"></i>
+                </div>
+                <div class="flex-1">
+                  <p class="text-sm font-semibold text-gray-900">Settings</p>
+                  <p class="text-xs text-gray-500">Edit account details</p>
+                </div>
+              </a>
+
+              <div class="h-px bg-gray-100"></div>
+
+              <a href="/student/logout" class="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 transition text-red-600">
+                <div class="w-8 h-8 rounded-lg bg-red-50 grid place-items-center">
+                  <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                </div>
+                <p class="text-sm font-semibold">Logout</p>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Menu Button -->
+        <button id="menuBtn" class="md:hidden p-2 text-slate-700 hover:text-brand transition-colors flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 focus:ring-offset-transparent rounded" aria-label="Toggle menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            <path id="close-icon" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Mobile Menu -->
+      <div id="mobileMenu" class="mobile-menu absolute top-full left-0 right-0 mt-2 mx-4 bg-white/85 backdrop-blur-xl border border-white/80 rounded-2xl shadow-lg z-50">
+        <div class="flex flex-col gap-4 p-4">
+          <a href="/student/dashboard" class="text-sm font-medium text-ink hover:text-brand transition-colors py-2">Dashboard</a>
+          <a href="/student/clubs/discover" class="text-sm font-medium text-slate-700 hover:text-brand transition-colors py-2">Discover</a>
+          <a href="/student/my-clubs" class="text-sm font-medium text-slate-700 hover:text-brand transition-colors py-2">My Clubs</a>
+          <a href="/student/events" class="text-sm font-medium text-slate-700 hover:text-brand transition-colors py-2">Events</a>
+          <a href="/student/profile" class="text-sm font-medium text-slate-700 hover:text-brand transition-colors py-2 border-t border-slate-200 pt-4">Profile</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+
+  <!-- HERO -->
+  <header class="pt-40 sm:pt-44 pb-16 sm:pb-20 bg-grid flex-1">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-6 sm:gap-8 items-start lg:items-center">
+
+      <!-- left -->
+      <div class="text-center lg:text-left animate-fade-in-up">
+        <p class="text-xs uppercase tracking-[0.25em] text-slate-700 font-semibold mb-4 sm:mb-5 animate-fade-in">
+          Welcome back
+        </p>
+
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black leading-[1.05] tracking-tight mb-6 sm:mb-8 animate-fade-in-up" style="animation-delay: 0.1s">
+          Hi, Juan Carlos<span class="inline-block align-baseline ml-1">👋</span><br/>
+          What do you want to do today?
+        </h1>
+
+        <p class="text-base sm:text-lg text-slate-950 leading-relaxed max-w-xl mx-auto lg:mx-0 mb-10 sm:mb-12 animate-fade-in-up relative z-10" style="animation-delay: 0.2s">
+          Jump into your clubs, check events, or discover something new.
+        </p>
+
+        <!-- Primary Action Buttons (Main CTAs) -->
+        <div class="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8 sm:mb-10 animate-fade-in-up" style="animation-delay: 0.3s">
+          <a href="/student/clubs/discover"
+             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-brand text-white font-bold text-base hover:bg-brandDark active:bg-brandDark/90 transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
+            Discover Clubs
+            <i class="fa-solid fa-arrow-right text-sm"></i>
+          </a>
+
+          <a href="/student/my-clubs"
+             class="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#fff7f5] backdrop-blur border border-slate-200/60 text-ink font-bold text-base hover:bg-white hover:border-brand/40 active:bg-white/90 transition-all hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2">
+            View My Clubs
+            <i class="fa-solid fa-users text-sm"></i>
+          </a>
+        </div>
+
+        <!-- AT A GLANCE STRIP (replaces stats) -->
+        <div class="mt-10 sm:mt-12 glass-panel rounded-2xl px-4 py-4 flex flex-wrap items-center justify-between gap-3 text-sm animate-fade-in-up" style="animation-delay: 0.4s">
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <span class="w-9 h-9 rounded-lg bg-brand/10 border border-brand/20 grid place-items-center flex-shrink-0">
+              <i class="fa-solid fa-users text-brand"></i>
+            </span>
+            <div class="min-w-0">
+              <p class="font-semibold text-ink leading-tight">Clubs Joined</p>
+              <p class="text-xs text-slate-800 font-medium -mt-0.5">You're in 3 clubs</p>
+            </div>
+          </div>
+
+          <div class="h-8 w-px bg-slate-200"></div>
+
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <span class="w-9 h-9 rounded-lg bg-amber-100 border border-amber-200 grid place-items-center flex-shrink-0">
+              <i class="fa-solid fa-calendar-check text-amber-600"></i>
+            </span>
+            <div class="min-w-0">
+              <p class="font-semibold text-ink leading-tight">Next Event</p>
+              <a href="/student/events" class="inline-flex items-center gap-1 text-xs text-amber-700 font-medium -mt-0.5 hover:text-amber-800 hover:underline">
+                <span>Browse events</span>
+                <span class="text-amber-600">→</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="h-8 w-px bg-slate-200"></div>
+
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <span class="w-9 h-9 rounded-lg bg-red-100 border border-red-200 grid place-items-center relative flex-shrink-0">
+              <i class="fa-solid fa-bell text-red-600"></i>
+            </span>
+            <div class="min-w-0">
+              <p class="font-semibold text-ink leading-tight">Updates</p>
+              <p class="text-xs text-red-700 font-medium -mt-0.5">2 new notifications</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- right visual (neutral quick actions, NO featured/favoritism) -->
+      <div class="relative animate-slide-in-right">
+        <div class="absolute -inset-6 bg-white/40 rounded-[2rem] blur-2xl animate-pulse"></div>
+        <div class="relative bg-white/85 backdrop-blur-xl border border-white/80 rounded-2xl p-6 shadow-sm hover-lift">
+          <p class="text-base font-semibold text-slate-800 mb-5">Quick actions</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a href="/student/clubs/discover"
+               class="bg-white/90 border border-white rounded-xl px-5 py-4 hover:bg-white hover:shadow-md transition-all flex items-center gap-3 group focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 cursor-pointer">
+              <div class="w-10 h-10 rounded-lg bg-slate-900 text-white grid place-items-center flex-shrink-0">
+                <i class="fa-solid fa-compass text-sm"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm">Discover clubs</p>
+                <p class="text-xs text-slate-600 font-medium">Find new organizations</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+            </a>
+
+            <a href="/student/messages"
+               class="bg-white/90 border border-white rounded-xl px-5 py-4 hover:bg-white hover:shadow-md transition-all flex items-center gap-3 group focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 cursor-pointer">
+              <div class="w-10 h-10 rounded-lg bg-blue-600 text-white grid place-items-center flex-shrink-0 relative">
+                <i class="fa-solid fa-message text-sm"></i>
+                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] leading-[18px] rounded-full text-center font-bold">3</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm">Messages</p>
+                <p class="text-xs text-slate-600 font-medium">3 unread</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+            </a>
+
+            <a href="/student/events"
+               class="bg-white/90 border border-white rounded-xl px-5 py-4 hover:bg-white hover:shadow-md transition-all flex items-center gap-3 group focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 cursor-pointer">
+              <div class="w-10 h-10 rounded-lg bg-amber-600 text-white grid place-items-center flex-shrink-0">
+                <i class="fa-solid fa-calendar-days text-sm"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm">Events</p>
+                <p class="text-xs text-slate-600 font-medium">View upcoming</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+            </a>
+
+            <a href="/student/announcements"
+               class="bg-white/90 border border-white rounded-xl px-5 py-4 hover:bg-white hover:shadow-md transition-all flex items-center gap-3 group focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 cursor-pointer">
+              <div class="w-10 h-10 rounded-lg bg-amber-600 text-white grid place-items-center flex-shrink-0 relative">
+                <i class="fa-solid fa-bullhorn text-sm"></i>
+                <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-600 text-white text-[10px] leading-[18px] rounded-full text-center font-bold">2</span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="font-semibold text-sm">Announcements</p>
+                <p class="text-xs text-slate-600 font-medium">2 new</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-xs text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- YOUR CLUB HIGHLIGHTS & RECOMMENDATIONS -->
+  <div class="mt-16 sm:mt-20 max-w-7xl mx-auto px-4 sm:px-6">
+    <div class="grid lg:grid-cols-2 gap-6">
+      
+      <!-- Your Club Highlights -->
+      <div class="glass-panel rounded-2xl p-6 fade-in-on-scroll hover-lift">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-lg font-bold text-ink">Your Club Highlights</h2>
+          <i class="fa-solid fa-trophy text-amber-500 text-xl"></i>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Most Active Club -->
+          <div class="bg-white/60 rounded-xl p-4 border border-white/80">
+            <div class="flex items-start gap-3">
+              <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                TI
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-ink mb-1">Most Active This Week</p>
+                <p class="text-xs text-slate-700 font-medium mb-2">Tech Innovators Club</p>
+                <div class="flex items-center gap-4 text-xs text-slate-600">
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-comment text-purple-500"></i>
+                    12 messages
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-calendar-check text-purple-500"></i>
+                    2 events attended
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Engagement Stats -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-white/60 rounded-xl p-4 border border-white/80 text-center">
+              <div class="w-10 h-10 rounded-full bg-green-100 border-2 border-green-200 grid place-items-center mx-auto mb-2">
+                <i class="fa-solid fa-chart-line text-green-600"></i>
+              </div>
+              <p class="text-2xl font-black text-ink mb-0.5">85%</p>
+              <p class="text-xs text-slate-600 font-medium">Attendance Rate</p>
+            </div>
+
+            <div class="bg-white/60 rounded-xl p-4 border border-white/80 text-center">
+              <div class="w-10 h-10 rounded-full bg-blue-100 border-2 border-blue-200 grid place-items-center mx-auto mb-2">
+                <i class="fa-solid fa-star text-blue-600"></i>
+              </div>
+              <p class="text-2xl font-black text-ink mb-0.5">340</p>
+              <p class="text-xs text-slate-600 font-medium">Points Earned</p>
+            </div>
+          </div>
+
+          <!-- Upcoming Responsibility -->
+          <div class="bg-amber-50/80 border border-amber-200 rounded-xl p-4">
+            <div class="flex items-start gap-3">
+              <div class="w-9 h-9 rounded-lg bg-amber-500 text-white grid place-items-center flex-shrink-0">
+                <i class="fa-solid fa-tasks text-sm"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-amber-900 mb-1">Upcoming Responsibility</p>
+                <p class="text-xs text-amber-800 font-medium mb-1">Lead workshop setup - Drama Society</p>
+                <p class="text-xs text-amber-700 flex items-center gap-1">
+                  <i class="fa-regular fa-clock"></i>
+                  Tomorrow, 3:00 PM
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommended For You -->
+      <div class="glass-panel rounded-2xl p-6 fade-in-on-scroll hover-lift">
+        <div class="flex items-center justify-between mb-5">
+          <h2 class="text-lg font-bold text-ink">Recommended For You</h2>
+          <i class="fa-solid fa-sparkles text-purple-500 text-xl"></i>
+        </div>
+
+        <p class="text-sm text-slate-700 mb-5">Based on your interests and activity</p>
+
+        <div class="space-y-3">
+          <!-- Recommended Club 1 -->
+          <a href="/student/clubs/robotics-club" class="block bg-white/60 rounded-xl p-4 border border-white/80 hover:bg-white hover:shadow-md transition-all group">
+            <div class="flex items-start gap-3">
+              <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                <i class="fa-solid fa-robot text-xl"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <p class="text-sm font-bold text-ink">Robotics Club</p>
+                  <span class="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">New</span>
+                </div>
+                <p class="text-xs text-slate-600 mb-2">Build and compete with autonomous robots</p>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-users"></i>
+                    48 members
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-lightbulb"></i>
+                    Technology
+                  </span>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-400 group-hover:text-slate-600 transition-colors mt-1"></i>
+            </div>
+          </a>
+
+          <!-- Recommended Club 2 -->
+          <a href="/student/clubs/game-dev-guild" class="block bg-white/60 rounded-xl p-4 border border-white/80 hover:bg-white hover:shadow-md transition-all group">
+            <div class="flex items-start gap-3">
+              <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                <i class="fa-solid fa-gamepad text-xl"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-bold text-ink mb-1">Game Dev Guild</p>
+                <p class="text-xs text-slate-600 mb-2">Create games from concept to launch</p>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-users"></i>
+                    67 members
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-palette"></i>
+                    Creative
+                  </span>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-400 group-hover:text-slate-600 transition-colors mt-1"></i>
+            </div>
+          </a>
+
+          <!-- Recommended Club 3 -->
+          <a href="/student/clubs/ai-research-group" class="block bg-white/60 rounded-xl p-4 border border-white/80 hover:bg-white hover:shadow-md transition-all group">
+            <div class="flex items-start gap-3">
+              <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center text-white font-bold flex-shrink-0">
+                <i class="fa-solid fa-brain text-xl"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <p class="text-sm font-bold text-ink">AI Research Group</p>
+                  <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">Popular</span>
+                </div>
+                <p class="text-xs text-slate-600 mb-2">Explore machine learning and neural networks</p>
+                <div class="flex items-center gap-3 text-xs text-slate-500">
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-users"></i>
+                    92 members
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i class="fa-solid fa-flask"></i>
+                    Research
+                  </span>
+                </div>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-400 group-hover:text-slate-600 transition-colors mt-1"></i>
+            </div>
+          </a>
+
+          <!-- View More -->
+          <a href="/student/clubs/discover" class="block text-center py-3 text-sm font-semibold text-brand hover:text-brandDark transition-colors">
+            View All Recommendations →
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer id="contact" class="mt-auto py-8 border-t border-slate-200/50">
+    <div class="max-w-7xl mx-auto px-6 text-xs text-slate-800 font-medium text-center">
+      © 2024 UniClub — University of Mindanao. All rights reserved.
+    </div>
+  </footer>
+
+
+  <script>
+    // mobile menu
+    const btn = document.getElementById("menuBtn");
+    const menu = document.getElementById("mobileMenu");
+    const menuIcon = document.getElementById("menu-icon");
+    const closeIcon = document.getElementById("close-icon");
+    
+    btn?.addEventListener("click", () => {
+      const isOpen = menu.classList.contains("open");
+      if (isOpen) {
+        menu.classList.remove("open");
+        menuIcon?.classList.remove("hidden");
+        closeIcon?.classList.add("hidden");
+      } else {
+        menu.classList.add("open");
+        menuIcon?.classList.add("hidden");
+        closeIcon?.classList.remove("hidden");
+      }
+    });
+
+    // smooth anchor scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a=>{
+      a.addEventListener("click",(e)=>{
+        const id = a.getAttribute("href");
+        const target = document.querySelector(id);
+        if(target){
+          e.preventDefault();
+          target.scrollIntoView({behavior:"smooth", block:"start"});
+          menu?.classList.remove("open");
+          menuIcon?.classList.remove("hidden");
+          closeIcon?.classList.add("hidden");
+        }
+      })
+    })
+
+    // profile dropdown toggle
+    const profileBtn = document.getElementById("profileBtn");
+    const profileMenu = document.getElementById("profileMenu");
+    const notifBtn = document.getElementById("notifBtn");
+    const notifMenu = document.getElementById("notifMenu");
+
+    function closeProfileMenu(){
+      profileMenu?.classList.add("hidden");
+      profileBtn?.setAttribute("aria-expanded", "false");
+    }
+
+    function closeNotifMenu(){
+      notifMenu?.classList.add("hidden");
+      notifBtn?.setAttribute("aria-expanded", "false");
+    }
+
+    profileBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = !profileMenu?.classList.contains("hidden");
+      if(isOpen){
+        closeProfileMenu();
+      }else{
+        closeNotifMenu();
+        profileMenu?.classList.remove("hidden");
+        profileBtn?.setAttribute("aria-expanded", "true");
+      }
+    });
+
+    notifBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = !notifMenu?.classList.contains("hidden");
+      if(isOpen){
+        closeNotifMenu();
+      }else{
+        closeProfileMenu();
+        notifMenu?.classList.remove("hidden");
+        notifBtn?.setAttribute("aria-expanded", "true");
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!profileMenu?.contains(e.target) && !profileBtn?.contains(e.target)) closeProfileMenu();
+      if (!notifMenu?.contains(e.target) && !notifBtn?.contains(e.target)) closeNotifMenu();
+    });
+
+    document.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape") {
+        closeProfileMenu();
+        closeNotifMenu();
+      }
+    });
+
+    // Scroll animations
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, observerOptions);
+
+    // Observe all fade-in-on-scroll elements
+    document.querySelectorAll('.fade-in-on-scroll').forEach(el => {
+      observer.observe(el);
+    });
+
+    // Navbar scroll effect
+    let lastScroll = 0;
+    const navbar = document.querySelector('nav');
+    
+    window.addEventListener('scroll', () => {
+      const currentScroll = window.pageYOffset;
+      
+      if (currentScroll > 100) {
+        navbar.classList.add('shadow-lg');
+      } else {
+        navbar.classList.remove('shadow-lg');
+      }
+      
+      lastScroll = currentScroll;
+    });
+
+
+    // Smooth page load animation
+    window.addEventListener('load', () => {
+      document.body.style.opacity = '0';
+      setTimeout(() => {
+        document.body.style.transition = 'opacity 0.5s ease-in';
+        document.body.style.opacity = '1';
+      }, 100);
+    });
+
+    // Add parallax effect to background blobs
+    window.addEventListener('scroll', () => {
+      const scrolled = window.pageYOffset;
+      const blobs = document.querySelectorAll('.absolute.bg-white\\/35');
+      blobs.forEach((blob, index) => {
+        const speed = (index + 1) * 0.1;
+        blob.style.transform = `translateY(${scrolled * speed}px)`;
+      });
+    });
+
+    // Notification badge click
+    document.querySelectorAll('.notification-badge').forEach(badge => {
+      badge.addEventListener('click', function(e) {
+        e.stopPropagation();
+        // Could trigger notification panel here
+        console.log('Notifications clicked');
+      });
+    });
+  </script>
+</body>
+</html>

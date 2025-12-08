@@ -2,45 +2,202 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <title><%= title || 'Analytics | UniClub' %></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = { theme: { extend: { colors: { brand: { 700:'#b91c1c' }}}}}
   </script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+    /* Chart animations */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .chart-container {
+      animation: fadeIn 0.6s ease-out;
+    }
+    /* Tooltip styles */
+    .tooltip {
+      position: relative;
+      cursor: help;
+    }
+    .tooltip:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
+    .tooltip-text {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #1f2937;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 1000;
+      transition: opacity 0.3s;
+    }
+    .tooltip-text::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #1f2937;
+    }
+  </style>
 </head>
 <body class="bg-gray-50 text-gray-900">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/analytics'), messages: [] }) %>
+  <%
+    // Get trend values - these should be passed from the route, default to 0 if not
+    let clubsVal = 0, deptsVal = 0, rolesVal = 0, growthVal = 0;
+    try { clubsVal = Number(clubsChange) || 0; } catch(e) { clubsVal = 0; }
+    try { deptsVal = Number(deptsChange) || 0; } catch(e) { deptsVal = 0; }
+    try { rolesVal = Number(rolesChange) || 0; } catch(e) { rolesVal = 0; }
+    try { growthVal = Number(growthChange) || 0; } catch(e) { growthVal = 0; }
+  %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/analytics'), messages: [] }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
-    <main class="flex flex-col gap-6">
+    <main class="flex flex-col gap-6 lg:mt-0 mt-16">
       <!-- Title / Refresh -->
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-semibold">Analytics</h1>
-        <form method="get" action="/admin/analytics">
-          <button class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold">
-            Refresh Data
+        <form method="get" action="/admin/analytics" id="refreshForm">
+          <button type="submit" id="refreshBtn" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors flex items-center gap-2" title="Fetch the latest analytics data">
+            <svg id="refreshIcon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span id="refreshText">Refresh Data</span>
           </button>
         </form>
       </div>
 
-      <!-- Cards -->
+      <!-- KPI Cards with Icons and Trends -->
       <section class="bg-gray-50 rounded-2xl">
         <div class="grid md:grid-cols-4 gap-4">
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <p class="text-gray-500">Club Distribution</p>
-            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= totalClubs || 0 %></p>
+          <!-- Club Distribution Card -->
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">📊</span>
+                <p class="text-gray-500 text-sm tooltip">
+                  Club Distribution
+                  <span class="tooltip-text">Total number of active clubs in the system</span>
+                </p>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= totalClubs || 0 %></p>
+              <% 
+                const clubsTrend = clubsVal > 0 ? 'up' : (clubsVal < 0 ? 'down' : 'neutral');
+                const clubsColor = clubsTrend === 'up' ? 'text-green-600' : (clubsTrend === 'down' ? 'text-red-600' : 'text-gray-500');
+                const clubsIcon = clubsTrend === 'up' ? '↑' : (clubsTrend === 'down' ? '↓' : '—');
+                const clubsLabel = clubsVal > 0 ? `+${clubsVal} this month` : (clubsVal < 0 ? `${clubsVal} this month` : 'No change');
+              %>
+              <span class="text-sm font-semibold <%= clubsColor %> flex items-center gap-1">
+                <%= clubsIcon %> <span class="text-xs"><%= clubsLabel %></span>
+              </span>
+            </div>
           </div>
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <p class="text-gray-500">Department Activity</p>
-            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= activeDepts || 0 %></p>
+
+          <!-- Department Activity Card -->
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">🏛</span>
+                <p class="text-gray-500 text-sm tooltip">
+                  Department Activity
+                  <span class="tooltip-text">Number of departments with active clubs</span>
+                </p>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= activeDepts || 0 %></p>
+              <% 
+                const deptsTrend = deptsVal > 0 ? 'up' : (deptsVal < 0 ? 'down' : 'neutral');
+                const deptsColor = deptsTrend === 'up' ? 'text-green-600' : (deptsTrend === 'down' ? 'text-red-600' : 'text-gray-500');
+                const deptsIcon = deptsTrend === 'up' ? '↑' : (deptsTrend === 'down' ? '↓' : '—');
+                const deptsLabel = deptsVal > 0 ? `+${deptsVal}` : (deptsVal < 0 ? `${deptsVal}` : 'Steady');
+              %>
+              <span class="text-sm font-semibold <%= deptsColor %> flex items-center gap-1">
+                <%= deptsIcon %> <span class="text-xs"><%= deptsLabel %></span>
+              </span>
+            </div>
           </div>
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <p class="text-gray-500">Role Distribution</p>
-            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= uniqueRoles || 0 %></p>
+
+          <!-- Role Distribution Card -->
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">👥</span>
+                <p class="text-gray-500 text-sm tooltip">
+                  Role Distribution
+                  <span class="tooltip-text">Number of unique officer roles across all clubs</span>
+                </p>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= uniqueRoles || 0 %></p>
+              <% 
+                const rolesTrend = rolesVal > 0 ? 'up' : (rolesVal < 0 ? 'down' : 'neutral');
+                const rolesColor = rolesTrend === 'up' ? 'text-green-600' : (rolesTrend === 'down' ? 'text-red-600' : 'text-gray-500');
+                const rolesIcon = rolesTrend === 'up' ? '↑' : (rolesTrend === 'down' ? '↓' : '—');
+                const rolesLabel = rolesVal > 0 ? `+${rolesVal} this month` : (rolesVal < 0 ? `${rolesVal}` : 'No change');
+              %>
+              <span class="text-sm font-semibold <%= rolesColor %> flex items-center gap-1">
+                <%= rolesIcon %> <span class="text-xs"><%= rolesLabel %></span>
+              </span>
+            </div>
           </div>
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <p class="text-gray-500">Growth Rate</p>
-            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= (typeof growthRate !== 'undefined' ? growthRate : 0) %>%</p>
+
+          <!-- Growth Rate Card -->
+          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">📈</span>
+                <p class="text-gray-500 text-sm tooltip">
+                  Growth Rate
+                  <span class="tooltip-text">Percentage increase in active members compared to last month</span>
+                </p>
+          </div>
+          </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= (typeof growthRate !== 'undefined' ? growthRate : 0) %>%</p>
+              <% 
+                const growthTrend = growthVal > 0 ? 'up' : (growthVal < 0 ? 'down' : 'neutral');
+                const growthColor = growthTrend === 'up' ? 'text-green-600' : (growthTrend === 'down' ? 'text-red-600' : 'text-gray-500');
+                const growthIcon = growthTrend === 'up' ? '↑' : (growthTrend === 'down' ? '↓' : '—');
+                const growthLabel = growthVal > 0 ? 'Growing' : (growthVal < 0 ? 'Declining' : 'No new members');
+              %>
+              <span class="text-sm font-semibold <%= growthColor %> flex items-center gap-1">
+                <%= growthIcon %> <span class="text-xs"><%= growthLabel %></span>
+              </span>
+          </div>
           </div>
         </div>
       </section>
@@ -48,18 +205,41 @@
       <!-- Charts Row -->
       <section class="grid lg:grid-cols-2 gap-6">
         <!-- Membership / roles pie -->
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 chart-container">
           <h2 class="text-lg font-semibold mb-3">Club Membership Distribution</h2>
           <div class="rounded-xl bg-gray-50 border border-gray-200 p-4">
-            <canvas id="deptPie" height="120"></canvas>
+            <% if (clubDeptLabels && clubDeptLabels.length > 0) { %>
+              <div class="flex flex-col items-center justify-center" style="min-height: 300px;">
+                <div class="w-full max-w-md">
+                  <canvas id="deptPie" style="max-height: 250px;"></canvas>
+                </div>
+              </div>
+            <% } else { %>
+              <div class="flex flex-col items-center justify-center h-48 text-gray-400">
+                <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <p class="text-sm">No club data available yet</p>
+              </div>
+            <% } %>
           </div>
         </div>
 
         <!-- Monthly trend -->
-        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-          <h2 class="text-lg font-semibold mb-3">Monthly Activity Trends</h2>
+        <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 chart-container">
+          <h2 class="text-lg font-semibold mb-1">Monthly Activity Trends</h2>
+          <p class="text-sm text-gray-500 mb-3">Total club events per month (last 6 months)</p>
           <div class="rounded-xl bg-gray-50 border border-gray-200 p-4">
-            <canvas id="monthlyLine" height="120"></canvas>
+            <% if (monthlyLabels && monthlyLabels.length > 0) { %>
+              <canvas id="monthlyLine" height="200"></canvas>
+            <% } else { %>
+              <div class="flex flex-col items-center justify-center h-48 text-gray-400">
+                <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <p class="text-sm text-center px-4">📉 No activity data yet — once clubs begin hosting events, trends will appear here.</p>
+              </div>
+            <% } %>
           </div>
         </div>
       </section>
@@ -73,7 +253,7 @@
           <div class="overflow-auto rounded-xl border border-gray-200">
             <table class="min-w-full">
               <thead>
-                <tr class="bg-red-800 text-white">
+                <tr class="bg-gray-100 text-gray-700">
                   <th class="px-4 py-3 text-left text-sm font-semibold">Department</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Total Officers</th>
                   <th class="px-4 py-3 text-left text-sm font-semibold">Active Clubs</th>
@@ -85,8 +265,19 @@
                 <% const _dept = (typeof deptAnalytics !== 'undefined' && Array.isArray(deptAnalytics)) ? deptAnalytics : []; %>
                 <% if (_dept.length) { %>
                   <% _dept.forEach(d => { %>
-                    <tr>
-                      <td class="px-4 py-3 text-sm font-medium text-gray-900"><%= d.department %></td>
+                    <tr class="hover:bg-gray-50 transition-colors">
+                      <td class="px-4 py-3 text-sm font-medium text-gray-900">
+                        <div class="flex items-center gap-2">
+                          <span class="text-lg">
+                            <% if (d.department.includes('Computing') || d.department.includes('Computer')) { %>💻<% } 
+                               else if (d.department.includes('Math')) { %>🧮<% }
+                               else if (d.department.includes('Science')) { %>🔬<% }
+                               else if (d.department.includes('Education')) { %>🏫<% }
+                               else { %>🏛<% } %>
+                          </span>
+                          <%= d.department %>
+                        </div>
+                      </td>
                       <td class="px-4 py-3 text-sm text-gray-700"><%= d.total_officers %></td>
                       <td class="px-4 py-3 text-sm text-gray-700"><%= d.active_clubs %></td>
                       <td class="px-4 py-3 text-sm text-gray-700"><%= d.activityScore %></td>
@@ -95,7 +286,7 @@
                            const pill = t === 'up' ? 'bg-green-100 text-green-700'
                                        : t === 'down' ? 'bg-red-100 text-red-700'
                                        : 'bg-gray-100 text-gray-700';
-                           const label = t === 'up' ? 'Rising' : (t === 'down' ? 'Falling' : 'Flat');
+                           const label = t === 'up' ? '↑ Rising' : (t === 'down' ? '↓ Falling' : '— Flat');
                         %>
                         <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= pill %>"><%= label %></span>
                       </td>
@@ -103,8 +294,11 @@
                   <% }) %>
                 <% } else { %>
                   <tr>
-                    <td colspan="5" class="px-4 py-10 text-center text-gray-500 text-sm">
-                      No department analytics yet.
+                    <td colspan="5" class="px-4 py-12 text-center">
+                      <div class="flex flex-col items-center gap-2 text-gray-400">
+                        <span class="text-4xl">🚀</span>
+                        <p class="text-sm">No department data available yet — once clubs start recording activities, analytics will appear here.</p>
+                      </div>
                     </td>
                   </tr>
                 <% } %>
@@ -125,23 +319,96 @@
     const monthlyLabels  = <%- JSON.stringify(monthlyLabels  || []) %>;
     const monthlyCounts  = <%- JSON.stringify(monthlyCounts  || []) %>;
 
-    // Pie (departments by clubs)
+    // Calculate percentages for donut chart
+    const totalClubs = clubDeptCounts.reduce((a, b) => a + b, 0);
+    const clubDeptPercentages = clubDeptCounts.map(count => 
+      totalClubs > 0 ? Math.round((count / totalClubs) * 100) : 0
+    );
+
+    // Department color mapping
+    function getDepartmentColor(deptName) {
+      const dept = deptName.toUpperCase();
+      // DCE - Grey
+      if (dept.includes('DCE') || dept.includes('COMPUTING EDUCATION')) return '#6b7280'; // grey-500
+      // DTE - Blue
+      if (dept.includes('DTE') || dept.includes('TEACHER EDUCATION')) return '#3b82f6'; // blue-500
+      // DASE - Green
+      if (dept.includes('DASE') || dept.includes('ARTS AND SCIENCES EDUCATION')) return '#10b981'; // green-500
+      // DEE - Orange
+      if (dept.includes('DEE') || dept.includes('ELEMENTARY EDUCATION')) return '#f97316'; // orange-500
+      // DCJE - Red
+      if (dept.includes('DCJE') || dept.includes('CRIMINAL JUSTICE EDUCATION')) return '#ef4444'; // red-500
+      // DHE - Purple
+      if (dept.includes('DHE') || dept.includes('HOME ECONOMICS')) return '#a855f7'; // purple-500
+      // DAE - Cyan
+      if (dept.includes('DAE') || dept.includes('AGRICULTURAL EDUCATION')) return '#06b6d4'; // cyan-500
+      // DBAE - Yellow
+      if (dept.includes('DBAE') || dept.includes('BUSINESS ADMINISTRATION EDUCATION')) return '#eab308'; // yellow-500
+      // Default color for unassigned or unknown departments
+      return '#9ca3af'; // grey-400
+    }
+
+    // Generate colors for each department
+    const departmentColors = clubDeptLabels.map(label => getDepartmentColor(label));
+
+    // Pie (departments by clubs) with percentages - centered circle with text at bottom
     const pieCtx = document.getElementById('deptPie');
     if (pieCtx && clubDeptLabels.length) {
       new Chart(pieCtx, {
         type: 'doughnut',
         data: {
           labels: clubDeptLabels,
-          datasets: [{ data: clubDeptCounts }]
+          datasets: [{
+            data: clubDeptCounts,
+            backgroundColor: departmentColors,
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
         },
         options: {
-          plugins: { legend: { position: 'bottom' } },
-          cutout: '65%'
+          plugins: {
+            legend: {
+              position: 'bottom',
+              align: 'center',
+              labels: {
+                padding: 15,
+                font: { size: 11 },
+                usePointStyle: true,
+                boxWidth: 12,
+                boxHeight: 12
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const label = context.label || '';
+                  const value = context.parsed || 0;
+                  const percentage = totalClubs > 0 ? ((value / totalClubs) * 100).toFixed(1) : 0;
+                  return `${label}: ${value} ${value === 1 ? 'Club' : 'Clubs'} (${percentage}%)`;
+                }
+              }
+            }
+          },
+          cutout: '70%',
+          layout: {
+            padding: {
+              top: 20,
+              bottom: 20
+            }
+          },
+          animation: {
+            animateRotate: true,
+            animateScale: true,
+            duration: 1000,
+            easing: 'easeOutQuart'
+          },
+          maintainAspectRatio: true,
+          responsive: true
         }
       });
     }
 
-    // Line (monthly activity)
+    // Line (monthly activity) with enhanced styling
     const lineCtx = document.getElementById('monthlyLine');
     if (lineCtx && monthlyLabels.length) {
       new Chart(lineCtx, {
@@ -151,18 +418,71 @@
           datasets: [{
             label: 'Events',
             data: monthlyCounts,
-            fill: false,
-            tension: 0.35
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.4,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointBackgroundColor: '#3b82f6',
+            pointBorderColor: '#ffffff',
+            pointBorderWidth: 2
           }]
         },
         options: {
-          plugins: { legend: { display: false } },
-          scales: { y: { beginAtZero: true } }
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 12,
+              titleFont: { size: 14, weight: 'bold' },
+              bodyFont: { size: 13 }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: 'rgba(0, 0, 0, 0.05)' },
+              ticks: { stepSize: 1 }
+            },
+            x: {
+              grid: { display: false }
+            }
+          },
+          animation: {
+            duration: 1000,
+            easing: 'easeOutQuart'
+          }
         }
       });
     }
+
+    // Refresh button loading state
+    const refreshForm = document.getElementById('refreshForm');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const refreshIcon = document.getElementById('refreshIcon');
+    const refreshText = document.getElementById('refreshText');
+
+    if (refreshForm) {
+      refreshForm.addEventListener('submit', function(e) {
+        refreshBtn.disabled = true;
+        refreshBtn.classList.add('opacity-75', 'cursor-not-allowed');
+        refreshIcon.classList.add('animate-spin');
+        refreshText.textContent = 'Refreshing...';
+      });
+    }
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
   </script>
 </body>
 </html>
-
-

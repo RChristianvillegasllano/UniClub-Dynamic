@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>UniClub • Sign Up</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brandRed: '#c62828',
+            brandOrange: '#ef6c00',
+            ink: '#1f2933',
+            subtle: '#6b7280',
+          },
+          fontFamily: {
+            ui: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: url("./sunstar_import_uploads_images_2023_07_05_446503.avif") center/cover no-repeat;
+      filter: saturate(0.7) brightness(0.8);
+      z-index: -2;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #801515 0%, #d75a06 100%);
+      mix-blend-mode: multiply;
+      z-index: -1;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(32px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(24px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .fade-up { animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    .slide-in { animation: slideIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    
+    .glass-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.9);
+    }
+
+    .input-field {
+      transition: all 0.3s ease;
+    }
+    
+    .input-field:focus {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 16px rgba(198,40,40,0.15);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #c62828 0%, #ef6c00 100%);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 16px rgba(198,40,40,0.4);
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(198,40,40,0.5);
+    }
+    
+    .btn-primary:active {
+      transform: translateY(0);
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, #c62828 0%, #ef6c00 100%);
+      box-shadow: 0 4px 12px rgba(198,40,40,0.3);
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: linear-gradient(to right, #c62828, #ef6c00);
+      transition: width 0.3s ease;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen font-ui text-white flex items-center justify-center px-4 py-8">
+
+  <main class="w-full max-w-7xl">
+    <!-- Top Navigation -->
+    <header class="fade-up mb-12 flex items-center justify-between text-sm">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-full bg-white/15 backdrop-blur-md border border-white/40 flex items-center justify-center shadow-lg">
+          <span class="text-sm font-bold tracking-tight">UC</span>
+        </div>
+        <div class="leading-tight">
+          <p class="uppercase tracking-[0.24em] text-white/80 text-[10px] font-medium">UniClub</p>
+          <p class="font-semibold text-base text-white">University of Mindanao</p>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <section class="grid lg:grid-cols-[1fr,1.3fr] gap-16 items-start">
+      <!-- Left Content -->
+      <div class="space-y-8 fade-up lg:sticky lg:top-8" style="animation-delay: 0.1s;">
+        <div class="space-y-5">
+          <div class="inline-block px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20">
+            <p class="text-xs uppercase tracking-[0.2em] text-white/90 font-medium">
+              Student Registration
+            </p>
+          </div>
+          
+          <h1 class="text-4xl lg:text-5xl font-bold leading-tight">
+            Create your<br/>
+            <span class="bg-gradient-to-r from-white to-white/90 bg-clip-text text-transparent">UniClub</span> account
+          </h1>
+          
+          <p class="text-lg text-white/90 leading-relaxed max-w-xl">
+            Use your official UMindanao email to join organizations, manage memberships, and stay connected with campus life.
+          </p>
+        </div>
+
+        <!-- Benefits -->
+        <div class="space-y-4 pt-4">
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div>
+              <p class="font-semibold mb-1">Instant Access</p>
+              <p class="text-sm text-white/80">Join organizations and RSVP to events immediately</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div>
+              <p class="font-semibold mb-1">Stay Updated</p>
+              <p class="text-sm text-white/80">Get real-time notifications about campus activities</p>
+            </div>
+          </div>
+          
+          <div class="flex items-start gap-3">
+            <div class="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+              </svg>
+            </div>
+            <div>
+              <p class="font-semibold mb-1">All-in-One Platform</p>
+              <p class="text-sm text-white/80">Manage everything from one dashboard</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sign Up Card -->
+      <div class="flex justify-end slide-in" style="animation-delay: 0.2s;">
+        <div class="glass-card w-full max-w-3xl rounded-3xl p-8 lg:p-10">
+          
+          <!-- Card Header -->
+          <div class="flex items-center justify-between mb-6">
+            
+            <!-- Progress Indicator -->
+            <div class="hidden sm:flex items-center gap-2 text-xs text-gray-500">
+              <span class="font-medium">Step 1 of 1</span>
+            </div>
+          </div>
+
+          <h2 class="text-3xl font-bold text-ink mb-2">
+            Sign up
+          </h2>
+          <p class="text-subtle text-sm mb-8">
+            Fill in your details to create your UniClub account
+          </p>
+
+          <form class="space-y-6" onsubmit="handleSignup(event)">
+            
+            <!-- Personal Information -->
+            <div class="space-y-5">
+              <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Personal Information</h3>
+              
+              <!-- Names Row -->
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    First Name <span class="text-brandRed">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="firstName"
+                    placeholder="Juan"
+                    required
+                    class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900 placeholder:text-gray-400
+                           focus:outline-none focus:border-brandRed"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    Last Name <span class="text-brandRed">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="lastName"
+                    placeholder="Dela Cruz"
+                    required
+                    class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900 placeholder:text-gray-400
+                           focus:outline-none focus:border-brandRed"
+                  />
+                </div>
+              </div>
+
+              <!-- Birthdate & Student ID Row -->
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    Birthdate <span class="text-brandRed">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    id="birthdate"
+                    required
+                    class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900
+                           focus:outline-none focus:border-brandRed"
+                  />
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    Student ID <span class="text-brandRed">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="studentId"
+                    placeholder="2024-12345"
+                    required
+                    class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900 placeholder:text-gray-400
+                           focus:outline-none focus:border-brandRed"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <!-- Academic Information -->
+            <div class="space-y-5 pt-4">
+              <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Academic Information</h3>
+              
+              <!-- Department & Program Row -->
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    Department <span class="text-brandRed">*</span>
+                  </label>
+                  <select
+                    id="department"
+                    required
+                    class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900
+                           focus:outline-none focus:border-brandRed">
+                    <option value="">Select Department</option>
+                    <option value="CCS">College of Computer Studies (CCS)</option>
+                    <option value="COE">College of Engineering (COE)</option>
+                    <option value="CBA">College of Business Administration (CBA)</option>
+                    <option value="CTE">College of Teacher Education (CTE)</option>
+                    <option value="CAS">College of Arts and Sciences (CAS)</option>
+                    <option value="CHS">College of Health Sciences (CHS)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    Program <span class="text-brandRed">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="program"
+                    placeholder="e.g., BSCS, BSIT, BSBA"
+                    required
+                    class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900 placeholder:text-gray-400
+                           focus:outline-none focus:border-brandRed"
+                  />
+                </div>
+              </div>
+
+              <!-- Year Level -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Year Level <span class="text-brandRed">*</span>
+                </label>
+                <select
+                  id="yearLevel"
+                  required
+                  class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900
+                         focus:outline-none focus:border-brandRed">
+                  <option value="">Select Year Level</option>
+                  <option value="1">1st Year</option>
+                  <option value="2">2nd Year</option>
+                  <option value="3">3rd Year</option>
+                  <option value="4">4th Year</option>
+                  <option value="5">5th Year</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Account Setup -->
+            <div class="space-y-5 pt-4">
+              <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Account Setup</h3>
+              
+              <!-- Email -->
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  UMindanao Email <span class="text-brandRed">*</span>
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  placeholder="yourname@umindanao.edu.ph"
+                  required
+                  pattern=".+@umindanao\.edu\.ph"
+                  class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900 placeholder:text-gray-400
+                         focus:outline-none focus:border-brandRed"
+                />
+                <p class="text-xs text-gray-500 mt-1">Must be your official UMindanao email address</p>
+              </div>
+
+              <!-- Passwords Row -->
+              <div class="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    Password <span class="text-brandRed">*</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="password"
+                      id="password"
+                      placeholder="Create a strong password"
+                      required
+                      minlength="8"
+                      class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                             text-gray-900 placeholder:text-gray-400
+                             focus:outline-none focus:border-brandRed"
+                    />
+                    <button
+                      type="button"
+                      onclick="togglePassword('password')"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </div>
+                  <p class="text-xs text-gray-500 mt-1">At least 8 characters</p>
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold text-gray-800 mb-2">
+                    Confirm Password <span class="text-brandRed">*</span>
+                  </label>
+                  <div class="relative">
+                    <input
+                      type="password"
+                      id="confirmPassword"
+                      placeholder="Re-enter your password"
+                      required
+                      class="input-field w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                             text-gray-900 placeholder:text-gray-400
+                             focus:outline-none focus:border-brandRed"
+                    />
+                    <button
+                      type="button"
+                      onclick="togglePassword('confirmPassword')"
+                      class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Terms & Conditions -->
+            <div class="pt-4">
+              <label class="flex items-start gap-3 cursor-pointer group">
+                <input 
+                  type="checkbox" 
+                  id="terms"
+                  required
+                  class="w-5 h-5 mt-0.5 text-brandRed border-gray-300 rounded focus:ring-brandOrange focus:ring-2" 
+                />
+                <span class="text-sm text-gray-700 group-hover:text-gray-900">
+                  I agree to the <a href="#" class="text-brandRed font-semibold hover:text-brandOrange">Terms of Service</a> and <a href="#" class="text-brandRed font-semibold hover:text-brandOrange">Privacy Policy</a>
+                </span>
+              </label>
+            </div>
+
+            <!-- Create Account Button -->
+            <button
+              type="submit"
+              class="btn-primary w-full py-4 text-base font-semibold tracking-wide
+                     rounded-xl text-white">
+              CREATE ACCOUNT
+            </button>
+          </form>
+
+          <!-- Sign In Link -->
+          <p class="mt-6 text-center text-sm text-gray-600">
+            Already have an account?
+            <a href="login.html" class="text-brandRed font-semibold hover:text-brandOrange transition-colors">
+              Log in here
+            </a>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    function togglePassword(fieldId) {
+      const input = document.getElementById(fieldId);
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function handleSignup(event) {
+      event.preventDefault();
+      
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const email = document.getElementById('email').value;
+      
+      // Validate email domain
+      if (!email.endsWith('@umindanao.edu.ph')) {
+        alert('Please use your official UMindanao email address');
+        return;
+      }
+      
+      // Validate password match
+      if (password !== confirmPassword) {
+        alert('Passwords do not match!');
+        return;
+      }
+      
+      // Collect form data
+      const formData = {
+        firstName: document.getElementById('firstName').value,
+        lastName: document.getElementById('lastName').value,
+        birthdate: document.getElementById('birthdate').value,
+        studentId: document.getElementById('studentId').value,
+        department: document.getElementById('department').value,
+        program: document.getElementById('program').value,
+        yearLevel: document.getElementById('yearLevel').value,
+        email: email,
+        password: password
+      };
+      
+      console.log('Sign up data:', formData);
+      alert('Account created successfully! Redirecting to login...');
+      
+      // In a real app, this would send data to the server
+      // window.location.href = 'login.html';
+    }
+
+    // Real-time password matching indicator
+    document.getElementById('confirmPassword')?.addEventListener('input', function() {
+      const password = document.getElementById('password').value;
+      const confirmPassword = this.value;
+      
+      if (confirmPassword && password !== confirmPassword) {
+        this.style.borderColor = '#ef4444';
+      } else if (confirmPassword && password === confirmPassword) {
+        this.style.borderColor = '#10b981';
+      } else {
+        this.style.borderColor = '#e5e7eb';
+      }
+    });
+  </script>
+
+</body>
+</html>

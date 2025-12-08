@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Edit Requirement | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
@@ -25,6 +25,7 @@
         <a href="/admin/requirements" class="block p-2 rounded bg-red-100 text-[#a10109d1] font-semibold">📋 Requirements</a>
         <a href="/admin/messages" class="block p-2 rounded hover:bg-red-50">💬 Messages</a>
         <form method="POST" action="/admin/logout" class="mt-8">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="w-full p-2 rounded bg-red-600 text-white hover:bg-red-700 transition">Logout</button>
         </form>
       </nav>
@@ -46,6 +47,7 @@
       <!-- Form Section -->
       <section class="bg-white p-6 rounded-xl shadow">
         <form action="/admin/requirements/edit/<%= requirement.id %>" method="POST" class="space-y-5">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <!-- Requirement Name -->
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Requirement</label>

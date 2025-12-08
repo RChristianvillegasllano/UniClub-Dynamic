@@ -65,6 +65,7 @@
     </button>
     <h2 class="text-xl font-bold mb-4">Add Requirement</h2>
     <form action="/requirements/add" method="POST" class="space-y-4">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="text" name="title" placeholder="Title" required class="w-full border border-gray-300 rounded px-3 py-2">
       <textarea name="description" placeholder="Description" class="w-full border border-gray-300 rounded px-3 py-2"></textarea>
       <select name="priority" class="w-full border border-gray-300 rounded px-3 py-2">
@@ -91,6 +92,7 @@
     </button>
     <h2 class="text-xl font-bold mb-4">Edit Requirement</h2>
     <form id="editForm" method="POST" class="space-y-4">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="text" name="title" id="editTitle" required class="w-full border border-gray-300 rounded px-3 py-2">
       <textarea name="description" id="editDescription" class="w-full border border-gray-300 rounded px-3 py-2"></textarea>
       <select name="priority" id="editPriority" class="w-full border border-gray-300 rounded px-3 py-2">

@@ -5,17 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Edit Club | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/clubs'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/clubs'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main -->
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
       <header class="mb-6 flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-slate-800">Edit Club</h1>
@@ -28,8 +46,8 @@
       </header>
 
       <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <form action="/admin/clubs/edit/<%= club.id %>" method="POST" class="space-y-5">
-          
+        <form action="/admin/clubs/edit/<%= club.id %>" method="POST" enctype="multipart/form-data" class="space-y-5">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <!-- Club Name -->
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Club Name</label>
@@ -37,17 +55,48 @@
               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
           </div>
 
-          <!-- Department & Program -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Department</label>
-              <input type="text" name="department" value="<%= club.department || '' %>"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
+          <!-- Department -->
+          <div data-dept-program>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-600 mb-2">Department <span class="text-gray-400 text-xs font-normal">(Optional)</span></label>
+              <select name="department" id="departmentSelect" data-dept-select
+                class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] transition">
+                <option value="">Select Department (Optional)</option>
+                <option value="Department of Accounting Education" <%= club.department === 'Department of Accounting Education' ? 'selected' : '' %>>Department of Accounting Education</option>
+                <option value="Department of Arts and Sciences Education" <%= club.department === 'Department of Arts and Sciences Education' ? 'selected' : '' %>>Department of Arts and Sciences Education</option>
+                <option value="Department of Business Administration Education" <%= club.department === 'Department of Business Administration Education' ? 'selected' : '' %>>Department of Business Administration Education</option>
+                <option value="Department of Computing Education" <%= club.department === 'Department of Computing Education' ? 'selected' : '' %>>Department of Computing Education</option>
+                <option value="Department of Criminal Justice Education" <%= club.department === 'Department of Criminal Justice Education' ? 'selected' : '' %>>Department of Criminal Justice Education</option>
+                <option value="Department of Engineering Education" <%= club.department === 'Department of Engineering Education' ? 'selected' : '' %>>Department of Engineering Education</option>
+                <option value="Department of Hospitality Education" <%= club.department === 'Department of Hospitality Education' ? 'selected' : '' %>>Department of Hospitality Education</option>
+                <option value="Department of Teacher Education" <%= club.department === 'Department of Teacher Education' ? 'selected' : '' %>>Department of Teacher Education</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Select a department to filter programs, or leave empty to see all programs</p>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Program</label>
-              <input type="text" name="program" value="<%= club.program || '' %>"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
+          </div>
+
+          <!-- Programs -->
+          <div class="mt-4" id="programsSection" style="display: <%= club.department ? 'block' : 'none' %>;">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-slate-600">Programs <span class="text-gray-400 text-xs font-normal">(Optional, select one or more)</span></label>
+              <div class="flex items-center gap-2">
+                <button type="button" id="selectAllPrograms" 
+                  class="px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap">
+                  Select All
+                </button>
+                <button type="button" id="clearAllPrograms" 
+                  class="px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap">
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Program Checkboxes Container -->
+            <div id="programOptions" class="border border-slate-200 rounded-lg p-4 bg-slate-50 max-h-80 overflow-y-auto">
+              <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <!-- Programs will be populated dynamically based on department selection -->
+              </div>
+              <p id="noProgramsMessage" class="text-sm text-gray-500 text-center py-4 hidden">No programs available.</p>
             </div>
           </div>
 
@@ -65,6 +114,19 @@
               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]"><%= club.description || '' %></textarea>
           </div>
 
+          <!-- Category -->
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Category</label>
+            <select name="category" required
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
+              <option value="">Select Category</option>
+              <option value="Prime Organization" <%= club.category === 'Prime Organization' ? 'selected' : '' %>>Prime Organization</option>
+              <option value="Academic" <%= club.category === 'Academic' ? 'selected' : '' %>>Academic</option>
+              <option value="Civic" <%= club.category === 'Civic' ? 'selected' : '' %>>Civic</option>
+              <option value="Religious" <%= club.category === 'Religious' ? 'selected' : '' %>>Religious</option>
+            </select>
+          </div>
+
           <!-- Status -->
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Status</label>
@@ -73,6 +135,35 @@
               <option value="Active" <%= club.status === 'Active' ? 'selected' : '' %>>Active</option>
               <option value="Inactive" <%= club.status === 'Inactive' ? 'selected' : '' %>>Inactive</option>
             </select>
+          </div>
+
+          <!-- Club Photo -->
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Club Logo/Photo</label>
+            <p class="text-xs text-slate-500 mb-2">Upload a logo or photo for this club (optional). Max size: 5MB. Supported formats: JPG, PNG, GIF, WebP</p>
+            
+            <% if (club.photo) { %>
+              <div class="mb-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                <div class="flex items-center gap-3">
+                  <img src="<%= club.photo %>" alt="Current club logo" class="w-20 h-20 object-cover rounded-lg border border-slate-300">
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-slate-700">Current Photo</p>
+                    <p class="text-xs text-slate-500"><%= club.photo %></p>
+                  </div>
+                  <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer">
+                    <input type="checkbox" name="delete_photo" class="rounded">
+                    <span>Delete photo</span>
+                  </label>
+                </div>
+              </div>
+            <% } %>
+            
+            <input type="file" name="photo" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            <div id="photoPreview" class="mt-3 hidden">
+              <p class="text-xs text-slate-500 mb-2">New photo preview:</p>
+              <img id="previewImage" src="" alt="Preview" class="max-w-xs max-h-48 rounded-lg border border-slate-300">
+            </div>
           </div>
 
           <!-- Buttons -->
@@ -96,5 +187,218 @@
   </div>
 
   <script> window.lucide && window.lucide.replace(); </script>
+  <script>
+    // Custom logic for Edit Club page - show programs as checkboxes based on department selection
+    (function() {
+      const container = document.querySelector('[data-dept-program]');
+      if (!container) return;
+      
+      const deptSelect = container.querySelector('[data-dept-select]');
+      const programOptions = document.getElementById('programOptions');
+      const programsSection = document.getElementById('programsSection');
+      
+      if (!deptSelect || !programOptions || !programsSection) return;
+      
+      const DEPT_TO_PROGRAMS = {
+        "Department of Accounting Education": [
+          "Bachelor of Science in Accountancy",
+          "Bachelor of Science in Management Accounting",
+        ],
+        "Department of Arts and Sciences Education": [
+          "Bachelor of Arts Major in English Language",
+          "Bachelor of Science in Psychology",
+        ],
+        "Department of Business Administration Education": [
+          "Bachelor of Science in Business Administration - Financial Management",
+          "Bachelor of Science in Business Administration - Human Resource Management",
+          "Bachelor of Science in Business Administration - Marketing Management",
+        ],
+        "Department of Computing Education": [
+          "Bachelor of Science in Information Technology",
+          "Bachelor of Science in Computer Science",
+        ],
+        "Department of Criminal Justice Education": [
+          "Bachelor of Science in Criminology",
+        ],
+        "Department of Engineering Education": [
+          "Bachelor of Science in Computer Engineering",
+          "Bachelor of Science in Electrical Engineering",
+          "Bachelor of Science in Electronics & Communications Engineering",
+        ],
+        "Department of Hospitality Education": [
+          "Bachelor of Science in Hospitality Management",
+          "Bachelor of Science in Tourism Management",
+        ],
+        "Department of Teacher Education": [
+          "Bachelor of Elementary Education",
+          "Bachelor of Physical Education",
+          "Bachelor of Secondary Education - Major in English",
+          "Bachelor of Secondary Education - Major in Filipino",
+          "Bachelor of Secondary Education - Major in General Science",
+          "Bachelor of Secondary Education - Major in Mathematics",
+          "Bachelor of Secondary Education - Major in Social Studies",
+        ],
+      };
+      
+      const ALL_PROGRAMS = Array.from(new Set(Object.values(DEPT_TO_PROGRAMS).flat()));
+      
+      // Parse existing club programs from the server
+      let existingPrograms = [];
+      <% if (club.program) { %>
+        try {
+          const clubProgram = <%- JSON.stringify(club.program) %>;
+          if (Array.isArray(clubProgram)) {
+            existingPrograms = clubProgram.filter(Boolean).map(p => String(p).trim()).filter(Boolean);
+          } else if (typeof clubProgram === 'string') {
+            try {
+              const parsed = JSON.parse(clubProgram);
+              if (Array.isArray(parsed)) {
+                existingPrograms = parsed.filter(Boolean).map(p => String(p).trim()).filter(Boolean);
+              } else {
+                existingPrograms = [clubProgram.trim()].filter(Boolean);
+              }
+            } catch (e) {
+              // If it's a simple string, try to split by comma
+              if (clubProgram.includes(',')) {
+                existingPrograms = clubProgram.split(',').map(p => p.trim()).filter(Boolean);
+              } else {
+                existingPrograms = [clubProgram.trim()].filter(Boolean);
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Could not parse existing programs:', e);
+        }
+      <% } %>
+      
+      function renderProgramCheckboxes(departmentValue) {
+        const gridContainer = programOptions.querySelector('.grid');
+        if (!gridContainer) return;
+        
+        gridContainer.innerHTML = '';
+        const noProgramsMsg = document.getElementById('noProgramsMessage');
+        
+        const programsToShow = departmentValue 
+          ? (DEPT_TO_PROGRAMS[departmentValue] || [])
+          : ALL_PROGRAMS;
+        
+        if (programsToShow.length === 0) {
+          if (noProgramsMsg) noProgramsMsg.classList.remove('hidden');
+          return;
+        }
+        
+        if (noProgramsMsg) noProgramsMsg.classList.add('hidden');
+        
+        programsToShow.forEach(program => {
+          const isChecked = existingPrograms.some(ep => 
+            ep.toLowerCase() === program.toLowerCase() || 
+            program.toLowerCase().includes(ep.toLowerCase())
+          );
+          
+          const label = document.createElement('label');
+          label.className = 'flex items-center gap-2 text-sm p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-all has-[:checked]:bg-blue-50 has-[:checked]:border-blue-300 has-[:checked]:text-blue-800';
+          label.innerHTML = `
+            <input type="checkbox" name="program" value="${program}" class="program-option h-4 w-4 text-[#a10109d1] focus:ring-[#a10109d1] border-gray-300 rounded" ${isChecked ? 'checked' : ''}>
+            <span>${program}</span>
+          `;
+          gridContainer.appendChild(label);
+        });
+      }
+      
+      function updateProgramsVisibility() {
+        const selectedDepartment = deptSelect.value;
+        if (selectedDepartment) {
+          programsSection.style.display = 'block';
+          renderProgramCheckboxes(selectedDepartment);
+        } else {
+          programsSection.style.display = 'none';
+          const gridContainer = programOptions.querySelector('.grid');
+          if (gridContainer) gridContainer.innerHTML = '';
+          const noProgramsMsg = document.getElementById('noProgramsMessage');
+          if (noProgramsMsg) noProgramsMsg.classList.add('hidden');
+        }
+      }
+      
+      // Event Listeners
+      deptSelect.addEventListener('change', updateProgramsVisibility);
+      
+      const selectAllBtn = document.getElementById('selectAllPrograms');
+      const clearAllBtn = document.getElementById('clearAllPrograms');
+      
+      if (selectAllBtn) {
+        selectAllBtn.addEventListener('click', () => {
+          programOptions.querySelectorAll('.program-option').forEach(checkbox => {
+            checkbox.checked = true;
+            const label = checkbox.closest('label');
+            if (label) {
+              label.classList.add('has-[:checked]:bg-blue-50', 'has-[:checked]:border-blue-300', 'has-[:checked]:text-blue-800');
+            }
+          });
+        });
+      }
+      
+      if (clearAllBtn) {
+        clearAllBtn.addEventListener('click', () => {
+          programOptions.querySelectorAll('.program-option').forEach(checkbox => {
+            checkbox.checked = false;
+            const label = checkbox.closest('label');
+            if (label) {
+              label.classList.remove('has-[:checked]:bg-blue-50', 'has-[:checked]:border-blue-300', 'has-[:checked]:text-blue-800');
+            }
+          });
+        });
+      }
+      
+      // Initial render - show programs if department is already selected
+      updateProgramsVisibility();
+      
+      // Photo preview
+      const photoInput = document.querySelector('input[name="photo"]');
+      const photoPreview = document.getElementById('photoPreview');
+      const previewImage = document.getElementById('previewImage');
+      
+      if (photoInput && photoPreview && previewImage) {
+        photoInput.addEventListener('change', function(e) {
+          const file = e.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+              previewImage.src = e.target.result;
+              photoPreview.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+          } else {
+            photoPreview.classList.add('hidden');
+          }
+        });
+      }
+
+      // Re-apply selection styles on dynamically added checkboxes
+      programOptions.addEventListener('change', (event) => {
+        if (event.target.classList.contains('program-option')) {
+          const label = event.target.closest('label');
+          if (label) {
+            if (event.target.checked) {
+              label.classList.add('has-[:checked]:bg-blue-50', 'has-[:checked]:border-blue-300', 'has-[:checked]:text-blue-800');
+            } else {
+              label.classList.remove('has-[:checked]:bg-blue-50', 'has-[:checked]:border-blue-300', 'has-[:checked]:text-blue-800');
+            }
+          }
+        }
+      });
+    })();
+    
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+  </script>
 </body>
 </html>

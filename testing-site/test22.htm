@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniClub - University of Mindanao</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f8fafc;
+        }
+        
+        /* Minimal color for white sections - Meta-style */
+        .bg-white, .bg-gray-50 {
+            background-color: #f5f6f8 !important;
+        }
+        
+        .bg-gradient-to-b.from-white {
+            background: linear-gradient(to bottom, #f5f6f8, #f8fafc) !important;
+        }
+        
+        .glass-card {
+            background: rgba(248, 250, 252, 0.98) !important;
+        }
+        
+        /* Animated Gradient Background */
+        .hero-gradient {
+            background: linear-gradient(-45deg, #8b0000, #b91c1c, #ff6b35, #f59e0b, #ff6b35, #b91c1c);
+            background-size: 400% 400%;
+            animation: gradientFlow 15s ease infinite;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        @keyframes gradientFlow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Mesh Gradient Overlay */
+        .mesh-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 10% 20%, rgba(255, 255, 255, 0.15) 0%, transparent 20%),
+                radial-gradient(circle at 90% 30%, rgba(255, 107, 53, 0.2) 0%, transparent 30%),
+                radial-gradient(circle at 50% 70%, rgba(139, 0, 0, 0.2) 0%, transparent 25%),
+                radial-gradient(circle at 70% 90%, rgba(255, 255, 255, 0.1) 0%, transparent 20%);
+            filter: blur(40px);
+        }
+        
+        /* Animated Particles */
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 20s infinite ease-in-out;
+        }
+        
+        .particle:nth-child(1) {
+            width: 80px;
+            height: 80px;
+            top: 20%;
+            left: 10%;
+            animation-delay: 0s;
+        }
+        
+        .particle:nth-child(2) {
+            width: 60px;
+            height: 60px;
+            top: 60%;
+            right: 15%;
+            animation-delay: 3s;
+        }
+        
+        .particle:nth-child(3) {
+            width: 100px;
+            height: 100px;
+            bottom: 15%;
+            left: 20%;
+            animation-delay: 6s;
+        }
+        
+        .particle:nth-child(4) {
+            width: 50px;
+            height: 50px;
+            top: 40%;
+            right: 30%;
+            animation-delay: 9s;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+            25% { transform: translate(30px, -30px) scale(1.1); opacity: 0.5; }
+            50% { transform: translate(-20px, -60px) scale(0.9); opacity: 0.3; }
+            75% { transform: translate(-30px, -30px) scale(1.05); opacity: 0.4; }
+        }
+        
+        /* Glass Cards - Minimal Meta-style color */
+        .glass-card {
+            background: rgba(248, 250, 252, 0.98);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .glass-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            background: rgba(255, 255, 255, 1);
+        }
+        
+        /* Glassmorphism Stats */
+        .stat-glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .stat-glass:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-4px);
+        }
+        
+        /* Premium Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, #ff6b35 0%, #f59e0b 100%);
+            box-shadow: 0 10px 30px -5px rgba(255, 107, 53, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 20px 40px -10px rgba(255, 107, 53, 0.7);
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.95);
+            color: #ff6b35;
+            border-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Search Bar */
+        .search-container {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(30px);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .search-container:focus-within {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.5);
+            box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Club Card Enhancements - Smaller Cards */
+        .club-card {
+            position: relative;
+            overflow: hidden;
+            max-width: 280px;
+            margin: 0 auto;
+        }
+        
+        .club-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.5s ease;
+        }
+        
+        .club-card:hover::before {
+            left: 100%;
+        }
+        
+        /* Responsive card width */
+        @media (min-width: 768px) {
+            .club-card {
+                max-width: 100%;
+            }
+        }
+        
+        @media (min-width: 1024px) {
+            .club-card {
+                max-width: 100%;
+            }
+        }
+        
+        .badge-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        /* Category Pills */
+        .category-pill {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .category-pill.active {
+            background: linear-gradient(135deg, #fff, #f3f4f6);
+            color: #ff6b35;
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .category-pill:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Smooth Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #ff6b35, #f59e0b);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #f59e0b, #ff6b35);
+        }
+        
+        /* Text Glow Effect */
+        .text-glow {
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
+                         0 0 40px rgba(255, 255, 255, 0.3),
+                         0 0 60px rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Icon Rotation */
+        .icon-spin:hover {
+            animation: spin 0.5s ease-in-out;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Glass effect for navigation */
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        /* Mobile menu styles */
+        .mobile-menu {
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            visibility: hidden;
+            transform: translateY(-10px);
+            z-index: 1000;
+            padding: 0;
+            margin-top: 0;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        opacity 0.3s ease-out, 
+                        visibility 0.3s ease-out, 
+                        transform 0.3s ease-out,
+                        padding 0.3s ease-out,
+                        margin-top 0.3s ease-out;
+        }
+
+        .mobile-menu.open {
+            max-height: 400px;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            visibility: visible !important;
+            transform: translateY(0);
+            margin-top: 0.5rem;
+        }
+        
+        /* Navbar scroll hide/show */
+        nav {
+            transition: transform 0.3s ease-in-out, opacity 0.3s ease-in-out;
+        }
+
+        nav.hidden {
+            transform: translateY(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* Brand colors */
+        .text-brandRed {
+            color: #c62828;
+        }
+        
+        .fade-in {
+            animation: fadeIn 1s ease-out forwards;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 fade-in">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6 relative">
+            <div class="glass rounded-2xl px-4 sm:px-6 py-4 flex items-center justify-between">
+                <!-- Logo -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <img src="/img/logo.png" alt="UM Logo" class="w-9 h-9 sm:w-11 sm:h-11 object-contain shadow-lg">
+                    <div class="leading-tight">
+                        <p class="text-[10px] sm:text-xs uppercase tracking-[0.2em] text-white/80 font-medium">UniClub</p>
+                        <p class="text-sm sm:text-base font-semibold text-white">University of Mindanao</p>
+                    </div>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center gap-8">
+                    <a href="#features" class="text-sm font-medium text-white/90 hover:text-white transition-colors">Features</a>
+                    <a href="#about" class="text-sm font-medium text-white/90 hover:text-white transition-colors">About</a>
+                    <a href="#contact" class="text-sm font-medium text-white/90 hover:text-white transition-colors">Contact</a>
+                </div>
+
+                <!-- CTA Buttons -->
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <a href="/student/login" class="hidden sm:block px-4 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-white/90 hover:text-white transition-colors">
+                        Log In
+                    </a>
+                    <a href="/student/signup" class="hidden sm:block px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-white text-brandRed font-semibold text-xs sm:text-sm hover:bg-white/90 transition-all shadow-lg whitespace-nowrap">
+                        Get Started
+                    </a>
+                    <!-- Mobile Menu Button -->
+                    <button id="mobile-menu-btn" class="md:hidden p-2 text-white/90 hover:text-white transition-colors flex-shrink-0" aria-label="Toggle menu">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path id="menu-icon" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                            <path id="close-icon" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="mobile-menu absolute top-full left-0 right-0 mt-2 mx-4 rounded-2xl z-50">
+                <div class="flex flex-col gap-4 p-4">
+                    <a href="#features" class="text-sm font-medium text-white hover:text-white/80 transition-colors py-2">Features</a>
+                    <a href="#about" class="text-sm font-medium text-white hover:text-white/80 transition-colors py-2">About</a>
+                    <a href="#contact" class="text-sm font-medium text-white hover:text-white/80 transition-colors py-2">Contact</a>
+                    <a href="/student/login" class="text-sm font-medium text-white hover:text-white/80 transition-colors py-2 border-t border-white/30 pt-4">Log In</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section with Enhanced Background -->
+    <section class="hero-gradient relative min-h-screen flex items-center">
+        <!-- Mesh Overlay -->
+        <div class="mesh-overlay"></div>
+        
+        <!-- Animated Particles -->
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        
+        <div class="container mx-auto px-6 relative z-10 py-24">
+            <!-- Welcome Text -->
+            <div class="text-center mb-12 animate-fade-in">
+                <p class="text-white/90 text-lg mb-4 font-medium tracking-wider uppercase">Welcome back, Juan Carlos Martin! 👋</p>
+                <h1 class="text-white text-7xl md:text-8xl font-black mb-6 text-glow leading-tight">
+                    Discover.<br/>Connect.<br/>Belong.
+                </h1>
+                <p class="text-white/90 text-xl md:text-2xl max-w-3xl mx-auto font-light leading-relaxed">
+                    Join amazing clubs, connect with like-minded students, and create <span class="font-semibold text-white">unforgettable experiences</span> at University of Mindanao.
+                </p>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap justify-center gap-5 mb-16">
+                <button class="btn-primary text-white px-10 py-5 rounded-2xl font-bold text-lg flex items-center space-x-3 transform hover:scale-105 transition-all">
+                    <i class="fas fa-rocket text-xl"></i>
+                    <span>Browse Clubs</span>
+                </button>
+                <button class="btn-secondary text-white px-10 py-5 rounded-2xl font-bold text-lg flex items-center space-x-3 transform hover:scale-105 transition-all">
+                    <i class="fas fa-users text-xl"></i>
+                    <span>Join a Club</span>
+                </button>
+                <button class="btn-secondary text-white px-10 py-5 rounded-2xl font-bold text-lg flex items-center space-x-3 transform hover:scale-105 transition-all">
+                    <i class="fas fa-calendar-star text-xl"></i>
+                    <span>View Events</span>
+                </button>
+            </div>
+            
+            <!-- Enhanced Search -->
+            <div class="max-w-4xl mx-auto mb-16">
+                <div class="search-container rounded-3xl p-3 flex items-center">
+                    <i class="fas fa-search text-white/80 ml-5 text-xl"></i>
+                    <input 
+                        type="text" 
+                        placeholder="Search clubs: Photography, Computer Science, Volunteer..." 
+                        class="flex-1 px-6 py-5 bg-transparent focus:outline-none text-white placeholder-white/60 text-lg font-medium"
+                    >
+                    <button class="bg-white text-orange-600 px-10 py-5 rounded-2xl font-bold text-lg hover:bg-orange-50 transition-all shadow-xl transform hover:scale-105 flex items-center space-x-2">
+                        <span>Search</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <div class="stat-glass rounded-3xl p-8 text-center transform hover:scale-105 transition-all">
+                    <div class="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-users text-white text-3xl"></i>
+                    </div>
+                    <p class="text-6xl font-black text-white mb-2">3</p>
+                    <p class="text-white/80 font-semibold text-lg">Active Clubs</p>
+                    <p class="text-white/60 text-sm mt-2">Join your favorites</p>
+                </div>
+                
+                <div class="stat-glass rounded-3xl p-8 text-center transform hover:scale-105 transition-all">
+                    <div class="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-calendar-check text-white text-3xl"></i>
+                    </div>
+                    <p class="text-6xl font-black text-white mb-2">0</p>
+                    <p class="text-white/80 font-semibold text-lg">Upcoming Events</p>
+                    <p class="text-white/60 text-sm mt-2">Stay tuned!</p>
+                </div>
+                
+                <div class="stat-glass rounded-3xl p-8 text-center transform hover:scale-105 transition-all">
+                    <div class="w-20 h-20 bg-white/20 backdrop-blur-lg rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <i class="fas fa-user-graduate text-white text-3xl"></i>
+                    </div>
+                    <p class="text-6xl font-black text-white mb-2">1</p>
+                    <p class="text-white/80 font-semibold text-lg">Total Members</p>
+                    <p class="text-white/60 text-sm mt-2">Be a pioneer!</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Discover Section -->
+    <section class="py-20 bg-gradient-to-b from-[#f5f6f8] to-[#f8fafc]">
+        <div class="container mx-auto px-6">
+            <div class="flex items-center justify-between mb-12">
+                <div>
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-compass text-white text-xl"></i>
+                        </div>
+                        <h2 class="text-5xl font-black text-gray-900">Discover Clubs</h2>
+                    </div>
+                    <p class="text-gray-600 text-lg ml-15">Find clubs that match your interests and passions</p>
+                </div>
+                <button class="hidden md:flex items-center space-x-2 text-orange-600 font-bold text-lg hover:text-orange-700 transition-colors group">
+                    <span>View All</span>
+                    <i class="fas fa-arrow-right transform group-hover:translate-x-2 transition-transform"></i>
+                </button>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="flex flex-wrap gap-4 mb-12">
+                <button class="category-pill active px-8 py-4 rounded-2xl font-bold text-lg flex items-center space-x-2">
+                    <i class="fas fa-th"></i>
+                    <span>All Clubs</span>
+                </button>
+                <button class="category-pill text-white px-8 py-4 rounded-2xl font-bold text-lg flex items-center space-x-2">
+                    <i class="fas fa-graduation-cap"></i>
+                    <span>Academic</span>
+                </button>
+                <button class="category-pill text-white px-8 py-4 rounded-2xl font-bold text-lg flex items-center space-x-2">
+                    <i class="fas fa-heart"></i>
+                    <span>Civic</span>
+                </button>
+                <button class="category-pill text-white px-8 py-4 rounded-2xl font-bold text-lg flex items-center space-x-2">
+                    <i class="fas fa-palette"></i>
+                    <span>Arts</span>
+                </button>
+                <button class="category-pill text-white px-8 py-4 rounded-2xl font-bold text-lg flex items-center space-x-2">
+                    <i class="fas fa-laptop-code"></i>
+                    <span>Technology</span>
+                </button>
+                <button class="category-pill text-white px-8 py-4 rounded-2xl font-bold text-lg flex items-center space-x-2">
+                    <i class="fas fa-running"></i>
+                    <span>Sports</span>
+                </button>
+            </div>
+            
+            <!-- Clubs Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto" id="clubsGrid">
+                <!-- Club Card 1 -->
+                <div class="glass-card club-card rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-all">
+                    <div class="h-32 bg-gradient-to-br from-indigo-600 to-blue-600 relative flex items-center justify-center">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        <div class="relative z-10">
+                            <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-2xl transform hover:rotate-12 transition-transform">
+                                <span class="text-3xl font-black bg-gradient-to-br from-indigo-600 to-blue-600 bg-clip-text text-transparent">CS</span>
+                            </div>
+                        </div>
+                        <span class="absolute top-2 right-2 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full badge-pulse flex items-center space-x-1 shadow-lg">
+                            <i class="fas fa-circle text-xs"></i>
+                            <span>ACTIVE</span>
+                        </span>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="text-xl font-black text-gray-900 mb-1">Computer Science Club</h3>
+                                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full">TECHNOLOGY</span>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-2">Explore the world of programming, algorithms, and cutting-edge technology with fellow CS enthusiasts.</p>
+                        <div class="flex items-center space-x-4 text-xs text-gray-500 mb-4">
+                            <span class="flex items-center space-x-1">
+                                <i class="fas fa-user-friends text-orange-500"></i>
+                                <span class="font-semibold">15 members</span>
+                            </span>
+                            <span class="flex items-center space-x-1">
+                                <i class="fas fa-calendar-check text-orange-500"></i>
+                                <span class="font-semibold">5 events</span>
+                            </span>
+                        </div>
+                        <button class="w-full bg-gradient-to-r from-indigo-600 to-blue-600 text-white py-3 rounded-xl font-bold hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center space-x-2 text-sm">
+                            <i class="fas fa-eye"></i>
+                            <span>View Club</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Club Card 2 -->
+                <div class="glass-card club-card rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-all">
+                    <div class="h-32 bg-gradient-to-br from-pink-600 to-rose-600 relative flex items-center justify-center">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        <div class="relative z-10">
+                            <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-2xl transform hover:rotate-12 transition-transform">
+                                <span class="text-3xl font-black bg-gradient-to-br from-pink-600 to-rose-600 bg-clip-text text-transparent">PH</span>
+                            </div>
+                        </div>
+                        <span class="absolute top-2 right-2 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full badge-pulse flex items-center space-x-1 shadow-lg">
+                            <i class="fas fa-circle text-xs"></i>
+                            <span>ACTIVE</span>
+                        </span>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="text-xl font-black text-gray-900 mb-1">Photography Club</h3>
+                                <span class="px-3 py-1 bg-pink-100 text-pink-700 text-xs font-bold rounded-full">ARTS</span>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-2">Capture moments, tell stories, and master the art of photography with creative minds.</p>
+                        <div class="flex items-center space-x-4 text-xs text-gray-500 mb-4">
+                            <span class="flex items-center space-x-1">
+                                <i class="fas fa-user-friends text-orange-500"></i>
+                                <span class="font-semibold">8 members</span>
+                            </span>
+                            <span class="flex items-center space-x-1">
+                                <i class="fas fa-calendar-check text-orange-500"></i>
+                                <span class="font-semibold">3 events</span>
+                            </span>
+                        </div>
+                        <button class="w-full bg-gradient-to-r from-pink-600 to-rose-600 text-white py-3 rounded-xl font-bold hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center space-x-2 text-sm">
+                            <i class="fas fa-eye"></i>
+                            <span>View Club</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Club Card 3 -->
+                <div class="glass-card club-card rounded-2xl overflow-hidden shadow-xl transform hover:scale-105 transition-all">
+                    <div class="h-32 bg-gradient-to-br from-emerald-600 to-teal-600 relative flex items-center justify-center">
+                        <div class="absolute inset-0 bg-black/10"></div>
+                        <div class="relative z-10">
+                            <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-2xl transform hover:rotate-12 transition-transform">
+                                <span class="text-3xl font-black bg-gradient-to-br from-emerald-600 to-teal-600 bg-clip-text text-transparent">VO</span>
+                            </div>
+                        </div>
+                        <span class="absolute top-2 right-2 px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full badge-pulse flex items-center space-x-1 shadow-lg">
+                            <i class="fas fa-circle text-xs"></i>
+                            <span>ACTIVE</span>
+                        </span>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <h3 class="text-xl font-black text-gray-900 mb-1">Volunteer Organization</h3>
+                                <span class="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">CIVIC</span>
+                            </div>
+                        </div>
+                        <p class="text-gray-600 mb-4 text-sm leading-relaxed line-clamp-2">Make a difference in your community through service, outreach, and meaningful volunteer work.</p>
+                        <div class="flex items-center space-x-4 text-xs text-gray-500 mb-4">
+                            <span class="flex items-center space-x-1">
+                                <i class="fas fa-user-friends text-orange-500"></i>
+                                <span class="font-semibold">12 members</span>
+                            </span>
+                            <span class="flex items-center space-x-1">
+                                <i class="fas fa-calendar-check text-orange-500"></i>
+                                <span class="font-semibold">7 events</span>
+                            </span>
+                        </div>
+                        <button class="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-3 rounded-xl font-bold hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center space-x-2 text-sm">
+                            <i class="fas fa-eye"></i>
+                            <span>View Club</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upcoming Events Section -->
+    <section class="py-20 bg-gradient-to-b from-[#f5f6f8] to-[#f8fafc]">
+        <div class="container mx-auto px-6">
+            <div class="flex items-center justify-between mb-12">
+                <div>
+                    <div class="flex items-center space-x-3 mb-2">
+                        <div class="w-12 h-12 bg-gradient-to-br from-orange-600 to-red-600 rounded-2xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-calendar-star text-white text-xl"></i>
+                        </div>
+                        <h2 class="text-5xl font-black text-gray-900">Upcoming Events</h2>
+                    </div>
+                    <p class="text-gray-600 text-lg ml-15">Don't miss out on exciting events happening around campus</p>
+                </div>
+                <button class="hidden md:flex items-center space-x-2 text-orange-600 font-bold text-lg hover:text-orange-700 transition-colors group">
+                    <span>View All Events</span>
+                    <i class="fas fa-arrow-right transform group-hover:translate-x-2 transition-transform"></i>
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Event Card 1 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-xl transform hover:scale-105 transition-all">
+                    <div class="h-40 bg-gradient-to-br from-purple-600 to-pink-600 relative p-6 flex items-end">
+                        <div class="absolute inset-0 bg-black/20"></div>
+                        <div class="relative z-10 text-white">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="font-semibold">March 15, 2024</span>
+                            </div>
+                            <h3 class="text-2xl font-black">Tech Innovation Summit</h3>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-600 mb-4 leading-relaxed">Join us for a day of innovation, networking, and cutting-edge technology presentations.</p>
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                            <span class="flex items-center space-x-2">
+                                <i class="fas fa-map-marker-alt text-orange-500"></i>
+                                <span>Main Auditorium</span>
+                            </span>
+                            <span class="flex items-center space-x-2">
+                                <i class="fas fa-clock text-orange-500"></i>
+                                <span>2:00 PM</span>
+                            </span>
+                        </div>
+                        <button class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-2xl font-bold hover:shadow-2xl transition-all">
+                            Learn More
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Event Card 2 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-xl transform hover:scale-105 transition-all">
+                    <div class="h-40 bg-gradient-to-br from-blue-600 to-cyan-600 relative p-6 flex items-end">
+                        <div class="absolute inset-0 bg-black/20"></div>
+                        <div class="relative z-10 text-white">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="font-semibold">March 20, 2024</span>
+                            </div>
+                            <h3 class="text-2xl font-black">Photography Workshop</h3>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-600 mb-4 leading-relaxed">Master the art of photography with hands-on workshops and expert guidance.</p>
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                            <span class="flex items-center space-x-2">
+                                <i class="fas fa-map-marker-alt text-orange-500"></i>
+                                <span>Arts Building</span>
+                            </span>
+                            <span class="flex items-center space-x-2">
+                                <i class="fas fa-clock text-orange-500"></i>
+                                <span>10:00 AM</span>
+                            </span>
+                        </div>
+                        <button class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-2xl font-bold hover:shadow-2xl transition-all">
+                            Learn More
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Event Card 3 -->
+                <div class="glass-card rounded-3xl overflow-hidden shadow-xl transform hover:scale-105 transition-all">
+                    <div class="h-40 bg-gradient-to-br from-green-600 to-emerald-600 relative p-6 flex items-end">
+                        <div class="absolute inset-0 bg-black/20"></div>
+                        <div class="relative z-10 text-white">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="font-semibold">March 25, 2024</span>
+                            </div>
+                            <h3 class="text-2xl font-black">Community Service Day</h3>
+                        </div>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-gray-600 mb-4 leading-relaxed">Join fellow students in making a positive impact on our local community.</p>
+                        <div class="flex items-center justify-between text-sm text-gray-500 mb-4">
+                            <span class="flex items-center space-x-2">
+                                <i class="fas fa-map-marker-alt text-orange-500"></i>
+                                <span>City Center</span>
+                            </span>
+                            <span class="flex items-center space-x-2">
+                                <i class="fas fa-clock text-orange-500"></i>
+                                <span>8:00 AM</span>
+                            </span>
+                        </div>
+                        <button class="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-2xl font-bold hover:shadow-2xl transition-all">
+                            Learn More
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-16">
+        <div class="container mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div>
+                    <div class="flex items-center space-x-3 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-red-900 to-orange-600 rounded-2xl flex items-center justify-center">
+                            <span class="text-white font-black text-xl">U</span>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-black">UniClub</h3>
+                            <p class="text-xs text-gray-400">University of Mindanao</p>
+                        </div>
+                    </div>
+                    <p class="text-gray-400 text-sm leading-relaxed">Connecting students, building communities, and creating unforgettable university experiences.</p>
+                </div>
+                
+                <div>
+                    <h4 class="font-black text-lg mb-4">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Discover Clubs</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">My Clubs</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Events</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Profile</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-black text-lg mb-4">Resources</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Help Center</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">FAQs</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Contact Us</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-orange-500 transition-colors">Privacy Policy</a></li>
+                    </ul>
+                </div>
+                
+                <div>
+                    <h4 class="font-black text-lg mb-4">Connect</h4>
+                    <div class="flex space-x-4 mb-4">
+                        <a href="#" class="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center hover:bg-orange-600 transition-all transform hover:scale-110">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a href="#" class="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center hover:bg-orange-600 transition-all transform hover:scale-110">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a href="#" class="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center hover:bg-orange-600 transition-all transform hover:scale-110">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a href="#" class="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center hover:bg-orange-600 transition-all transform hover:scale-110">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                    </div>
+                    <p class="text-gray-400 text-sm">Stay updated with the latest news and events</p>
+                </div>
+            </div>
+            
+            <div class="border-t border-gray-800 pt-8 text-center">
+                <p class="text-gray-400 text-sm">&copy; 2024 UniClub - University of Mindanao. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JavaScript for Interactivity -->
+    <script>
+        // Category filter functionality
+        document.querySelectorAll('.category-pill').forEach(pill => {
+            pill.addEventListener('click', function() {
+                // Remove active class from all pills
+                document.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+                // Add active class to clicked pill
+                this.classList.add('active');
+                
+                // Filter clubs based on category
+                const category = this.textContent.trim().toLowerCase();
+                const clubs = document.querySelectorAll('.club-card');
+                
+                clubs.forEach(club => {
+                    if (category === 'all clubs') {
+                        club.style.display = 'block';
+                    } else {
+                        const clubCategory = club.querySelector('.text-xs.font-bold').textContent.toLowerCase();
+                        if (clubCategory.includes(category)) {
+                            club.style.display = 'block';
+                        } else {
+                            club.style.display = 'none';
+                        }
+                    }
+                });
+            });
+        });
+
+        // Search functionality
+        const searchInput = document.querySelector('.search-container input');
+        const searchBtn = document.querySelector('.search-container button');
+        
+        if (searchInput && searchBtn) {
+            searchBtn.addEventListener('click', function() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const clubs = document.querySelectorAll('.club-card');
+                
+                clubs.forEach(club => {
+                    const clubName = club.querySelector('h3').textContent.toLowerCase();
+                    const clubDesc = club.querySelector('p').textContent.toLowerCase();
+                    
+                    if (clubName.includes(searchTerm) || clubDesc.includes(searchTerm)) {
+                        club.style.display = 'block';
+                    } else {
+                        club.style.display = 'none';
+                    }
+                });
+            });
+            
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchBtn.click();
+                }
+            });
+        }
+
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Add fade-in animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.glass-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+        
+        // Mobile menu toggle
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const menuIcon = document.getElementById('menu-icon');
+        const closeIcon = document.getElementById('close-icon');
+
+        if (mobileMenuBtn && mobileMenu) {
+            mobileMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                const isOpen = mobileMenu.classList.contains('open');
+                if (isOpen) {
+                    mobileMenu.classList.remove('open');
+                    if (menuIcon && closeIcon) {
+                        menuIcon.classList.remove('hidden');
+                        closeIcon.classList.add('hidden');
+                    }
+                } else {
+                    mobileMenu.classList.add('open');
+                    if (menuIcon && closeIcon) {
+                        menuIcon.classList.add('hidden');
+                        closeIcon.classList.remove('hidden');
+                    }
+                }
+            });
+
+            // Close mobile menu when clicking on a link
+            const mobileLinks = mobileMenu.querySelectorAll('a');
+            mobileLinks.forEach(link => {
+                link.addEventListener('click', () => {
+                    mobileMenu.classList.remove('open');
+                    if (menuIcon && closeIcon) {
+                        menuIcon.classList.remove('hidden');
+                        closeIcon.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Close mobile menu when clicking outside
+            document.addEventListener('click', (e) => {
+                if (mobileMenu.classList.contains('open') && 
+                    !mobileMenu.contains(e.target) && 
+                    !mobileMenuBtn.contains(e.target)) {
+                    mobileMenu.classList.remove('open');
+                    if (menuIcon && closeIcon) {
+                        menuIcon.classList.remove('hidden');
+                        closeIcon.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // Navbar scroll hide/show functionality
+        let lastScrollTop = 0;
+        const nav = document.getElementById('main-nav');
+        let ticking = false;
+
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                    
+                    // Hide navbar when scrolling down, show when scrolling up
+                    if (scrollTop > lastScrollTop && scrollTop > 100) {
+                        // Scrolling down
+                        nav.classList.add('hidden');
+                    } else {
+                        // Scrolling up
+                        nav.classList.remove('hidden');
+                    }
+                    
+                    lastScrollTop = scrollTop <= 0 ? 0 : scrollTop;
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        });
+    </script>
+</body>
+</html>

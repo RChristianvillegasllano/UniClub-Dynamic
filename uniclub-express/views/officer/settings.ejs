@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title><%= title || 'Officer Settings' %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff5f2',
+              100: '#ffe4dc',
+              500: '#b1271b',
+              600: '#921f16',
+              700: '#6e160f'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans antialiased bg-gradient-to-br from-gray-50 via-white to-amber-50 text-gray-900">
+  <div class="min-h-screen">
+    <header class="bg-white/90 backdrop-blur border-b border-gray-100 shadow-sm">
+      <div class="max-w-6xl mx-auto px-4 py-5 flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-brand-600">Officer Console</p>
+          <h1 class="text-3xl font-extrabold tracking-tight text-gray-900 mt-1">Settings & Preferences</h1>
+          <p class="text-gray-500 text-sm mt-1">Manage how members see you and keep your account secure.</p>
+        </div>
+        <a href="/officer" class="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 hover:text-brand-600 transition">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          Back to dashboard
+        </a>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <% if (submitted) { %>
+        <div class="p-4 rounded-2xl border border-amber-200 bg-amber-50 text-amber-900 flex items-start gap-3 shadow-sm">
+          <span class="inline-flex items-center justify-center rounded-full bg-white/70 text-amber-600 w-8 h-8">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+          </span>
+          <div>
+            <p class="font-semibold">Changes submitted</p>
+            <p class="text-sm text-amber-800">Your update was sent to the admin team. You will see it reflected once approved.</p>
+          </div>
+        </div>
+      <% } %>
+
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <article class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-md p-6">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5 mb-5">
+            <div class="flex items-center gap-4">
+              <% if (officer && officer.photo_url) { %>
+                <img src="<%= officer.photo_url %>" alt="Profile photo" class="w-16 h-16 rounded-2xl object-cover ring-4 ring-brand-50">
+              <% } else { %>
+                <div class="w-16 h-16 rounded-2xl bg-brand-600/10 text-brand-700 font-semibold flex items-center justify-center ring-4 ring-brand-50">
+                  <span><%= officer && officer.name ? officer.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() : 'OF' %></span>
+                </div>
+              <% } %>
+              <div>
+                <p class="text-sm text-gray-500">Signed in as</p>
+                <h2 class="text-xl font-semibold"><%= officer && officer.name ? officer.name : 'Officer' %></h2>
+                <p class="text-sm text-gray-500"><%= officer && officer.role ? officer.role : 'Club officer' %> · <%= officer && officer.username ? officer.username : 'username pending' %></p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 text-sm text-gray-500">
+              <div class="flex items-center gap-2">
+                <span class="inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
+                Active session
+              </div>
+              <div class="flex items-center gap-2">
+                <i data-lucide="shield" class="w-4 h-4 text-gray-400"></i>
+                Secure area
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="rounded-xl border border-gray-100 p-4 bg-gray-50/70">
+              <p class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Club</p>
+              <p class="text-base font-semibold text-gray-900 mt-1"><%= officer && officer.club ? officer.club.name : (officer && officer.club_id ? 'Club #' + officer.club_id : 'Not assigned') %></p>
+              <p class="text-sm text-gray-500 mt-0.5"><%= officer && officer.department ? officer.department : 'Department pending' %></p>
+            </div>
+            <div class="rounded-xl border border-gray-100 p-4 bg-gray-50/70">
+              <p class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Last updated</p>
+              <p class="text-base font-semibold text-gray-900 mt-1"><%= officer && officer.updated_at ? new Date(officer.updated_at).toLocaleDateString() : 'Recently' %></p>
+              <p class="text-sm text-gray-500 mt-0.5">Keep your details fresh for members.</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
+          <div class="absolute inset-0 opacity-20 bg-[url('https://www.toptal.com/designers/subtlepatterns/uploads/moroccan-flower.png')]"></div>
+          <div class="relative space-y-4">
+            <div class="flex items-center gap-3">
+              <span class="inline-flex items-center justify-center rounded-2xl bg-white/10 w-12 h-12">
+                <i data-lucide="lock" class="w-6 h-6"></i>
+              </span>
+              <div>
+                <p class="text-sm uppercase tracking-wide text-white/70">Security</p>
+                <h3 class="text-xl font-semibold">Stay protected</h3>
+              </div>
+            </div>
+            <ul class="space-y-3 text-sm font-medium text-white/90">
+              <li class="flex items-start gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 text-emerald-300"></i>
+                Use a unique password and keep it private.
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 text-emerald-300"></i>
+                Update your profile so members can find you.
+              </li>
+              <li class="flex items-start gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4 mt-0.5 text-emerald-300"></i>
+                Contact the admin team immediately if you lose access.
+              </li>
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+        <form id="displayNameForm" method="POST" action="/officer/settings" class="xl:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="p-6 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p class="text-xs font-semibold uppercase text-gray-500 tracking-[0.2em]">Profile identity</p>
+              <h2 class="text-xl font-semibold text-gray-900 mt-1">Display preferences</h2>
+              <p class="text-sm text-gray-500 mt-1">Any changes here require administrator review before they become public.</p>
+            </div>
+            <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
+              <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+              Admin approval
+            </span>
+          </div>
+          <div class="p-6 space-y-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Display name</label>
+              <div class="relative rounded-2xl border border-gray-200 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100 shadow-sm">
+                <input name="display_name" type="text" value="<%= officer && officer.name ? officer.name : '' %>" class="w-full bg-transparent px-4 py-3 text-sm text-gray-900 focus:outline-none" placeholder="e.g. Juan Dela Cruz" />
+                <div class="px-4 py-2 border-t border-gray-100 bg-gray-50 text-xs text-gray-500">Visible across the officer dashboard, announcements, and club directory.</div>
+              </div>
+              <p class="mt-2 text-xs font-semibold text-red-600 hidden" data-error-display></p>
+            </div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+              <a href="/officer" class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:border-gray-300 transition">
+                Cancel
+              </a>
+              <button type="submit" name="action" value="update-name" class="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/30 hover:bg-brand-500 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                Submit for approval
+              </button>
+            </div>
+          </div>
+        </form>
+
+        <form id="accountForm" method="POST" action="/officer/settings" class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="p-6 border-b border-gray-100">
+            <p class="text-xs font-semibold uppercase text-gray-500 tracking-[0.2em]">Account access</p>
+            <h2 class="text-xl font-semibold text-gray-900 mt-1">Credentials</h2>
+            <p class="text-sm text-gray-500 mt-1">Update your username and password. Password must be at least 8 characters.</p>
+          </div>
+          <div class="p-6 space-y-5">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+              <div class="relative">
+                <input name="username" type="text" value="<%= officer && officer.username ? officer.username : '' %>" class="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-500" placeholder="your.username" />
+                <span class="absolute inset-y-0 right-3 flex items-center text-gray-400 text-xs">unique</span>
+              </div>
+              <p class="mt-1 text-xs text-gray-500">Usernames help members contact you in system messages.</p>
+              <p class="mt-2 text-xs font-semibold text-red-600 hidden" data-error-username></p>
+            </div>
+            <div class="grid grid-cols-1 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">New password</label>
+                <div class="relative">
+                  <input name="new_password" type="password" class="credential-input w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-500" placeholder="••••••••" data-toggle-target />
+                  <button type="button" class="toggle-visibility absolute inset-y-0 right-3 flex items-center text-gray-400" aria-label="Toggle password visibility">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Confirm password</label>
+                <div class="relative">
+                  <input name="confirm_password" type="password" class="credential-input w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-500" placeholder="••••••••" data-toggle-target />
+                  <button type="button" class="toggle-visibility absolute inset-y-0 right-3 flex items-center text-gray-400" aria-label="Toggle password visibility">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs font-semibold text-red-600 hidden" data-error-password></p>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+              <a href="/officer" class="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:border-gray-300 transition">
+                Cancel
+              </a>
+              <button type="submit" name="action" value="update-account" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-800/40">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                Save changes
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <article class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-4">
+          <span class="inline-flex items-center justify-center rounded-2xl bg-brand-600/10 text-brand-600 w-12 h-12">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h3 class="font-semibold text-gray-900">Profile completeness</h3>
+            <p class="text-sm text-gray-500 mt-1">Keep your photo, club role, and contact links updated so members can reach you faster.</p>
+          </div>
+        </article>
+        <article class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-4">
+          <span class="inline-flex items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 w-12 h-12">
+            <i data-lucide="bell" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h3 class="font-semibold text-gray-900">Notification hygiene</h3>
+            <p class="text-sm text-gray-500 mt-1">Use your official UM email to receive important reminders about requirements.</p>
+          </div>
+        </article>
+        <article class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-4">
+          <span class="inline-flex items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 w-12 h-12">
+            <i data-lucide="info" class="w-5 h-5"></i>
+          </span>
+          <div>
+            <h3 class="font-semibold text-gray-900">Need help?</h3>
+            <p class="text-sm text-gray-500 mt-1">Contact the Student Affairs Office or email the UniClub Admin team for urgent account changes.</p>
+          </div>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLucideIcons();
+
+      const toggles = document.querySelectorAll('.toggle-visibility');
+      toggles.forEach((toggle) => {
+        toggle.addEventListener('click', () => {
+          const input = toggle.previousElementSibling;
+          if (!input) return;
+          const isPassword = input.getAttribute('type') === 'password';
+          input.setAttribute('type', isPassword ? 'text' : 'password');
+          toggle.innerHTML = '';
+          const icon = document.createElement('i');
+          icon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+          icon.classList.add('w-4', 'h-4');
+          toggle.appendChild(icon);
+          renderLucideIcons();
+        });
+      });
+
+      const showError = (target, message) => {
+        if (!target) return;
+        target.textContent = message;
+        target.classList.remove('hidden');
+      };
+
+      const hideError = (target) => {
+        if (!target) return;
+        target.textContent = '';
+        target.classList.add('hidden');
+      };
+
+      const displayNameForm = document.getElementById('displayNameForm');
+      if (displayNameForm) {
+        const displayInput = displayNameForm.querySelector('input[name="display_name"]');
+        const displayError = displayNameForm.querySelector('[data-error-display]');
+        displayNameForm.addEventListener('submit', (event) => {
+          hideError(displayError);
+          const value = (displayInput?.value || '').trim();
+          if (!value) {
+            event.preventDefault();
+            showError(displayError, 'Please enter a display name before submitting.');
+            displayInput?.focus();
+            return;
+          }
+          if (value.length < 3) {
+            event.preventDefault();
+            showError(displayError, 'Display name must be at least 3 characters.');
+            displayInput?.focus();
+            return;
+          }
+        });
+      }
+
+      const accountForm = document.getElementById('accountForm');
+      if (accountForm) {
+        const usernameInput = accountForm.querySelector('input[name="username"]');
+        const newPasswordInput = accountForm.querySelector('input[name="new_password"]');
+        const confirmPasswordInput = accountForm.querySelector('input[name="confirm_password"]');
+        const usernameError = accountForm.querySelector('[data-error-username]');
+        const passwordError = accountForm.querySelector('[data-error-password]');
+
+        accountForm.addEventListener('submit', (event) => {
+          let hasError = false;
+          hideError(usernameError);
+          hideError(passwordError);
+
+          const username = (usernameInput?.value || '').trim();
+          if (!username) {
+            showError(usernameError, 'Username is required.');
+            usernameInput?.focus();
+            hasError = true;
+          } else if (username.length < 4) {
+            showError(usernameError, 'Username must be at least 4 characters.');
+            usernameInput?.focus();
+            hasError = true;
+          } else if (!/^[a-zA-Z0-9._-]+$/.test(username)) {
+            showError(usernameError, 'Username can only include letters, numbers, dots, underscores, or hyphens.');
+            usernameInput?.focus();
+            hasError = true;
+          }
+
+          const newPassword = (newPasswordInput?.value || '').trim();
+          const confirmPassword = (confirmPasswordInput?.value || '').trim();
+          if (newPassword || confirmPassword) {
+            if (newPassword.length < 8) {
+              showError(passwordError, 'Password must be at least 8 characters.');
+              newPasswordInput?.focus();
+              hasError = true;
+            } else if (newPassword !== confirmPassword) {
+              showError(passwordError, 'Passwords do not match.');
+              confirmPasswordInput?.focus();
+              hasError = true;
+            }
+          }
+
+          if (hasError) {
+            event.preventDefault();
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

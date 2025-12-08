@@ -24,7 +24,7 @@ router.post("/add", async (req, res) => {
   const { name, description, adviser, department } = req.body;
   try {
     await pool.query(
-      "INSERT INTO clubs (name, description, adviser, department) VALUES ($1,$2,$3,$4)",
+      "INSERT INTO clubs (name, description, adviser, department) VALUES (?,?,?,?)",
       [name, description, adviser, department]
     );
     res.redirect("/clubs/manage");
@@ -37,7 +37,7 @@ router.post("/add", async (req, res) => {
 // ✅ Edit Club Form
 router.get("/edit/:id", async (req, res) => {
   try {
-    const { rows } = await pool.query("SELECT * FROM clubs WHERE id=$1", [req.params.id]);
+    const { rows } = await pool.query("SELECT * FROM clubs WHERE id=?", [req.params.id]);
     res.render("admin/editClub", { title: "Edit Club | UniClub", club: rows[0], error: null });
   } catch (err) {
     console.error("Error loading club:", err);
@@ -50,7 +50,7 @@ router.post("/edit/:id", async (req, res) => {
   const { name, description, adviser, department } = req.body;
   try {
     await pool.query(
-      "UPDATE clubs SET name=$1, description=$2, adviser=$3, department=$4 WHERE id=$5",
+      "UPDATE clubs SET name=?, description=?, adviser=?, department=? WHERE id=?",
       [name, description, adviser, department, req.params.id]
     );
     res.redirect("/clubs/manage");
@@ -63,7 +63,7 @@ router.post("/edit/:id", async (req, res) => {
 // ✅ Delete Club
 router.post("/delete/:id", async (req, res) => {
   try {
-    await pool.query("DELETE FROM clubs WHERE id=$1", [req.params.id]);
+    await pool.query("DELETE FROM clubs WHERE id=?", [req.params.id]);
     res.redirect("/clubs/manage");
   } catch (err) {
     console.error("Error deleting club:", err);

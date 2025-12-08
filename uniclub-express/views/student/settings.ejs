@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- CRITICAL ANTI-FLICKER: Block rendering until theme is set -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      html.setAttribute('data-theme', theme);
+      if (theme === 'light') {
+        html.classList.add('light-mode');
+      } else {
+        html.classList.remove('light-mode');
+      }
+      if (theme === 'light') {
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+      } else {
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title><%= title || 'Settings — UniClub' %></title>
+  
+  <style>
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f8fafc !important;
+    }
+    html[data-theme="dark"],
+    html:not([data-theme]) body {
+      background-color: #0a0f1a !important;
+    }
+    body:not([data-theme-ready]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+    body[data-theme-ready] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.1s ease;
+    }
+  </style>
+  <%
+    if (typeof student === 'undefined') {
+      student = {};
+    }
+    if (typeof csrfToken === 'undefined') {
+      csrfToken = '';
+    }
+    if (typeof activeSessions === 'undefined') {
+      activeSessions = [];
+    }
+    if (typeof loginHistory === 'undefined') {
+      loginHistory = [];
+    }
+  %>
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      function applyThemeToBody() {
+        if (!document.body) return;
+        if (theme === 'light') {
+          document.body.classList.add('light-mode');
+          document.body.style.setProperty('background-color', '#f8fafc', 'important');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.style.setProperty('background-color', '#0a0f1a', 'important');
+        }
+        document.body.setAttribute('data-theme-ready', 'true');
+      }
+      if (document.body) {
+        applyThemeToBody();
+      } else {
+        const observer = new MutationObserver(function(mutations) {
+          if (document.body) {
+            applyThemeToBody();
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyThemeToBody);
+        } else {
+          applyThemeToBody();
+        }
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#fff5f2',
+              100: '#ffe4dc',
+              500: '#b1271b',
+              600: '#921f16',
+              700: '#6e160f'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body.light-mode {
+      background: #f8fafc;
+      color: #1e293b;
+    }
+    body:not(.light-mode) {
+      background: #0a0f1a;
+      color: #e2e8f0;
+    }
+    
+    .settings-section {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    
+    body.light-mode .settings-section {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .settings-section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #ffffff;
+    }
+    
+    body.light-mode .settings-section-title {
+      color: #1e293b;
+    }
+    
+    .settings-divider {
+      height: 2px;
+      background: linear-gradient(to right, #b1271b, #ef6c00);
+      margin: 16px 0 24px 0;
+      border-radius: 1px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+    
+    body.light-mode .form-input {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #1e293b;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: #b1271b;
+      box-shadow: 0 0 0 3px rgba(177, 39, 27, 0.1);
+    }
+    
+    .form-select {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: #ffffff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    body.light-mode .form-select {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      color: #1e293b;
+    }
+    
+    .form-select:focus {
+      outline: none;
+      border-color: #b1271b;
+      box-shadow: 0 0 0 3px rgba(177, 39, 27, 0.1);
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #b1271b 0%, #ef6c00 100%);
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(177, 39, 27, 0.3);
+    }
+    
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    body.light-mode .btn-secondary {
+      background: #f1f5f9;
+      color: #1e293b;
+      border: 1px solid #cbd5e1;
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    body.light-mode .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+    
+    .session-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    body.light-mode .session-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .history-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    
+    body.light-mode .history-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .label-text {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: block;
+      color: #ffffff;
+    }
+    
+    body.light-mode .label-text {
+      color: #1e293b;
+    }
+    
+    .help-text {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 4px;
+    }
+    
+    body.light-mode .help-text {
+      color: #64748b;
+    }
+    
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #10b981;
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .status-enabled {
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+    }
+    
+    .status-disabled {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+    
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #10b981;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+    
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+
+<body>
+  <%- include('../layouts/studentNav', { 
+    currentPath: '/student/settings',
+    student: student,
+    user: student,
+    announcements: [],
+    csrfToken: csrfToken
+  }) %>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+    <!-- Page Header -->
+    <div class="mb-8">
+      <div class="settings-section">
+        <div class="text-center py-4">
+          <h1 class="text-3xl font-bold mb-2" style="color: #ffffff;">
+            <i class="fas fa-cog mr-2"></i>Settings
+          </h1>
+          <div class="settings-divider"></div>
+          <p class="text-sm" style="color: rgba(255, 255, 255, 0.7);">
+            Manage your account settings
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Success/Error Messages -->
+    <% if (success === 'personal_updated') { %>
+      <div class="alert-success">
+        <i class="fas fa-check-circle mr-2"></i>Personal information updated successfully!
+      </div>
+    <% } %>
+    <% if (success === 'password_updated') { %>
+      <div class="alert-success">
+        <i class="fas fa-check-circle mr-2"></i>Password updated successfully!
+      </div>
+    <% } %>
+    <% if (error === 'password_mismatch') { %>
+      <div class="alert-error">
+        <i class="fas fa-exclamation-circle mr-2"></i>New passwords do not match!
+      </div>
+    <% } %>
+    <% if (error === 'password_too_short') { %>
+      <div class="alert-error">
+        <i class="fas fa-exclamation-circle mr-2"></i>Password must be at least 8 characters!
+      </div>
+    <% } %>
+    <% if (error === 'invalid_current_password') { %>
+      <div class="alert-error">
+        <i class="fas fa-exclamation-circle mr-2"></i>Current password is incorrect!
+      </div>
+    <% } %>
+    <% if (error === 'update_failed') { %>
+      <div class="alert-error">
+        <i class="fas fa-exclamation-circle mr-2"></i>Failed to update settings. Please try again.
+      </div>
+    <% } %>
+
+    <!-- Settings Content -->
+    <div class="space-y-6">
+      <!-- Personal Information -->
+      <div class="settings-section">
+        <h2 class="settings-section-title">
+          <i class="fas fa-user mr-2"></i>Personal Information
+        </h2>
+        <div class="settings-divider"></div>
+        
+        <form method="POST" action="/student/settings" class="space-y-6">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="action" value="update-personal">
+          
+          <div>
+            <label class="label-text">Full Name</label>
+            <input 
+              type="text" 
+              name="first_name" 
+              value="<%= student.first_name || '' %>"
+              class="form-input"
+              placeholder="First Name"
+              required
+            >
+            <input 
+              type="text" 
+              name="last_name" 
+              value="<%= student.last_name || '' %>"
+              class="form-input mt-3"
+              placeholder="Last Name"
+              required
+            >
+          </div>
+          
+          <div>
+            <label class="label-text">Program</label>
+            <select name="program" class="form-select" required>
+              <option value="">Select Program</option>
+              <option value="BSIT" <%= student.program === 'BSIT' ? 'selected' : '' %>>BSIT</option>
+              <option value="BSCS" <%= student.program === 'BSCS' ? 'selected' : '' %>>BSCS</option>
+              <option value="BSIS" <%= student.program === 'BSIS' ? 'selected' : '' %>>BSIS</option>
+              <option value="BSCE" <%= student.program === 'BSCE' ? 'selected' : '' %>>BSCE</option>
+              <option value="BSME" <%= student.program === 'BSME' ? 'selected' : '' %>>BSME</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="label-text">Department</label>
+            <select name="department" class="form-select" required>
+              <option value="">Select Department</option>
+              <option value="IT Department" <%= student.department === 'IT Department' ? 'selected' : '' %>>IT Department</option>
+              <option value="Engineering Department" <%= student.department === 'Engineering Department' ? 'selected' : '' %>>Engineering Department</option>
+              <option value="Business Department" <%= student.department === 'Business Department' ? 'selected' : '' %>>Business Department</option>
+            </select>
+          </div>
+          
+          <div>
+            <label class="label-text">Email Address</label>
+            <input 
+              type="email" 
+              value="<%= student.email || '' %>"
+              class="form-input"
+              disabled
+            >
+            <div class="verified-badge">
+              <i class="fas fa-check-circle"></i>Verified
+            </div>
+          </div>
+          
+          <button type="submit" class="btn-primary">
+            Save Changes
+          </button>
+        </form>
+      </div>
+
+      <!-- Password & Security -->
+      <div class="settings-section">
+        <h2 class="settings-section-title">
+          <i class="fas fa-lock mr-2"></i>Password & Security
+        </h2>
+        <div class="settings-divider"></div>
+        
+        <form method="POST" action="/student/settings" class="space-y-6">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <input type="hidden" name="action" value="update-password">
+          
+          <div>
+            <label class="label-text">Change Password</label>
+          </div>
+          
+          <div>
+            <label class="label-text">Current Password</label>
+            <input 
+              type="password" 
+              name="current_password" 
+              class="form-input"
+              placeholder="••••••••••"
+              required
+            >
+          </div>
+          
+          <div>
+            <label class="label-text">New Password</label>
+            <input 
+              type="password" 
+              name="new_password" 
+              class="form-input"
+              placeholder="••••••••••"
+              required
+            >
+            <p class="help-text">Must be at least 8 characters</p>
+          </div>
+          
+          <div>
+            <label class="label-text">Confirm New Password</label>
+            <input 
+              type="password" 
+              name="confirm_password" 
+              class="form-input"
+              placeholder="••••••••••"
+              required
+            >
+          </div>
+          
+          <button type="submit" class="btn-primary">
+            Update Password
+          </button>
+        </form>
+      </div>
+
+      <!-- Two-Factor Authentication -->
+      <div class="settings-section">
+        <h2 class="settings-section-title">
+          <i class="fas fa-shield-alt mr-2"></i>Two-Factor Authentication (2FA)
+        </h2>
+        <div class="settings-divider"></div>
+        
+        <div class="space-y-4">
+          <div>
+            <span class="status-badge status-disabled">
+              <i class="fas fa-times-circle"></i>Status: Disabled
+            </span>
+          </div>
+          
+          <p class="help-text">
+            Add an extra layer of security to your account. We'll send you a verification code when you sign in.
+          </p>
+          
+          <button type="button" class="btn-secondary">
+            Enable Two-Factor Auth →
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Sessions -->
+      <div class="settings-section">
+        <h2 class="settings-section-title">
+          <i class="fas fa-laptop mr-2"></i>Active Sessions
+        </h2>
+        <div class="settings-divider"></div>
+        
+        <p class="help-text mb-4">Devices currently logged into your account</p>
+        
+        <div class="space-y-3">
+          <% if (activeSessions && activeSessions.length > 0) { %>
+            <% activeSessions.forEach((session, index) => { %>
+              <div class="session-card">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-3">
+                    <i class="fas fa-laptop text-xl" style="color: #b1271b;"></i>
+                    <div>
+                      <h3 class="font-semibold" style="color: #ffffff;">
+                        <%= session.device %> • <%= session.browser %>
+                      </h3>
+                    </div>
+                  </div>
+                </div>
+                <div class="settings-divider" style="margin: 12px 0;"></div>
+                <div class="space-y-2 text-sm">
+                  <p class="help-text">
+                    <i class="fas fa-map-marker-alt mr-2"></i><%= session.location %>
+                  </p>
+                  <p class="help-text">
+                    <i class="fas fa-clock mr-2"></i>Last active: <%= session.lastActive %>
+                  </p>
+                  <% if (session.isCurrent) { %>
+                    <span class="status-badge status-enabled">
+                      <i class="fas fa-circle"></i>This device
+                    </span>
+                  <% } else { %>
+                    <button type="button" class="btn-secondary mt-2" style="padding: 8px 16px; font-size: 12px;">
+                      Sign Out This Device
+                    </button>
+                  <% } %>
+                </div>
+              </div>
+            <% }); %>
+          <% } else { %>
+            <div class="session-card">
+              <div class="flex items-center gap-3">
+                <i class="fas fa-laptop text-xl" style="color: #b1271b;"></i>
+                <div>
+                  <h3 class="font-semibold" style="color: #ffffff;">
+                    Windows PC • Chrome
+                  </h3>
+                </div>
+              </div>
+              <div class="settings-divider" style="margin: 12px 0;"></div>
+              <div class="space-y-2 text-sm">
+                <p class="help-text">
+                  <i class="fas fa-map-marker-alt mr-2"></i>Davao City, Philippines
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-clock mr-2"></i>Last active: Just now
+                </p>
+                <span class="status-badge status-enabled">
+                  <i class="fas fa-circle"></i>This device
+                </span>
+              </div>
+            </div>
+          <% } %>
+        </div>
+        
+        <button type="button" class="btn-secondary mt-4">
+          Sign Out All Other Devices
+        </button>
+      </div>
+
+      <!-- Login History -->
+      <div class="settings-section">
+        <h2 class="settings-section-title">
+          <i class="fas fa-history mr-2"></i>Login History
+        </h2>
+        <div class="settings-divider"></div>
+        
+        <p class="help-text mb-4">Recent login activity on your account</p>
+        
+        <div class="space-y-3">
+          <% if (loginHistory && loginHistory.length > 0) { %>
+            <% loginHistory.forEach((history, index) => { %>
+              <div class="history-card">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <% if (history.status === 'success') { %>
+                      <i class="fas fa-check-circle text-green-500"></i>
+                      <span class="font-semibold" style="color: #ffffff;">Successful Login</span>
+                    <% } else { %>
+                      <i class="fas fa-times-circle text-red-500"></i>
+                      <span class="font-semibold" style="color: #ffffff;">Failed Login Attempt</span>
+                    <% } %>
+                  </div>
+                </div>
+                <div class="settings-divider" style="margin: 12px 0;"></div>
+                <div class="space-y-2 text-sm">
+                  <p class="help-text">
+                    <i class="fas fa-calendar mr-2"></i><%= new Date(history.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %> at <%= new Date(history.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) %>
+                  </p>
+                  <p class="help-text">
+                    <i class="fas fa-laptop mr-2"></i><%= history.device %> • <%= history.browser %>
+                  </p>
+                  <p class="help-text">
+                    <i class="fas fa-map-marker-alt mr-2"></i><%= history.location %>
+                  </p>
+                  <p class="help-text">
+                    <i class="fas fa-network-wired mr-2"></i>IP: <%= history.ip %>
+                  </p>
+                  <% if (history.status !== 'success' && history.reason) { %>
+                    <p class="help-text" style="color: #ef4444;">
+                      <i class="fas fa-exclamation-triangle mr-2"></i>Reason: <%= history.reason %>
+                    </p>
+                  <% } %>
+                </div>
+              </div>
+            <% }); %>
+          <% } else { %>
+            <!-- Sample login history entries -->
+            <div class="history-card">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-check-circle text-green-500"></i>
+                  <span class="font-semibold" style="color: #ffffff;">Successful Login</span>
+                </div>
+              </div>
+              <div class="settings-divider" style="margin: 12px 0;"></div>
+              <div class="space-y-2 text-sm">
+                <p class="help-text">
+                  <i class="fas fa-calendar mr-2"></i>December 5, 2024 at 9:30 AM
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-laptop mr-2"></i>Windows PC • Chrome
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-map-marker-alt mr-2"></i>Davao City, Philippines
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-network-wired mr-2"></i>IP: 192.168.1.100
+                </p>
+              </div>
+            </div>
+            
+            <div class="history-card">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-check-circle text-green-500"></i>
+                  <span class="font-semibold" style="color: #ffffff;">Successful Login</span>
+                </div>
+              </div>
+              <div class="settings-divider" style="margin: 12px 0;"></div>
+              <div class="space-y-2 text-sm">
+                <p class="help-text">
+                  <i class="fas fa-calendar mr-2"></i>December 4, 2024 at 2:15 PM
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-mobile-alt mr-2"></i>Android • Chrome Mobile
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-map-marker-alt mr-2"></i>Davao City, Philippines
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-network-wired mr-2"></i>IP: 192.168.1.105
+                </p>
+              </div>
+            </div>
+            
+            <div class="history-card">
+              <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                  <i class="fas fa-times-circle text-red-500"></i>
+                  <span class="font-semibold" style="color: #ffffff;">Failed Login Attempt</span>
+                </div>
+              </div>
+              <div class="settings-divider" style="margin: 12px 0;"></div>
+              <div class="space-y-2 text-sm">
+                <p class="help-text">
+                  <i class="fas fa-calendar mr-2"></i>December 2, 2024 at 11:20 PM
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-laptop mr-2"></i>Unknown Device • Chrome
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-map-marker-alt mr-2"></i>Quezon City, Philippines
+                </p>
+                <p class="help-text">
+                  <i class="fas fa-network-wired mr-2"></i>IP: 180.190.50.33
+                </p>
+                <p class="help-text" style="color: #ef4444;">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>Reason: Incorrect password
+                </p>
+              </div>
+            </div>
+          <% } %>
+        </div>
+        
+        <p class="help-text mt-4">Showing last 5 logins</p>
+        
+        <button type="button" class="btn-secondary mt-4">
+          View Full Login History →
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Form validation
+    document.querySelectorAll('form').forEach(form => {
+      form.addEventListener('submit', function(e) {
+        if (form.querySelector('input[name="action"]')?.value === 'update-password') {
+          const newPassword = form.querySelector('input[name="new_password"]').value;
+          const confirmPassword = form.querySelector('input[name="confirm_password"]').value;
+          
+          if (newPassword !== confirmPassword) {
+            e.preventDefault();
+            alert('New passwords do not match!');
+            return false;
+          }
+          
+          if (newPassword.length < 8) {
+            e.preventDefault();
+            alert('Password must be at least 8 characters!');
+            return false;
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

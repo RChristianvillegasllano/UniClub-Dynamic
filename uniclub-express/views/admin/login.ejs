@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
     <title>Admin Login | UniClub</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="icon" href="/img/uniclub-logo.png" />
     <style>
       @keyframes fadeIn {
         from {
@@ -114,10 +114,18 @@
     <div class="glass-card p-12 rounded-3xl w-full max-w-md border border-white/20 fade-in">
       <!-- Logo and Header -->
       <div class="text-center mb-10">
-        <h1 class="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
-          UniClub Admin Portal
-        </h1>
-        <p class="text-gray-600 text-sm font-medium mb-4">
+        <div class="flex items-center justify-center gap-4 sm:gap-5 mb-5">
+          <img src="/img/logo.png" alt="UniClub Logo" class="h-20 w-20 sm:h-24 sm:w-24 flex-shrink-0 logo-glow object-contain transition-transform duration-300 hover:scale-105" />
+          <div class="flex flex-col items-start">
+            <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight">
+              UniClub
+            </h1>
+            <span class="text-xl sm:text-2xl lg:text-3xl font-semibold text-gray-600">
+              Admin Portal
+            </span>
+          </div>
+        </div>
+        <p class="text-gray-600 text-sm sm:text-base font-medium mb-4">
           Secure Access to Club Management System
         </p>
         <div class="divider-gradient w-24 mx-auto"></div>
@@ -140,6 +148,7 @@
 
       <!-- Login Form -->
       <form action="/admin/login" method="POST" class="space-y-6">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <div>
           <label class="block text-sm font-bold text-gray-800 mb-3 uppercase tracking-wide text-xs">
             Username

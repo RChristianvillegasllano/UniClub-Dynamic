@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title><%= club.name %> | UniClub</title>
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+  <%
+    // Ensure announcements is always defined
+    if (typeof announcements === 'undefined') {
+      announcements = [];
+    }
+  %>
+  
+  <!-- CRITICAL ANTI-FLICKER: Block rendering until theme is set -->
+  <script>
+    // This script MUST run synchronously - blocks all rendering
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      
+      // Set theme attribute immediately for CSS to use
+      html.setAttribute('data-theme', theme);
+      
+      // Apply theme class immediately
+      if (theme === 'light') {
+        html.classList.add('light-mode');
+      } else {
+        html.classList.remove('light-mode');
+      }
+      
+      // Set background colors inline with !important - overrides all CSS
+      if (theme === 'light') {
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+      } else {
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+      }
+    })();
+  </script>
+  
+  <!-- Blocking inline CSS that uses theme attribute -->
+  <style>
+    /* Set background based on data-theme attribute - prevents dark flash */
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f8fafc !important;
+    }
+    html[data-theme="dark"],
+    html:not([data-theme]) body {
+      background-color: #0a0f1a !important;
+    }
+    /* Hide body until it's ready */
+    body:not([data-theme-ready]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+    body[data-theme-ready] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.1s ease;
+    }
+  </style>
+
+  <!-- Apply theme to body once it exists -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      
+      function applyThemeToBody() {
+        if (!document.body) return;
+        
+        if (theme === 'light') {
+          document.body.classList.add('light-mode');
+          document.body.style.setProperty('background-color', '#f8fafc', 'important');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.style.setProperty('background-color', '#0a0f1a', 'important');
+        }
+        
+        // Mark body as ready
+        document.body.setAttribute('data-theme-ready', 'true');
+      }
+      
+      // Try immediately
+      if (document.body) {
+        applyThemeToBody();
+      } else {
+        // Watch for body creation
+        const observer = new MutationObserver(function(mutations) {
+          if (document.body) {
+            applyThemeToBody();
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        
+        // Fallback on DOMContentLoaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyThemeToBody);
+        }
+      }
+    })();
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      scroll-behavior: smooth;
+    }
+
+    body { 
+      background:#0a0f1a; 
+      font-family: 'Inter', system-ui, sans-serif;
+      color: white;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    /* Subtle Color Tint Overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    body > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    body.light-mode::before {
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      opacity: 1;
+      z-index: 0;
+    }
+
+    body.light-mode {
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    body.light-mode .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-white\/80,
+    body.light-mode .text-white\/70,
+    body.light-mode .text-white\/60 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .text-white\/90,
+    body.light-mode .text-white\/85,
+    body.light-mode .text-white\/75,
+    body.light-mode .text-white\/65,
+    body.light-mode .text-white\/50,
+    body.light-mode .text-white\/40,
+    body.light-mode .text-white\/30,
+    body.light-mode .text-white\/20 {
+      color: #64748b !important;
+    }
+
+    /* All headings */
+    body.light-mode h1,
+    body.light-mode h2,
+    body.light-mode h3,
+    body.light-mode h4,
+    body.light-mode h5,
+    body.light-mode h6 {
+      color: #1e293b !important;
+    }
+
+    /* All text elements inherit properly */
+    body.light-mode p,
+    body.light-mode span,
+    body.light-mode label,
+    body.light-mode a,
+    body.light-mode div {
+      color: inherit;
+    }
+
+    /* Section header text */
+    body.light-mode .section-header {
+      color: #1e293b !important;
+    }
+
+    /* Sticky Header */
+    #navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 15, 26, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    body.light-mode #navbar {
+      background: rgba(255, 255, 255, 0.95);
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Hero Section */
+    .hero-section {
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.1) 0%, rgba(239, 108, 0, 0.05) 100%);
+      border-radius: 24px;
+      padding: 32px;
+      margin-bottom: 32px;
+    }
+
+    body.light-mode .hero-section {
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.05) 0%, rgba(239, 108, 0, 0.02) 100%);
+    }
+
+    .club-logo {
+      width: 120px;
+      height: 120px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      font-weight: bold;
+      color: white;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Quick Info Cards */
+    .info-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+
+    body.light-mode .info-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .info-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Section Headers */
+    .section-header {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    body.light-mode .section-header {
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Event Cards */
+    .event-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.3s ease;
+    }
+
+    body.light-mode .event-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .event-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Officer Cards Grid */
+    .officer-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 32px;
+      text-align: center;
+      transition: all 0.3s ease;
+      text-decoration: none;
+      display: block;
+      color: inherit;
+    }
+
+    .officer-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    }
+
+    .officer-card button {
+      pointer-events: auto;
+    }
+
+    .officers-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .officers-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .officers-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    body.light-mode .officer-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .officer-photo {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 64px;
+      color: white;
+      border: 4px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* Join Button */
+    .join-button {
+      background: linear-gradient(135deg, #dc2626 0%, #f97316 100%);
+      padding: 16px 32px;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+      }
+    }
+
+    .join-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+    }
+
+    /* Badge Styles */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-academic {
+      background: rgba(59, 130, 246, 0.2);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .badge-civic {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .badge-religious {
+      background: rgba(168, 85, 247, 0.2);
+      color: #a78bfa;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero-section {
+        padding: 20px;
+      }
+      
+      .club-logo {
+        width: 80px;
+        height: 80px;
+        font-size: 32px;
+      }
+    }
+
+    /* Navbar Styles */
+    .nav-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      position: relative;
+      padding: 8px 0;
+      text-decoration: none;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C62828;
+      transition: width 0.2s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .nav-link.active::after {
+      width: 100%;
+      background: #C62828;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .profile-dropdown {
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      padding: 8px;
+      min-width: 280px;
+      max-width: 90vw;
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      background: #C62828;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+      line-height: 14px;
+    }
+
+    .recommended-badge {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 12px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #a5b4fc;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .profile-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+    }
+
+    .profile-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .mobile-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.98);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(32px);
+      z-index: 40;
+    }
+
+    .mobile-menu.active {
+      display: block;
+    }
+
+    .mobile-menu-content {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    body.light-mode .nav-link {
+      color: #475569;
+    }
+
+    body.light-mode .nav-link:hover,
+    body.light-mode .nav-link.active {
+      color: #1e293b;
+    }
+
+    body.light-mode .profile-dropdown {
+      background: rgba(255, 255, 255, 0.98);
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .profile-dropdown .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/65,
+    body.light-mode .profile-dropdown .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .mobile-menu {
+      background: rgba(255, 255, 255, 0.98);
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .mobile-menu .nav-link {
+      color: #475569;
+    }
+
+    body.light-mode .mobile-menu .nav-link:hover {
+      color: #1e293b;
+    }
+
+    body.light-mode .btn-icon {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .btn-icon:hover {
+      background: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .join-button {
+      background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
+      color: white;
+    }
+
+    body.light-mode .join-button:hover {
+      background: linear-gradient(135deg, #B71C1C 0%, #C62828 100%);
+      box-shadow: 0 8px 24px rgba(198, 40, 40, 0.3);
+    }
+
+    body.light-mode .profile-pill {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .profile-pill:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    body.light-mode .profile-pill .text-white\/85 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-caret {
+      color: #64748b !important;
+    }
+
+    body.light-mode .notification-badge {
+      background: #C62828;
+      color: white;
+    }
+
+    body.light-mode h1,
+    body.light-mode h2,
+    body.light-mode h3,
+    body.light-mode h4 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .bg-white\/10 {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .bg-white\/20 {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border-color: rgba(0, 0, 0, 0.2) !important;
+    }
+
+    body.light-mode .border-white\/20 {
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .text-red-400 {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode .text-red-300 {
+      color: #f87171 !important;
+    }
+
+    body.light-mode .hover\:bg-white\/20:hover {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .hover\:bg-red-500\/15:hover {
+      background: rgba(220, 38, 38, 0.1) !important;
+    }
+
+    body.light-mode .bg-red-500\/15 {
+      background: rgba(220, 38, 38, 0.1) !important;
+    }
+
+    body.light-mode .border-red-500\/20 {
+      border-color: rgba(220, 38, 38, 0.2) !important;
+    }
+
+    body.light-mode .club-logo {
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .officer-photo {
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .event-card:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .info-card:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .officer-card:hover {
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode footer {
+      background: #f8fafc;
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode footer .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode footer .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode footer a {
+      color: #64748b !important;
+    }
+
+    body.light-mode footer a:hover {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .bg-white\/5 {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .bg-white\/10 {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .bg-white\/20 {
+      background: rgba(0, 0, 0, 0.12) !important;
+    }
+
+    body.light-mode .bg-gradient-to-r.from-red-600\/20 {
+      background: linear-gradient(to right, rgba(198, 40, 40, 0.1), rgba(239, 108, 0, 0.1)) !important;
+      border-color: rgba(198, 40, 40, 0.2) !important;
+    }
+
+    body.light-mode .border-red-500\/30 {
+      border-color: rgba(198, 40, 40, 0.25) !important;
+    }
+
+    body.light-mode .bg-red-600 {
+      background: #C62828 !important;
+    }
+
+    body.light-mode .hover\:bg-red-500:hover {
+      background: #B71C1C !important;
+    }
+
+    body.light-mode .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .text-white\/80 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .hover\:text-white\/70:hover {
+      color: #1e293b !important;
+    }
+
+    /* Additional text color overrides */
+    body.light-mode .info-card .text-white,
+    body.light-mode .info-card .text-white\/90,
+    body.light-mode .info-card .text-white\/80,
+    body.light-mode .info-card .text-white\/70 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .info-card .text-white\/60,
+    body.light-mode .info-card .text-white\/50,
+    body.light-mode .info-card .text-white\/40 {
+      color: #64748b !important;
+    }
+
+    /* Event card text */
+    body.light-mode .event-card .text-white,
+    body.light-mode .event-card .text-white\/90,
+    body.light-mode .event-card .text-white\/80,
+    body.light-mode .event-card .text-white\/70 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .event-card .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    /* Hero section text */
+    body.light-mode .hero-section .text-white,
+    body.light-mode .hero-section .text-white\/90,
+    body.light-mode .hero-section .text-white\/80,
+    body.light-mode .hero-section .text-white\/70,
+    body.light-mode .hero-section .text-white\/60 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .hero-section strong {
+      color: #1e293b !important;
+    }
+
+    /* Officer card text */
+    body.light-mode .officer-card .text-white,
+    body.light-mode .officer-card .text-white\/80,
+    body.light-mode .officer-card .text-white\/70 {
+      color: #1e293b !important;
+    }
+
+    /* Club information section */
+    body.light-mode .bg-white\/5 .text-white,
+    body.light-mode .bg-white\/5 .text-white\/80 {
+      color: #1e293b !important;
+    }
+
+    /* Icons in light mode */
+    body.light-mode i,
+    body.light-mode .fas,
+    body.light-mode .far {
+      color: inherit;
+    }
+
+    body.light-mode .fa-users,
+    body.light-mode .fa-calendar,
+    body.light-mode .fa-map-marker-alt,
+    body.light-mode .fa-building,
+    body.light-mode .fa-graduation-cap,
+    body.light-mode .fa-tag,
+    body.light-mode .fa-share-alt,
+    body.light-mode .fa-comment,
+    body.light-mode .fa-check {
+      color: inherit !important;
+    }
+
+    /* Links */
+    body.light-mode a {
+      color: inherit;
+    }
+
+    body.light-mode a:hover {
+      color: #C62828 !important;
+    }
+
+    body.light-mode .text-red-400:hover,
+    body.light-mode .hover\:text-red-300:hover {
+      color: #B71C1C !important;
+    }
+
+    /* Buttons */
+    body.light-mode button {
+      color: inherit;
+    }
+
+    body.light-mode button.text-white {
+      color: white !important;
+    }
+
+    body.light-mode .bg-white\/10,
+    body.light-mode .hover\:bg-white\/20 {
+      background: rgba(0, 0, 0, 0.05) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .hover\:bg-white\/20:hover {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode button.bg-white\/10,
+    body.light-mode button.hover\:bg-white\/20 {
+      color: #1e293b !important;
+    }
+
+    /* Badges */
+    body.light-mode .badge-academic {
+      background: rgba(59, 130, 246, 0.15) !important;
+      color: #2563eb !important;
+      border-color: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    body.light-mode .badge-civic {
+      background: rgba(16, 185, 129, 0.15) !important;
+      color: #059669 !important;
+      border-color: rgba(16, 185, 129, 0.3) !important;
+    }
+
+    body.light-mode .badge-religious {
+      background: rgba(168, 85, 247, 0.15) !important;
+      color: #7c3aed !important;
+      border-color: rgba(168, 85, 247, 0.3) !important;
+    }
+
+    /* Green text for growth indicators */
+    body.light-mode .text-green-400 {
+      color: #10b981 !important;
+    }
+
+    /* Carousel dots */
+    body.light-mode .carousel-dot.bg-white\/30 {
+      background: rgba(0, 0, 0, 0.2) !important;
+    }
+
+    body.light-mode .carousel-dot.bg-red-500 {
+      background: #C62828 !important;
+    }
+
+    /* Main content area */
+    body.light-mode main {
+      background: #f8fafc !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode main.bg-\[#0a0f1a\] {
+      background: #f8fafc !important;
+    }
+
+    /* Empty state text */
+    body.light-mode .event-card.text-center .text-white,
+    body.light-mode .event-card.text-center .text-white\/70 {
+      color: #1e293b !important;
+    }
+
+    /* Strong tags */
+    body.light-mode strong {
+      color: #1e293b !important;
+    }
+
+    /* Any remaining black text */
+    body.light-mode .text-black,
+    body.light-mode [class*="text-black"] {
+      color: #1e293b !important;
+    }
+
+    /* Club logo text remains white (gradient background) */
+    body.light-mode .club-logo,
+    body.light-mode .club-logo * {
+      color: white !important;
+    }
+
+    body.light-mode .officer-photo,
+    body.light-mode .officer-photo * {
+      color: white !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen text-white light-mode:text-[#1e293b]">
+  <!-- Shared Student Navigation -->
+  <%- include('../layouts/studentNav', { 
+    currentPath: '/student/club',
+    student: typeof student !== 'undefined' ? student : {},
+    announcements: typeof announcements !== 'undefined' ? announcements : [],
+    csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : ''
+  }) %>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-[#0a0f1a] text-white light-mode:bg-[#f8fafc] light-mode:text-[#1e293b]">
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+        <div class="club-logo" style="position: relative; overflow: hidden;">
+          <% if (club.photo) { %>
+            <img src="<%= club.photo %>" alt="<%= club.name %>" class="w-full h-full object-cover" style="position: absolute; inset: 0;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <div class="hidden w-full h-full items-center justify-center text-4xl font-bold text-white" style="position: absolute; inset: 0;">
+              <%= club.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() %>
+            </div>
+          <% } else { %>
+            <div class="w-full h-full flex items-center justify-center text-4xl font-bold text-white">
+              <%= club.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() %>
+            </div>
+          <% } %>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-3 mb-2">
+            <h1 class="text-3xl font-bold text-white"><%= club.name %></h1>
+            <% if (club.category) { %>
+              <span class="badge badge-<%= club.category.toLowerCase().includes('academic') ? 'academic' : club.category.toLowerCase().includes('civic') ? 'civic' : 'religious' %>">
+                <%= club.category %>
+              </span>
+            <% } %>
+          </div>
+          <% if (club.tagline || club.description) { %>
+            <p class="text-white/80 mb-4"><%= (club.tagline || club.description || '').substring(0, 100) %></p>
+          <% } %>
+          <div class="flex items-center gap-4 mb-4">
+            <% if (memberCount > 0) { %>
+              <div class="flex items-center gap-2">
+                <i class="fas fa-users text-white/70"></i>
+                <span class="text-white/90 font-semibold"><%= memberCount %> members</span>
+                <% if (growthPercent > 0) { %>
+                  <span class="text-green-400 text-sm">↑ <%= growthPercent %>%</span>
+                <% } %>
+              </div>
+            <% } %>
+          </div>
+          <% if (club.next_event_name) { %>
+            <div class="flex items-center gap-2 mb-4">
+              <i class="fas fa-calendar text-white/70"></i>
+              <span class="text-white/80">Next Event: <strong><%= club.next_event_name %></strong></span>
+              <% if (club.next_event_date) { %>
+                <span class="text-white/60">• <%= new Date(club.next_event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+              <% } %>
+            </div>
+          <% } %>
+          <div class="flex gap-4">
+            <% if (isMember) { %>
+              <a href="/student/my-clubs" class="join-button text-white inline-flex items-center gap-2">
+                <i class="fas fa-check"></i>
+                View My Dashboard →
+              </a>
+            <% } else { %>
+              <button id="joinClubBtn" class="join-button text-white inline-flex items-center gap-2">
+                Join →
+              </button>
+            <% } %>
+            <button class="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white transition-colors">
+              <i class="fas fa-share-alt mr-2"></i>Share
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Info Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <% if (club.next_event_name) { %>
+        <div class="info-card">
+          <div class="text-3xl mb-3">📅</div>
+          <h3 class="font-semibold text-white mb-2">Next Event</h3>
+          <p class="text-white/90 font-medium mb-1"><%= club.next_event_name %></p>
+          <% if (club.next_event_date) { %>
+            <p class="text-white/70 text-sm mb-2"><%= new Date(club.next_event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></p>
+          <% } %>
+          <button class="text-red-400 hover:text-red-300 text-sm font-medium">RSVP →</button>
+        </div>
+      <% } %>
+      
+      <% if (club.adviser) { %>
+        <div class="info-card">
+          <div class="text-3xl mb-3">👨‍🏫</div>
+          <h3 class="font-semibold text-white mb-2">Club Adviser</h3>
+          <p class="text-white/90 font-medium mb-1"><%= club.adviser %></p>
+          <% if (club.department) { %>
+            <p class="text-white/70 text-sm mb-2"><%= club.department %></p>
+          <% } %>
+          <button class="text-red-400 hover:text-red-300 text-sm font-medium">Contact →</button>
+        </div>
+      <% } %>
+
+      <% if (programs && programs.length > 0) { %>
+        <div class="info-card">
+          <div class="text-3xl mb-3">🎓</div>
+          <h3 class="font-semibold text-white mb-2">Who Can Join</h3>
+          <p class="text-white/90 text-sm"><%= programs.join(', ') %></p>
+        </div>
+      <% } %>
+
+      <% if (eventCount > 0) { %>
+        <div class="info-card">
+          <div class="text-3xl mb-3">⚡</div>
+          <h3 class="font-semibold text-white mb-2">Activity Level</h3>
+          <p class="text-white/90 font-medium mb-1"><%= eventCount %> events</p>
+          <p class="text-white/70 text-sm">this month</p>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- About Section -->
+    <div class="mb-8">
+      <h2 class="section-header text-white">📖 ABOUT</h2>
+      <div class="bg-white/5 rounded-lg p-6 border border-white/10">
+        <p class="text-white/80 leading-relaxed whitespace-pre-line"><%= club.description || 'No description available.' %></p>
+      </div>
+    </div>
+
+    <!-- Upcoming Events Section -->
+    <div class="mb-8">
+      <h2 class="section-header text-white">📅 UPCOMING EVENTS</h2>
+      <% if (events && events.length > 0) { %>
+        <div class="space-y-4">
+          <% events.slice(0, 3).forEach(event => { %>
+            <div class="event-card">
+              <div class="flex items-start justify-between mb-3">
+                <div>
+                  <div class="flex items-center gap-2 mb-2">
+                    <i class="fas fa-calendar text-red-400"></i>
+                    <span class="text-white/90 font-medium">
+                      <%= new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) %>
+                    </span>
+                  </div>
+                  <h3 class="text-xl font-bold text-white mb-2"><%= event.title %></h3>
+                </div>
+              </div>
+              <% if (event.location) { %>
+                <div class="flex items-center gap-2 mb-2">
+                  <i class="fas fa-map-marker-alt text-white/60"></i>
+                  <span class="text-white/80"><%= event.location %></span>
+                </div>
+              <% } %>
+              <% if (event.description) { %>
+                <p class="text-white/70 mb-4"><%= event.description.substring(0, 150) %><%= event.description.length > 150 ? '...' : '' %></p>
+              <% } %>
+              <div class="flex gap-3">
+                <button class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white text-sm font-medium transition-colors">
+                  RSVP
+                </button>
+                <button class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white text-sm font-medium transition-colors">
+                  View Details →
+                </button>
+              </div>
+            </div>
+          <% }) %>
+          <% if (events.length > 3) { %>
+            <div class="text-center">
+              <a href="/student/events" class="text-red-400 hover:text-red-300 font-medium">
+                View All Events →
+              </a>
+            </div>
+          <% } %>
+        </div>
+      <% } else { %>
+        <div class="event-card text-center">
+          <div class="text-4xl mb-4">📅</div>
+          <h3 class="text-xl font-bold text-white mb-2">No upcoming events yet</h3>
+          <p class="text-white/70 mb-4">We're planning exciting activities! Check back soon or join to get notified when we post new events.</p>
+          <% if (!isMember) { %>
+            <button id="joinForEventsBtn" class="px-6 py-3 bg-red-600 hover:bg-red-500 rounded-lg text-white font-medium transition-colors">
+              Join to Get Notified →
+            </button>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Meet The Team Section -->
+    <% if (officers && officers.length > 0) { %>
+      <div class="mb-8">
+        <h2 class="section-header text-white">👥 MEET THE TEAM</h2>
+        <div class="officers-grid">
+          <% officers.forEach((officer, index) => { %>
+            <a href="/student/profile?officer_id=<%= officer.id %>" class="officer-card block cursor-pointer">
+              <div class="officer-photo">
+                <%= (officer.first_name || 'O')[0].toUpperCase() %>
+              </div>
+              <h3 class="text-2xl font-bold text-white mb-1"><%= officer.name %></h3>
+              <p class="text-white/80 font-medium mb-2"><%= officer.position || 'Officer' %> • <%= officer.department || 'N/A' %></p>
+              <% if (officer.program) { %>
+                <p class="text-white/70 text-sm mb-2"><%= officer.program %></p>
+              <% } %>
+              <button class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white text-sm font-medium transition-colors">
+                <i class="fas fa-comment mr-2"></i>Message
+              </button>
+            </a>
+          <% }) %>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- Club Information Section -->
+    <div class="mb-8">
+      <h2 class="section-header text-white">📊 CLUB INFORMATION</h2>
+      <div class="bg-white/5 rounded-lg p-6 border border-white/10 space-y-3">
+        <% if (club.department) { %>
+          <div class="flex items-center gap-2">
+            <i class="fas fa-building text-white/60 w-5"></i>
+            <span class="text-white/80">Department:</span>
+            <span class="text-white font-medium"><%= club.department %></span>
+          </div>
+        <% } %>
+        <% if (programs && programs.length > 0) { %>
+          <div class="flex items-center gap-2">
+            <i class="fas fa-graduation-cap text-white/60 w-5"></i>
+            <span class="text-white/80">Open to:</span>
+            <span class="text-white font-medium"><%= programs.join(', ') %></span>
+          </div>
+        <% } %>
+        <% if (club.category) { %>
+          <div class="flex items-center gap-2">
+            <i class="fas fa-tag text-white/60 w-5"></i>
+            <span class="text-white/80">Type:</span>
+            <span class="text-white font-medium"><%= club.category %></span>
+          </div>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- Ready to Join Section -->
+    <div class="mb-8">
+      <h2 class="section-header text-white">🚀 READY TO JOIN?</h2>
+      <div class="bg-gradient-to-r from-red-600/20 to-orange-500/20 rounded-lg p-8 border border-red-500/30 text-center">
+        <% if (isMember) { %>
+          <div class="text-4xl mb-4">✅</div>
+          <h3 class="text-2xl font-bold text-white mb-2">You're already a member!</h3>
+          <a href="/student/my-clubs" class="inline-block px-8 py-4 bg-red-600 hover:bg-red-500 rounded-lg text-white font-semibold transition-colors mt-4">
+            View My Dashboard →
+          </a>
+        <% } else { %>
+          <h3 class="text-2xl font-bold text-white mb-2">Join <%= club.name %> and connect with fellow <%= club.department || 'students' %> students</h3>
+          <button id="finalJoinBtn" class="join-button text-white inline-flex items-center gap-2 mt-4">
+            Join →
+          </button>
+        <% } %>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t border-white/10 py-6 px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <img src="/img/logo.png" alt="UM Logo" class="w-6 h-6 object-contain">
+          <p class="text-white font-semibold text-sm">UniClub</p>
+        </div>
+        <p class="text-xs text-white/50">© 2024 University of Mindanao</p>
+        <div class="flex gap-4 text-xs text-white/50">
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Privacy</a>
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Terms Modal (same as discover page) -->
+  <div id="termsModal" class="terms-modal-overlay" data-club-id="<%= club.id %>" data-club-name="<%= club.name.replace(/"/g, '&quot;') %>">
+    <!-- Modal content will be loaded from discover page structure -->
+  </div>
+
+  <script>
+    // Store club data for terms modal
+    const modalElement = document.getElementById('termsModal');
+    const currentClubData = {
+      id: modalElement ? parseInt(modalElement.dataset.clubId) : null,
+      name: modalElement ? modalElement.dataset.clubName : ''
+    };
+
+    // Join button handlers - redirect to discover page where terms modal will open
+    const joinButtons = document.querySelectorAll('#joinClubBtn, #joinForEventsBtn, #finalJoinBtn');
+    joinButtons.forEach(btn => {
+      if (btn) {
+        btn.addEventListener('click', () => {
+          // Redirect to discover page and trigger join
+          window.location.href = `/student/discover?join=<%= club.id %>`;
+        });
+      }
+    });
+
+    // Officer cards - prevent button from triggering card link
+    document.querySelectorAll('.officer-card button').forEach(button => {
+      button.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        // Handle message button click here if needed
+        const officerCard = this.closest('.officer-card');
+        if (officerCard) {
+          // Could navigate to messages or show message modal
+          const href = officerCard.getAttribute('href');
+          if (href) {
+            // For now, just prevent default link behavior
+          }
+        }
+      });
+    });
+
+    // ===== NOTIFICATION DROPDOWN =====
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationMenu = document.getElementById('notificationMenu');
+
+    function closeNotificationMenu() {
+      if (notificationMenu) {
+        notificationMenu.classList.add('hidden');
+        if (notificationBtn) {
+          notificationBtn.setAttribute('aria-expanded', 'false');
+        }
+      }
+    }
+
+    function openNotificationMenu() {
+      if (notificationMenu) {
+        notificationMenu.classList.remove('hidden');
+        if (notificationBtn) {
+          notificationBtn.setAttribute('aria-expanded', 'true');
+        }
+      }
+    }
+
+    // ===== PROFILE DROPDOWN =====
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+
+    function closeProfileMenu() {
+      if (profileMenu) {
+        profileMenu.classList.add('hidden');
+        if (profileBtn) {
+          profileBtn.setAttribute('aria-expanded', 'false');
+        }
+      }
+    }
+
+    function openProfileMenu() {
+      if (profileMenu) {
+        profileMenu.classList.remove('hidden');
+        if (profileBtn) {
+          profileBtn.setAttribute('aria-expanded', 'true');
+        }
+      }
+    }
+
+    notificationBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !notificationMenu?.classList.contains('hidden');
+      
+      // Close profile menu if open
+      closeProfileMenu();
+      
+      if (isOpen) {
+        closeNotificationMenu();
+      } else {
+        openNotificationMenu();
+      }
+    });
+
+    profileBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = !profileMenu?.classList.contains('hidden');
+      
+      // Close notification menu if open
+      closeNotificationMenu();
+      
+      if (isOpen) {
+        closeProfileMenu();
+      } else {
+        openProfileMenu();
+      }
+    });
+
+    // Close menus when clicking outside
+    document.addEventListener('click', (e) => {
+      if (profileMenu && !profileBtn?.contains(e.target) && !profileMenu.contains(e.target)) {
+        closeProfileMenu();
+      }
+      if (notificationMenu && !notificationBtn?.contains(e.target) && !notificationMenu.contains(e.target)) {
+        closeNotificationMenu();
+      }
+    });
+
+    // Close menus on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeProfileMenu();
+        closeNotificationMenu();
+      }
+    });
+
+    // Mobile menu toggle
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    mobileMenuBtn?.addEventListener('click', () => {
+      mobileMenu?.classList.toggle('active');
+    });
+
+    // Close mobile menu when clicking outside
+    document.addEventListener('click', (e) => {
+      if (mobileMenu && !mobileMenuBtn?.contains(e.target) && !mobileMenu.contains(e.target)) {
+        mobileMenu.classList.remove('active');
+      }
+    });
+
+    // Navbar scroll effect
+    const navbar = document.getElementById('navbar');
+    window.addEventListener('scroll', () => {
+      if (navbar) {
+        if (window.scrollY > 50) {
+          navbar.style.background = 'rgba(15, 23, 42, 0.9)';
+        } else {
+          navbar.style.background = 'rgba(15, 23, 42, 0.7)';
+        }
+      }
+    });
+
+    // ===== THEME TOGGLE FUNCTIONALITY =====
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeLabel = document.getElementById('themeLabel');
+    const themeDescription = document.getElementById('themeDescription');
+    const themeSwitch = document.getElementById('themeSwitch');
+    const themeSwitchThumb = document.getElementById('themeSwitchThumb');
+    
+    function updateThemeUI(isLight) {
+      if (isLight) {
+        document.body.classList.add('light-mode');
+        document.documentElement.classList.add('light-mode');
+        if (themeIcon) {
+          themeIcon.classList.remove('fa-sun');
+          themeIcon.classList.add('fa-moon');
+        }
+        if (themeLabel) themeLabel.textContent = 'Dark Mode';
+        if (themeDescription) themeDescription.textContent = 'Switch to dark theme';
+        if (themeSwitch) themeSwitch.style.background = '#C62828';
+        if (themeSwitchThumb) themeSwitchThumb.style.transform = 'translateX(16px)';
+      } else {
+        document.body.classList.remove('light-mode');
+        document.documentElement.classList.remove('light-mode');
+        if (themeIcon) {
+          themeIcon.classList.remove('fa-moon');
+          themeIcon.classList.add('fa-sun');
+        }
+        if (themeLabel) themeLabel.textContent = 'Light Mode';
+        if (themeDescription) themeDescription.textContent = 'Switch to light theme';
+        if (themeSwitch) themeSwitch.style.background = '#64748b';
+        if (themeSwitchThumb) themeSwitchThumb.style.transform = 'translateX(0)';
+      }
+    }
+    
+    updateThemeUI(currentTheme === 'light');
+
+    themeToggle?.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const isLightMode = document.body.classList.contains('light-mode');
+      
+      if (isLightMode) {
+        updateThemeUI(false);
+        localStorage.setItem('theme', 'dark');
+      } else {
+        updateThemeUI(true);
+        localStorage.setItem('theme', 'light');
+      }
+
+      // Sync theme across tabs
+      window.dispatchEvent(new Event('storage'));
+    });
+
+    // Listen for theme changes from other tabs
+    window.addEventListener('storage', () => {
+      const theme = localStorage.getItem('theme') || 'light';
+      updateThemeUI(theme === 'light');
+    });
+  </script>
+</body>
+</html>
+

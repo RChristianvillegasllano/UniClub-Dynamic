@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title><%= title || 'Officer Dashboard' %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'] },
+          colors: {
+            primary: { 700: '#7a0e0e', 800: '#6a0c0c', 900: '#5b0a0a' }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
+  <% 
+    // Detect role type early for use throughout the template (must be at the top)
+    // Use var instead of const so variables are accessible throughout the entire template
+    var officerRole = (typeof officer !== 'undefined' && officer && officer.role) ? officer.role.toLowerCase() : '';
+    var isAuditor = officerRole.includes('auditor');
+    var isTreasurer = officerRole.includes('treasurer') || officerRole.includes('finance');
+    var isFinanceRole = isAuditor || isTreasurer;
+  %>
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <%- include('./partials/sidebar', {
+      activePage: 'dashboard',
+      club: (typeof club !== 'undefined' ? club : null),
+      accessiblePages: (typeof accessiblePages !== 'undefined' ? accessiblePages : []),
+      officer: (typeof officer !== 'undefined' ? officer : null),
+      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0)
+    }) %>
+
+    <!-- Main -->
+    <main class="flex-1 overflow-auto">
+      <!-- Header -->
+      <header class="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200 sticky top-0 z-10 overflow-visible">
+        <div class="flex items-center justify-between px-6 md:px-8 py-4">
+          <div class="flex items-center gap-3">
+            <!-- Hamburger removed by request -->
+            <div>
+              <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Officer Dashboard</h1>
+              <p class="text-gray-500 mt-1 text-sm">Welcome back! Here's what's happening today.</p>           
+            </div>
+          </div>
+          <div class="relative flex items-center gap-3 md:gap-5">
+            <!-- Notifications -->
+            <div class="relative">
+              <button id="notifBtn" class="relative p-2 hover:bg-gray-100 rounded-lg transition-colors" aria-haspopup="true" aria-expanded="false" aria-controls="notifMenu">
+                <i data-lucide="bell" class="w-5 h-5 text-gray-700"></i>
+                <% 
+                  // Only show pending count badge if officer has members access (not for auditors)
+                  const showPendingBadgeInHeader = (typeof accessiblePages !== 'undefined' && (accessiblePages.includes('all') || accessiblePages.includes('members'))) && !isAuditor;
+                %>
+                <% if (showPendingBadgeInHeader && (typeof pendingCount !== 'undefined' ? pendingCount : 0) > 0) { %>
+                  <span class="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-red-600 text-white text-[10px] leading-4 rounded-full text-center"><%= pendingCount %></span>
+                <% } %>
+              </button>
+              <div id="notifMenu" class="hidden absolute right-0 mt-2 w-72 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
+                <div class="px-3 py-2 border-b">
+                  <p class="text-sm font-semibold text-gray-800">Notifications</p>
+                </div>
+                <ul class="max-h-80 overflow-auto">
+                  <% 
+                    var notifItems = [];
+                    if (typeof announcements !== 'undefined' && announcements && announcements.length) {
+                      notifItems = announcements.slice(0, 5).map(function(a){ return { title: a.title, meta: new Date(a.created_at).toLocaleDateString() }; });
+                    } else if (showPendingBadgeInHeader && (typeof pendingCount !== 'undefined' ? pendingCount : 0) > 0) {
+                      notifItems = [{ title: 'Pending membership applications', meta: (pendingCount + ' awaiting review') }];
+                    }
+                  %>
+                  <% if (notifItems.length) { %>
+                    <% notifItems.forEach(function(n){ %>
+                      <li class="px-3 py-3 hover:bg-gray-50">
+                        <p class="text-sm font-medium text-gray-800"><%= n.title %></p>
+                        <p class="text-xs text-gray-500"><%= n.meta %></p>
+                      </li>
+                    <% }) %>
+                  <% } else { %>
+                    <li class="px-3 py-6 text-center text-sm text-gray-500">No new notifications</li>
+                  <% } %>
+                </ul>
+                <div class="px-3 py-2 border-t bg-gray-50">
+                  <button class="w-full text-left text-sm text-gray-700 hover:text-gray-900">View all</button>
+                </div>
+              </div>
+            </div>
+            <!-- Profile -->
+            <div class="relative pl-2 md:pl-4 border-l border-gray-200">
+              <button id="profileBtn" class="flex items-center gap-3 hover:bg-gray-100 px-2 py-1.5 rounded-lg" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu">
+                <div class="text-right hidden sm:block">
+                  <p class="text-sm font-semibold text-gray-900"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
+                  <p class="text-xs text-gray-600"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
+                </div>
+                <% if (typeof officer !== 'undefined' && officer && officer.photo_url) { %>
+                  <img src="<%= officer.photo_url %>" alt="Profile" class="w-11 h-11 rounded-full ring-2 ring-red-600 object-cover">
+                <% } else { %>
+                  <div class="w-11 h-11 rounded-full ring-2 ring-red-600 bg-gray-200 flex items-center justify-center text-xs text-gray-600">UC</div>
+                <% } %>
+              </button>
+              <div id="profileMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
+                <div class="p-4 bg-gray-50 border-b">
+                  <p class="font-semibold text-gray-800"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
+                  <p class="text-sm text-gray-500"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
+                  <% if (typeof club !== 'undefined' && club) { %>
+                    <p class="text-xs text-gray-500 mt-1"><%= club.name %></p>
+                  <% } %>
+                </div>
+                <div class="p-2">
+                  <a href="/officer/profile" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm">View Profile</a>
+                  <a href="/officer/settings" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm">Settings</a>
+                  <a href="/help" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm">Help & Support</a>
+                </div>
+                <div class="border-t p-2 bg-gray-50">
+                  <form action="/officer/logout" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-sm text-red-600">Logout</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page content -->
+      <div class="p-6 md:p-8">
+        <!-- Welcome banner -->
+        <div class="mb-8 bg-white rounded-2xl border border-gray-100 shadow-md p-5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <i data-lucide="hand" class="w-5 h-5 text-red-700"></i>
+            <p class="text-sm text-gray-700">
+              Welcome back, <span class="font-semibold"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Officer' %></span>! Here’s your club status today.
+            </p>
+          </div>
+          <% 
+            // Only show pending approvals badge if officer has members access AND is not an auditor
+            // Auditors don't handle member approvals, only financial reviews
+            const showPendingBadge = (typeof accessiblePages !== 'undefined' && (accessiblePages.includes('all') || accessiblePages.includes('members'))) && !isAuditor;
+          %>
+          <% if (showPendingBadge && (typeof pendingCount !== 'undefined' ? pendingCount : 0) > 0) { %>
+            <span class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700">You have <%= pendingCount %> pending approval<%= pendingCount>1?'s':'' %></span>
+          <% } else if (showPendingBadge) { %>
+            <span class="text-xs px-3 py-1 rounded-full bg-green-100 text-green-700">All caught up</span>
+          <% } else if (isAuditor) { %>
+            <span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700">Financial Review Dashboard</span>
+          <% } %>
+        </div>
+        <!-- Stats -->
+        <% 
+          // Get accessible pages for filtering dashboard content
+          const accessiblePagesList = (typeof accessiblePages !== 'undefined' && Array.isArray(accessiblePages)) ? accessiblePages : [];
+          const hasAllAccess = accessiblePagesList.includes('all');
+          const hasMembersAccess = hasAllAccess || accessiblePagesList.includes('members');
+          const hasAttendanceAccess = hasAllAccess || accessiblePagesList.includes('attendance');
+          const hasReportsAccess = hasAllAccess || accessiblePagesList.includes('reports');
+          const hasAnnouncementsAccess = hasAllAccess || accessiblePagesList.includes('announcements');
+          
+          // Note: isAuditor, isTreasurer, and isFinanceRole are already defined in the header section above
+        %>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <% if (isAuditor) { %>
+          <!-- Auditor-specific metrics -->
+          <% 
+            var financialData = typeof financialData !== 'undefined' ? financialData : {
+              pendingExpensesCount: 0,
+              budgetUtilization: 0,
+              totalBudget: 0,
+              totalSpent: 0,
+              reportsDueCount: 0,
+              complianceIssuesCount: 0
+            };
+          %>
+          <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border-2 border-amber-100">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Pending Receipts/Expenses</p>
+                <h3 class="text-4xl font-extrabold text-gray-900 mb-1"><%= financialData.pendingExpensesCount || 0 %></h3>
+                <p class="text-sm text-amber-600 font-medium">Awaiting review</p>
+              </div>
+              <div class="bg-amber-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="file-check" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-gray-200">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Budget Utilization</p>
+                <h3 class="text-3xl font-bold text-gray-800 mb-1"><%= financialData.budgetUtilization || 0 %>%</h3>
+                <p class="text-sm text-blue-600 font-medium">₱<%= (financialData.totalSpent || 0).toLocaleString() %> / ₱<%= (financialData.totalBudget || 0).toLocaleString() %></p>
+              </div>
+              <div class="bg-blue-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="pie-chart" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-gray-100">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Reports Due This Month</p>
+                <h3 class="text-3xl font-bold text-gray-800 mb-1"><%= financialData.reportsDueCount || 0 %></h3>
+                <p class="text-sm text-purple-600 font-medium"><%= financialData.reportsDueCount > 0 ? 'Action needed' : 'All caught up' %></p>
+              </div>
+              <div class="bg-purple-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="file-text" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border-2 border-red-100">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Compliance Issues</p>
+                <h3 class="text-3xl font-bold text-gray-800 mb-1"><%= financialData.complianceIssuesCount || 0 %></h3>
+                <p class="text-sm text-red-600 font-medium"><%= financialData.complianceIssuesCount > 0 ? 'Flagged' : 'No issues' %></p>
+              </div>
+              <div class="bg-red-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="alert-triangle" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <% } else { %>
+          <!-- Default metrics for other roles -->
+          <% if (hasMembersAccess) { %>
+          <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border-2 border-blue-100">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Total Members</p>
+                <h3 class="text-4xl font-extrabold text-gray-900 mb-1"><%= (typeof totalMembers !== 'undefined' ? totalMembers : 0) %></h3>
+                <p class="text-sm text-green-600 font-medium"><%= (typeof membersChange !== 'undefined' ? membersChange : '') %></p>
+              </div>
+              <div class="bg-blue-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="users" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <% } %>
+          <% if (hasMembersAccess) { %>
+          <div class="bg-gray-50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-gray-200">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Pending Approvals</p>
+                <h3 class="text-3xl font-bold text-gray-800 mb-1"><%= (typeof pendingCount !== 'undefined' ? pendingCount : 0) %></h3>
+                <p class="text-sm text-amber-600 font-medium">Action needed</p>
+              </div>
+              <div class="bg-amber-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="user-check" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <% } %>
+          <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-gray-100">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Events This Month</p>
+                <h3 class="text-3xl font-bold text-gray-800 mb-1"><%= (typeof events !== 'undefined' && Array.isArray(events) ? events.length : 0) %></h3>
+                <p class="text-sm text-purple-600 font-medium"><%= (typeof eventsChange !== 'undefined' ? eventsChange : '') %></p>
+              </div>
+              <div class="bg-purple-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="calendar" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <% if (hasAttendanceAccess) { %>
+          <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border-2 border-green-100">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-gray-500 text-sm font-medium mb-2">Attendance Rate</p>
+                <h3 class="text-4xl font-extrabold text-gray-900 mb-1">
+                  <%= ((typeof stats !== 'undefined' && stats && stats.total_attendance && stats.total_possible)
+                    ? Math.round((stats.total_attendance / stats.total_possible) * 100)
+                    : ((typeof stats !== 'undefined' && typeof stats.attendance_rate !== 'undefined') ? stats.attendance_rate : 0)) %>%</h3>
+                <p class="text-sm text-green-600 font-medium"><%= (typeof attendanceChange !== 'undefined' ? attendanceChange : '') %></p>
+              </div>
+              <div class="bg-green-500 p-3 rounded-xl shadow-lg">
+                <i data-lucide="trending-up" class="w-6 h-6 text-white"></i>
+              </div>
+            </div>
+          </div>
+          <% } %>
+          <% } %>
+        </div>
+
+        <!-- Main grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <% if (isAuditor) { %>
+          <!-- Pending Financial Reviews (Auditor) -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                Pending Financial Reviews
+                <i data-lucide="help-circle" class="w-4 h-4 text-gray-400" title="Expenses awaiting your review and approval"></i>
+              </h2>
+              <% if (financialData.pendingExpensesCount > 0) { %>
+                <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-semibold"><%= financialData.pendingExpensesCount %> New</span>
+              <% } else { %>
+                <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">All caught up</span>
+              <% } %>
+            </div>
+            <div class="space-y-3 mb-6 max-h-72 overflow-y-auto pr-1">
+              <% if (financialData.pendingExpenses && financialData.pendingExpenses.length > 0) { %>
+                <% financialData.pendingExpenses.slice(0, 5).forEach(function(expense) { %>
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
+                    <div>
+                      <p class="font-semibold text-gray-800 text-sm"><%= expense.title || 'Untitled Expense' %></p>
+                      <p class="text-xs text-gray-500">
+                        <% if (expense.submitted_by_name) { %>
+                          Submitted by <%= expense.submitted_by_name %>
+                        <% } %>
+                        <% if (expense.created_at) { %>
+                          • <%= new Date(expense.created_at).toLocaleDateString() %>
+                        <% } %>
+                      </p>
+                    </div>
+                    <span class="text-sm font-bold text-gray-900">₱<%= Number(expense.amount || 0).toLocaleString() %></span>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <p class="text-sm text-gray-500 text-center py-4">No pending expenses to review</p>
+              <% } %>
+            </div>
+            <% if (financialData.pendingExpensesCount > 0) { %>
+              <a href="/officer/finance" class="w-full bg-red-700 text-white py-3 rounded-xl font-semibold hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 transition-all flex items-center justify-center gap-2">
+                Review & Approve
+                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+              </a>
+            <% } else { %>
+              <a href="/officer/finance" class="w-full bg-gray-700 text-white py-3 rounded-xl font-semibold hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-600 transition-all flex items-center justify-center gap-2">
+                View All Expenses
+                <i data-lucide="chevron-right" class="w-5 h-5"></i>
+              </a>
+            <% } %>
+          </div>
+
+          <!-- Budget Overview (Auditor) -->
+          <div class="bg-gray-50 rounded-2xl p-6 shadow-lg border border-gray-200">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                Budget Overview
+                <i data-lucide="help-circle" class="w-4 h-4 text-gray-400" title="Current budget status and utilization"></i>
+              </h2>
+              <i data-lucide="wallet" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div class="space-y-4 mb-6">
+              <div>
+                <div class="flex justify-between mb-2">
+                  <span class="text-sm text-gray-600">Total Budget</span>
+                  <span class="text-sm font-bold text-gray-900">₱<%= (financialData.totalBudget || 0).toLocaleString() %></span>
+                </div>
+                <div class="flex justify-between mb-2">
+                  <span class="text-sm text-gray-600">Spent</span>
+                  <span class="text-sm font-bold text-blue-600">₱<%= (financialData.totalSpent || 0).toLocaleString() %> (<%= financialData.budgetUtilization || 0 %>%)</span>
+                </div>
+                <div class="flex justify-between mb-4">
+                  <span class="text-sm text-gray-600">Remaining</span>
+                  <span class="text-sm font-bold text-green-600">₱<%= ((financialData.totalBudget || 0) - (financialData.totalSpent || 0)).toLocaleString() %></span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                  <div class="bg-gradient-to-r from-blue-500 to-blue-400 h-3 rounded-full transition-all duration-700" style="width: <%= Math.min(financialData.budgetUtilization || 0, 100) %>%"></div>
+                </div>
+              </div>
+            </div>
+            <a href="/officer/finance" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors flex items-center justify-center gap-2">
+              View Breakdown
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          </div>
+          <% } else { %>
+          <!-- Pending Memberships (Default) -->
+          <% if (hasMembersAccess) { %>
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                Pending Memberships
+                <i data-lucide="help-circle" class="w-4 h-4 text-gray-400" title="View membership requests awaiting approval"></i>
+              </h2>
+              <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-full text-sm font-semibold"><%= (typeof pendingCount !== 'undefined' ? pendingCount : 0) %> New</span>
+            </div>
+            <p class="text-gray-600 mb-6"><%= (typeof pendingCount !== 'undefined' ? pendingCount : 0) %> new applications awaiting approval.</p>
+            <a href="/officer/member-approvals" class="w-full bg-red-700 text-white py-3 rounded-xl font-semibold hover:bg-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 transition-all flex items-center justify-center gap-2">
+              Review Applications
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          </div>
+          <% } %>
+
+          <!-- Upcoming Events (Default) -->
+          <div class="bg-gray-50 rounded-2xl p-6 shadow-lg border border-gray-200">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                Upcoming Events
+                <i data-lucide="help-circle" class="w-4 h-4 text-gray-400" title="Your next events at a glance"></i>
+              </h2>
+              <i data-lucide="calendar" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div class="space-y-3 mb-6 max-h-72 overflow-y-auto pr-1">
+              <% if (typeof events !== 'undefined' && events && events.length) { %>
+                <% events.slice(0, 5).forEach(function(event) { %>
+                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div>
+                      <p class="font-semibold text-gray-800 text-sm"><%= event.name %></p>
+                      <p class="text-xs text-gray-500">
+                        <%= new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                        <% if (event.time) { %> • <%= event.time %> <% } %>
+                      </p>
+                    </div>
+                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                      <%= event.attendees || 0 %>
+                    </span>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <div class="text-center text-gray-500 text-sm py-8">No events yet — let's plan your first one!</div>
+              <% } %>
+            </div>
+            <button id="createEvent" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors flex items-center justify-center gap-2">
+              Create Event
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <% } %>
+
+          <!-- Analytics Preview -->
+          <% if (hasReportsAccess) { %>
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                Analytics
+                <i data-lucide="help-circle" class="w-4 h-4 text-gray-400" title="Track growth and attendance trends"></i>
+              </h2>
+              <i data-lucide="bar-chart-3" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div class="mb-6">
+              <div class="flex justify-between mb-2">
+                <span class="text-sm text-gray-600">Member Growth</span>
+                <span class="text-sm font-semibold text-green-600"><%= typeof growthChange !== 'undefined' ? growthChange : '+0%' %></span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2 mb-4 overflow-hidden">
+                <div class="bg-gradient-to-r from-green-500 to-green-400 h-2 rounded-full transition-all duration-700" style="width: <%= typeof growthPct !== 'undefined' ? growthPct : 70 %>%"></div>
+              </div>
+              <div class="flex justify-between mb-2">
+                <span class="text-sm text-gray-600">Event Attendance</span>
+                <span class="text-sm font-semibold text-blue-600"><%= typeof attendancePreview !== 'undefined' ? attendancePreview : '87%' %></span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div class="bg-gradient-to-r from-blue-500 to-blue-400 h-2 rounded-full transition-all duration-700" style="width: <%= typeof attendanceBarPct !== 'undefined' ? attendanceBarPct : 87 %>%"></div>
+              </div>
+            </div>
+            <a href="/officer/analytics" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors flex items-center justify-center gap-2">
+              View Full Analytics
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          </div>
+          <% } %>
+        </div>
+
+        <!-- Communication & Recent Activity / Auditor Sections -->
+        <% if (isAuditor) { %>
+        <!-- Auditor-specific sections -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+          <!-- Reports & Compliance -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                Reports & Compliance
+                <i data-lucide="help-circle" class="w-4 h-4 text-gray-400" title="Financial reports and compliance deadlines"></i>
+              </h2>
+              <i data-lucide="file-check" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div class="space-y-3 mb-6 max-h-72 overflow-y-auto pr-1">
+              <% if (financialData.reportsDue && financialData.reportsDue.length > 0) { %>
+                <% financialData.reportsDue.slice(0, 5).forEach(function(report) { %>
+                  <div class="flex items-start justify-between p-3 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
+                    <div>
+                      <p class="font-semibold text-gray-800 text-sm"><%= report.report_type ? report.report_type.charAt(0).toUpperCase() + report.report_type.slice(1) : 'Financial' %> Report</p>
+                      <p class="text-xs text-gray-500 mt-1">
+                        Due: <%= new Date(report.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                      </p>
+                    </div>
+                    <span class="text-xs bg-amber-200 text-amber-800 px-2 py-1 rounded-full font-semibold">
+                      <%= report.status === 'pending' ? 'Due Soon' : report.status || 'Pending' %>
+                    </span>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <p class="text-sm text-gray-500 text-center py-4">No reports due this month</p>
+              <% } %>
+            </div>
+            <a href="/officer/finance" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors flex items-center justify-center gap-2">
+              View Reports
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          </div>
+
+          <!-- Recent Transactions -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800">Recent Transactions</h2>
+              <i data-lucide="credit-card" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <ul class="mt-6 space-y-3 max-h-80 overflow-y-auto pr-1">
+              <% if (financialData.recentTransactions && financialData.recentTransactions.length > 0) { %>
+                <% financialData.recentTransactions.slice(0, 5).forEach(function(transaction) { %>
+                  <li class="flex items-start justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div class="pr-4">
+                      <div class="text-gray-700 font-semibold text-sm mb-1">
+                        <%= new Date(transaction.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>: <%= transaction.title || 'Transaction' %>
+                      </div>
+                      <div class="text-gray-600 text-sm">
+                        <%= transaction.category || 'General' %>
+                      </div>
+                    </div>
+                    <span class="text-sm font-semibold text-red-600">-₱<%= Number(transaction.amount || 0).toLocaleString() %></span>
+                  </li>
+                <% }) %>
+              <% } else { %>
+                <li class="text-sm text-gray-500 text-center py-4">No recent transactions</li>
+              <% } %>
+            </ul>
+            <a href="/officer/finance" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors flex items-center justify-center gap-2 mt-6">
+              View All Transactions
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          </div>
+
+          <!-- Audit History -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800">Audit History</h2>
+              <i data-lucide="clipboard-check" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <ul class="mt-6 space-y-3 max-h-80 overflow-y-auto pr-1">
+              <% if (financialData.auditHistory && financialData.auditHistory.length > 0) { %>
+                <% financialData.auditHistory.slice(0, 5).forEach(function(log) { %>
+                  <li class="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
+                    <div class="w-2 h-2 <%= log.action_type && log.action_type.includes('approved') ? 'bg-green-600' : (log.action_type && log.action_type.includes('rejected') || log.action_type && log.action_type.includes('flagged') ? 'bg-red-600' : 'bg-blue-600') %> rounded-full mt-2"></div>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-800"><%= log.description || log.action_type || 'Audit action' %></p>
+                      <p class="text-xs text-gray-500">
+                        <% if (log.performed_by_name) { %>
+                          by <%= log.performed_by_name %> • 
+                        <% } %>
+                        <%= new Date(log.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) %>
+                      </p>
+                    </div>
+                  </li>
+                <% }) %>
+              <% } else { %>
+                <li class="text-sm text-gray-500 text-center py-4">No audit history yet</li>
+              <% } %>
+            </ul>
+            <a href="/officer/finance" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors flex items-center justify-center gap-2 mt-6">
+              View Audit Logs
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+          </div>
+        </div>
+        <% } else { %>
+        <!-- Default sections for other roles -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Communication -->
+          <% if (hasAnnouncementsAccess) { %>
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800">Communication</h2>
+              <i data-lucide="message-square" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <p class="text-gray-600 mb-6">Post announcements or event reminders to keep members informed.</p>
+            <a href="/officer/communication" class="w-full bg-gradient-to-r from-primary-900 to-primary-800 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105 flex items-center justify-center gap-2 text-center">
+              Open Communication Center
+              <i data-lucide="chevron-right" class="w-5 h-5"></i>
+            </a>
+            <ul class="mt-6 space-y-3 max-h-80 overflow-y-auto pr-1">
+              <% if (typeof announcements !== 'undefined' && announcements && announcements.length) { %>
+                <% announcements.slice(0,5).forEach(function(announcement) { %>
+                  <li class="flex items-start justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                    <div class="pr-4">
+                      <div class="text-red-700 font-semibold text-sm mb-1"><%= announcement.title %></div>
+                      <div class="text-gray-600 text-sm"><%= announcement.message %></div>
+                      <div class="text-xs text-gray-400 mt-2">
+                        <span><%= announcement.audience %></span>
+                        <span class="mx-2">•</span>
+                        <span><%= new Date(announcement.created_at).toLocaleDateString() %></span>
+                      </div>
+                    </div>
+                    <button class="p-1.5 rounded-lg text-red-600 hover:bg-red-50" title="Remove" onclick="this.closest('li').remove()">
+                      <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
+                  </li>
+                <% }) %>
+              <% } else { %>
+                <li class="text-center text-gray-500 text-sm py-8">🎉 No announcements yet. Great job keeping everyone up to date!</li>
+              <% } %>
+            </ul>
+          </div>
+          <% } %>
+
+          <!-- Recent Activity -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="flex items-center justify-between mb-6">
+              <h2 class="text-xl font-bold text-gray-800">Recent Activity</h2>
+              <i data-lucide="clock" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div class="space-y-4">
+              <% var activity = ((typeof recentActivity !== 'undefined' && recentActivity) ? recentActivity : []).slice(0,6); %>
+              <% if (activity.length) { %>
+                <% activity.forEach(function(a) { %>
+                  <div class="flex items-start gap-3 pb-4 border-b border-gray-100 last:border-0">
+                    <div class="w-2 h-2 bg-red-600 rounded-full mt-2"></div>
+                    <div>
+                      <p class="text-sm font-semibold text-gray-800"><%= a.action %></p>
+                      <p class="text-xs text-gray-500"><%= a.user %> • <%= a.time %></p>
+                    </div>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <div class="text-center text-gray-500 text-sm py-8">No recent activity — once actions happen, they'll show here.</div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toasts -->
+  <div id="toastContainer" class="fixed right-4 bottom-4 z-[10000] flex flex-col gap-2"></div>
+
+  <script>
+    // Sidebar toggle
+    const sidebar = document.getElementById('sidebar');
+    const sidebarToggle = document.getElementById('sidebarToggle');
+    // Sidebar is always expanded (toggle removed by request)
+    function setSidebar() {
+      sidebar.classList.remove('w-20');
+      sidebar.classList.add('w-64');
+      document.querySelectorAll('.sidebar-label').forEach(el => el.classList.remove('hidden'));
+      const brandText = document.getElementById('sidebarBrandText');
+      const brandLogo = document.getElementById('sidebarBrandLogo');
+      if (brandText) brandText.classList.remove('hidden');
+      if (brandLogo) brandLogo.classList.remove('hidden');
+      try { localStorage.removeItem('sidebarCollapsed'); } catch(e) {}
+    }
+    setSidebar();
+
+    // Collapsible Records group
+    const recordsToggle = document.getElementById('recordsToggle');
+    const recordsGroup = document.getElementById('recordsGroup');
+    const recordsChevron = document.getElementById('recordsChevron');
+    if (recordsToggle && recordsGroup) {
+      recordsToggle.addEventListener('click', () => {
+        const isHidden = recordsGroup.classList.contains('hidden');
+        recordsGroup.classList.toggle('hidden');
+        if (recordsChevron) {
+          recordsChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+      });
+    }
+
+    // Lucide icons
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLucideIcons();
+    });
+
+    // Header dropdowns
+    const notifBtn = document.getElementById('notifBtn');
+    const notifMenu = document.getElementById('notifMenu');
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    function hideMenus() {
+      if (notifMenu) notifMenu.classList.add('hidden');
+      if (profileMenu) profileMenu.classList.add('hidden');
+      if (notifBtn) notifBtn.setAttribute('aria-expanded', 'false');
+      if (profileBtn) profileBtn.setAttribute('aria-expanded', 'false');
+    }
+    if (notifBtn && notifMenu) {
+      notifBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = notifMenu.classList.contains('hidden');
+        hideMenus();
+        if (isHidden) {
+          notifMenu.classList.remove('hidden');
+          notifBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+    if (profileBtn && profileMenu) {
+      profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = profileMenu.classList.contains('hidden');
+        hideMenus();
+        if (isHidden) {
+          profileMenu.classList.remove('hidden');
+          profileBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    }
+    document.addEventListener('click', (e) => {
+      const withinNotif = notifMenu && notifMenu.contains(e.target);
+      const withinNotifBtn = notifBtn && notifBtn.contains(e.target);
+      const withinProfile = profileMenu && profileMenu.contains(e.target);
+      const withinProfileBtn = profileBtn && profileBtn.contains(e.target);
+      if (!withinNotif && !withinNotifBtn && !withinProfile && !withinProfileBtn) {
+        hideMenus();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') hideMenus();
+    });
+
+    // Toast helper (available for future use)
+    function showToast(message, type) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      const base =
+        'px-4 py-2 rounded-lg shadow-lg text-white text-sm animate-[fadein_200ms_ease]';
+      const color =
+        type === 'success' ? 'bg-green-600' :
+        type === 'error' ? 'bg-red-600' :
+        'bg-gray-900';
+      toast.className = base + ' ' + color;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(4px)';
+        setTimeout(() => toast.remove(), 250);
+      }, 2200);
+    }
+  </script>
+</body>
+</html>

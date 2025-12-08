@@ -3,22 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <title><%= title || 'Edit Event | UniClub Admin' %></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
 </head>
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/events'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/events'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
       <header class="mb-2 flex items-center justify-between">
         <h1 class="text-2xl font-bold text-slate-800">Edit Event</h1>
         <a href="/admin/events" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Back</a>
       </header>
 
 <form action="/admin/events/edit/<%= event.id %>" method="POST" class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <% if (error) { %>
     <div class="p-3 bg-red-100 text-red-700 rounded"><%= error %></div>
   <% } %>
@@ -114,6 +134,19 @@
       </footer>
     </main>
   </div>
-  <script>window.lucide && window.lucide.replace();</script>
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+    window.lucide && window.lucide.replace();
+  </script>
 </body>
 </html>

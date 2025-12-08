@@ -1,0 +1,1951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- CRITICAL ANTI-FLICKER: Block rendering until theme is set -->
+  <script>
+    // This script MUST run synchronously - blocks all rendering
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      
+      // Set theme attribute immediately for CSS to use
+      html.setAttribute('data-theme', theme);
+      
+      // Apply theme class immediately
+      if (theme === 'light') {
+        html.classList.add('light-mode');
+      } else {
+        html.classList.remove('light-mode');
+      }
+      
+      // Set background colors inline with !important - overrides all CSS
+      if (theme === 'light') {
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+      } else {
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+      }
+    })();
+  </script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title>Profile — UniClub</title>
+  
+  <!-- Blocking inline CSS that uses theme attribute -->
+  <style>
+    /* Set background based on data-theme attribute - prevents dark flash */
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f8fafc !important;
+    }
+    html[data-theme="dark"],
+    html:not([data-theme]) body {
+      background-color: #0a0f1a !important;
+    }
+    /* Hide body until it's ready */
+    body:not([data-theme-ready]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+    body[data-theme-ready] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.1s ease;
+    }
+  </style>
+  <%
+    // Ensure variables are defined
+    if (typeof user === 'undefined') {
+      user = typeof student !== 'undefined' ? student : {};
+    }
+    if (typeof student === 'undefined') {
+      student = user;
+    }
+    if (typeof announcements === 'undefined') {
+      announcements = [];
+    }
+    if (typeof csrfToken === 'undefined') {
+      csrfToken = '';
+    }
+    
+    // Calculate stats (mock data if not provided)
+    // Calculate stats from user data (only use what's available)
+    const points = user.points || 0;
+    const level = points > 0 ? Math.floor(points / 100) + 1 : 1;
+    const badges = user.badges || 0;
+    const clubsJoined = user.clubsJoined || 0;
+    const eventsAttended = user.eventsAttended || 0;
+    const memberSince = user.created_at ? new Date(user.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : null;
+    
+    // Active tab - default to 'about' if not passed from route
+    var activeTabValue = typeof activeTab !== 'undefined' ? activeTab : 'about';
+  %>
+  <meta name="csrf-token" content="<%= csrfToken %>">
+  
+  <!-- Apply theme to body once it exists -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      
+      function applyThemeToBody() {
+        if (!document.body) return;
+        
+        if (theme === 'light') {
+          document.body.classList.add('light-mode');
+          document.body.style.setProperty('background-color', '#f8fafc', 'important');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.style.setProperty('background-color', '#0a0f1a', 'important');
+        }
+        
+        // Mark body as ready
+        document.body.setAttribute('data-theme-ready', 'true');
+      }
+      
+      // Try immediately
+      if (document.body) {
+        applyThemeToBody();
+      } else {
+        // Watch for body creation
+        const observer = new MutationObserver(function(mutations) {
+          if (document.body) {
+            applyThemeToBody();
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        
+        // Fallback on DOMContentLoaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyThemeToBody);
+        }
+      }
+    })();
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      scroll-behavior: smooth;
+    }
+
+    body { 
+      background:#0a0f1a; 
+      font-family: 'Inter', system-ui, sans-serif;
+      color: white;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    /* Subtle Color Tint Overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    body > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Light Mode Styles */
+    body.light-mode {
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    body.light-mode::before {
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      opacity: 1;
+    }
+
+    body.light-mode .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-white\/80,
+    body.light-mode .text-white\/70,
+    body.light-mode .text-white\/60 {
+      color: #475569 !important;
+    }
+
+    /* Profile Header Section */
+    .profile-header {
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    body.light-mode .profile-header {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .profile-photo {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+    }
+
+    body.light-mode .profile-photo {
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+    }
+
+    body.light-mode .stat-card {
+      background: rgba(0, 0, 0, 0.03);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .stat-card:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Tab Navigation */
+    .tab-nav {
+      display: flex;
+      gap: 2rem;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 2rem;
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-link {
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      padding: 0.5rem 0;
+      position: relative;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    .tab-link:hover {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .tab-link.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .tab-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -0.5rem;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: #C62828;
+    }
+
+    body.light-mode .tab-nav {
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .tab-link {
+      color: #64748b;
+    }
+
+    body.light-mode .tab-link:hover,
+    body.light-mode .tab-link.active {
+      color: #1e293b;
+    }
+
+    /* Content Sections */
+    .content-section {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    body.light-mode .content-section {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .section-title {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: white;
+    }
+
+    body.light-mode .section-title {
+      color: #1e293b;
+    }
+
+    /* Skills Tags */
+    .skill-tag {
+      display: inline-block;
+      background: rgba(198, 40, 40, 0.2);
+      color: #ff6b6b;
+      padding: 0.375rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin: 0.25rem;
+      border: 1px solid rgba(198, 40, 40, 0.3);
+    }
+
+    body.light-mode .skill-tag {
+      background: rgba(198, 40, 40, 0.1);
+      color: #c62828;
+      border-color: rgba(198, 40, 40, 0.2);
+    }
+
+    /* Progress Bar */
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #C62828, #E53935);
+      transition: width 0.3s ease;
+    }
+
+    body.light-mode .progress-bar {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, #C62828, #E53935);
+      color: white;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 500;
+      font-size: 0.875rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    body.light-mode .btn-secondary {
+      background: rgba(0, 0, 0, 0.05);
+      color: #1e293b;
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Skeleton Loading */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.1) 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+      border-radius: 4px;
+    }
+
+    @keyframes loading {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
+    }
+
+    body.light-mode .skeleton {
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0.05) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.05) 75%);
+      background-size: 200% 100%;
+    }
+
+    .skeleton-content {
+      display: block;
+    }
+
+    .skeleton-content.hidden {
+      display: none;
+    }
+
+    .normal-content {
+      display: block;
+    }
+
+    .normal-content.hidden {
+      display: none;
+    }
+
+    /* Social Links */
+    .social-link-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    body.light-mode .social-link-item {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 1.5rem 0;
+      margin-top: 3rem;
+    }
+
+    body.light-mode footer {
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode footer .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    /* Club Cards */
+    .club-card-link {
+      display: block;
+      padding: 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+
+    .club-card-link:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    body.light-mode .club-card-link {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .club-card-link:hover {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .profile-header {
+        padding: 1.5rem;
+      }
+
+      .tab-nav {
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+
+      .stat-card {
+        padding: 0.75rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <%- include('../layouts/studentNav', { 
+    currentPath: '/student/profile',
+    student: student,
+    user: user,
+    announcements: announcements,
+    csrfToken: csrfToken
+  }) %>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+    <!-- Profile Header Section -->
+    <div class="profile-header">
+      <!-- Skeleton Header (hidden by default) -->
+      <div class="skeleton-content hidden">
+        <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
+          <div class="skeleton w-[120px] h-[120px] rounded-full"></div>
+          <div class="flex-1 space-y-3">
+            <div class="skeleton h-8 w-64"></div>
+            <div class="skeleton h-4 w-48"></div>
+            <div class="skeleton h-4 w-56"></div>
+            <div class="skeleton h-4 w-40"></div>
+            <div class="skeleton h-4 w-36"></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <div class="skeleton h-20 rounded-lg"></div>
+          <div class="skeleton h-20 rounded-lg"></div>
+          <div class="skeleton h-20 rounded-lg"></div>
+          <div class="skeleton h-20 rounded-lg"></div>
+        </div>
+      </div>
+
+      <!-- Normal Header -->
+      <div class="normal-content">
+        <div class="flex flex-col md:flex-row gap-6 items-start md:items-center">
+        <!-- Profile Photo -->
+        <div class="relative">
+          <div class="relative">
+            <% if (user.profile_picture) { %>
+              <img src="<%= user.profile_picture %>" alt="Profile Photo" class="profile-photo" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <% } %>
+            <div class="<%= user.profile_picture ? 'hidden' : 'flex' %> profile-photo items-center justify-center bg-gradient-to-br from-red-500 to-orange-500 text-white text-4xl font-bold">
+              <%= user.first_name ? user.first_name.charAt(0).toUpperCase() : 'U' %>
+            </div>
+          </div>
+          <button id="cameraBtn" class="absolute bottom-0 right-0 bg-red-600 hover:bg-red-700 text-white p-2 rounded-full shadow-lg transition-all" title="Change Photo">
+            <i class="fas fa-camera text-sm"></i>
+          </button>
+        </div>
+
+        <!-- Profile Info -->
+        <div class="flex-1">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div>
+              <h1 class="text-2xl md:text-3xl font-bold text-white mb-1">
+                <%= user.first_name && user.last_name ? `${user.first_name} ${user.last_name}` : (user.first_name || user.username || 'User') %>
+              </h1>
+              <% if (user.username) { %>
+                <p class="text-white/70 text-sm md:text-base">
+                  @<%= user.username %>
+                </p>
+              <% } %>
+              <% if (user.program || user.year_level || user.department) { %>
+                <p class="text-white/60 text-sm mt-1">
+                  <%= user.program ? user.program : '' %><%= user.year_level ? ` ${user.year_level}` : '' %><%= user.year_level ? ' Year' : '' %><%= (user.program || user.year_level) && user.department ? ' • ' : '' %><%= user.department || '' %>
+                </p>
+              <% } %>
+              <% if (user.location) { %>
+                <p class="text-white/60 text-sm flex items-center gap-1 mt-1">
+                  <i class="fas fa-map-marker-alt text-xs"></i>
+                  <%= user.location %>
+                </p>
+              <% } %>
+              <p class="text-white/60 text-sm flex items-center gap-1 mt-1">
+                <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                Online
+              </p>
+            </div>
+          </div>
+          <% if (memberSince) { %>
+            <p class="text-white/60 text-sm">Member since: <%= memberSince %></p>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+        <div class="stat-card">
+          <div class="text-2xl mb-1">🎯</div>
+          <div class="text-xl font-bold text-white">Level <%= level %></div>
+          <div class="text-sm text-white/70"><%= points %> points</div>
+          <% if (points === 0 && clubsJoined > 0) { %>
+            <button 
+              id="awardPointsBtn" 
+              class="mt-2 text-xs px-2 py-1 bg-red-500/20 hover:bg-red-500/30 text-white rounded border border-red-500/30 transition-colors"
+              onclick="awardRetroactivePoints()"
+            >
+              Award Points
+            </button>
+          <% } %>
+        </div>
+        <div class="stat-card">
+          <div class="text-2xl mb-1">🏆</div>
+          <div class="text-xl font-bold text-white"><%= badges %> Badges</div>
+          <div class="text-sm text-white/70">Earned</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-2xl mb-1">👥</div>
+          <div class="text-xl font-bold text-white"><%= clubsJoined %></div>
+          <div class="text-sm text-white/70">Clubs Joined</div>
+        </div>
+        <div class="stat-card">
+          <div class="text-2xl mb-1">📅</div>
+          <div class="text-xl font-bold text-white"><%= eventsAttended %> Events</div>
+          <div class="text-sm text-white/70">Attended</div>
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <!-- Skeleton Tab Navigation -->
+    <div class="skeleton-content hidden mb-2">
+      <div class="flex gap-4">
+        <div class="skeleton h-8 w-20"></div>
+        <div class="skeleton h-8 w-24"></div>
+        <div class="skeleton h-8 w-20"></div>
+        <div class="skeleton h-8 w-28"></div>
+        <div class="skeleton h-8 w-24"></div>
+      </div>
+    </div>
+    <!-- Normal Tab Navigation -->
+    <div class="normal-content">
+    <div class="tab-nav">
+      <button class="tab-link <%= activeTabValue === 'about' ? 'active' : '' %>" data-tab="about">About</button>
+      <button class="tab-link <%= activeTabValue === 'activity' ? 'active' : '' %>" data-tab="activity">Activity</button>
+      <button class="tab-link <%= activeTabValue === 'clubs' ? 'active' : '' %>" data-tab="clubs">Clubs</button>
+      <button class="tab-link <%= activeTabValue === 'achievements' ? 'active' : '' %>" data-tab="achievements">Achievements</button>
+    </div>
+    </div>
+
+    <!-- Main Content -->
+    <!-- Skeleton Main Content -->
+    <div class="skeleton-content hidden">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+          <div class="skeleton h-64"></div>
+          <div class="skeleton h-48"></div>
+          <div class="skeleton h-40"></div>
+        </div>
+        <div class="space-y-6">
+          <div class="skeleton h-64"></div>
+          <div class="skeleton h-48"></div>
+          <div class="skeleton h-56"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Normal Main Content -->
+    <div class="normal-content">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Left Column (60%) -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- About Tab Content -->
+        <div id="tab-about" class="tab-content <%= activeTabValue === 'about' ? '' : 'hidden' %>">
+          <!-- About Me -->
+          <div class="content-section">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="section-title">📝 About Me</h2>
+              <% if (user.bio) { %>
+                <button id="editBioBtn" class="btn-secondary text-sm py-1 px-3">
+                  <i class="fas fa-edit text-xs mr-1"></i>
+                  Edit
+                </button>
+              <% } %>
+            </div>
+            <% if (!user.bio) { %>
+              <div class="text-center py-8">
+                <div class="text-4xl mb-4">✏️</div>
+                <h3 class="text-lg font-semibold text-white mb-2">Add a Bio</h3>
+                <p class="text-white/70 text-sm mb-4">Tell others about yourself! Share your interests, skills, and what you're passionate about.</p>
+                <button id="addBioBtn" class="btn-primary">Add Bio Now →</button>
+              </div>
+            <% } else { %>
+              <p class="text-white/80 leading-relaxed"><%= user.bio %></p>
+            <% } %>
+          </div>
+
+          <!-- Academic Information -->
+          <div class="content-section">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="section-title">🎓 Academic Information</h2>
+              <button id="editAcademicBtn" class="btn-secondary text-sm py-1 px-3">
+                <i class="fas fa-edit text-xs mr-1"></i>
+                Edit
+              </button>
+            </div>
+            <div class="space-y-3 text-sm">
+              <% if (user.studentid || user.student_id) { %>
+                <div class="flex justify-between">
+                  <span class="text-white/70">Student ID:</span>
+                  <span class="text-white font-medium"><%= user.studentid || user.student_id %></span>
+                </div>
+              <% } %>
+              <% if (user.program) { %>
+                <div class="flex justify-between">
+                  <span class="text-white/70">Program:</span>
+                  <span class="text-white font-medium"><%= user.program %></span>
+                </div>
+              <% } %>
+              <% if (user.year_level) { %>
+                <div class="flex justify-between">
+                  <span class="text-white/70">Year Level:</span>
+                  <span class="text-white font-medium"><%= user.year_level %></span>
+                </div>
+              <% } %>
+              <% if (user.department) { %>
+                <div class="flex justify-between">
+                  <span class="text-white/70">Department:</span>
+                  <span class="text-white font-medium"><%= user.department %></span>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Skills -->
+          <div class="content-section">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="section-title">💼 Skills</h2>
+              <button id="editSkillsBtn" class="btn-secondary text-sm py-1 px-3">
+                <i class="fas fa-edit text-xs mr-1"></i>
+                <%= user.skills && user.skills.length > 0 ? 'Edit' : 'Add' %>
+              </button>
+            </div>
+            <% if (user.skills && user.skills.length > 0) { %>
+              <div class="flex flex-wrap gap-2">
+                <% user.skills.forEach(skill => { %>
+                  <span class="skill-tag"><%= skill %></span>
+                <% }) %>
+              </div>
+            <% } else { %>
+              <p class="text-white/60 text-sm">No skills added yet. Click "Add" to add your skills.</p>
+            <% } %>
+          </div>
+
+          <!-- Contact Information -->
+          <div class="content-section">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="section-title">🔗 Contact Information</h2>
+              <button id="editContactBtn" class="btn-secondary text-sm py-1 px-3">
+                <i class="fas fa-edit text-xs mr-1"></i>
+                Edit Contact Info
+              </button>
+            </div>
+            <div class="space-y-3 text-sm">
+              <% if (user.email) { %>
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-envelope text-white/60 w-5"></i>
+                  <span class="text-white/80"><%= user.email %></span>
+                </div>
+              <% } %>
+              <% if (user.phone) { %>
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-phone text-white/60 w-5"></i>
+                  <span class="text-white/80"><%= user.phone %></span>
+                </div>
+              <% } %>
+              <% if (user.discord) { %>
+                <div class="flex items-center gap-3">
+                  <i class="fab fa-discord text-white/60 w-5"></i>
+                  <span class="text-white/80"><%= user.discord %></span>
+                </div>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Interests & Hobbies -->
+          <div class="content-section">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="section-title">🌟 Interests & Hobbies</h2>
+              <button id="editInterestsBtn" class="btn-secondary text-sm py-1 px-3">
+                <i class="fas fa-edit text-xs mr-1"></i>
+                <%= user.interests && user.interests.length > 0 ? 'Edit' : 'Add' %>
+              </button>
+            </div>
+            <% if (user.interests && user.interests.length > 0) { %>
+              <ul class="space-y-2 text-white/80">
+                <% user.interests.forEach(interest => { %>
+                  <li class="flex items-center gap-2">
+                    <span class="text-white/60">•</span>
+                    <span><%= interest %></span>
+                  </li>
+                <% }) %>
+              </ul>
+            <% } else { %>
+              <p class="text-white/60 text-sm">No interests added yet. Click "Add" to add your interests.</p>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Activity Tab Content -->
+        <div id="tab-activity" class="tab-content <%= activeTabValue === 'activity' ? '' : 'hidden' %>">
+          <div class="content-section">
+            <h2 class="section-title">Recent Activity</h2>
+            <p class="text-white/70 text-sm mt-2">Your recent activities will appear here.</p>
+          </div>
+        </div>
+
+        <!-- Clubs Tab Content -->
+        <div id="tab-clubs" class="tab-content <%= activeTabValue === 'clubs' ? '' : 'hidden' %>">
+          <div class="content-section">
+            <div class="flex items-center justify-between mb-4">
+              <h2 class="section-title">My Clubs</h2>
+              <div class="text-right">
+                <div class="text-2xl font-bold text-white"><%= typeof clubsJoined !== 'undefined' ? clubsJoined : (typeof myClubs !== 'undefined' ? myClubs.length : 0) %></div>
+                <div class="text-sm text-white/70">Total Clubs</div>
+              </div>
+            </div>
+            <% 
+              // Ensure we have clubs data
+              const clubsList = typeof myClubs !== 'undefined' ? myClubs : [];
+              const clubsJoinedNum = typeof clubsJoined !== 'undefined' ? Number(clubsJoined) : clubsList.length;
+              
+              // Debug logging (check browser console)
+              if (typeof console !== 'undefined') {
+                console.log('[Profile EJS] Clubs data:', {
+                  clubsJoined: clubsJoinedNum,
+                  clubsListLength: clubsList.length,
+                  clubsList: clubsList
+                });
+              }
+            %>
+            <% if (clubsList.length === 0) { %>
+              <div class="text-center py-12">
+                <div class="text-5xl mb-4">👥</div>
+                <h3 class="text-lg font-semibold text-white mb-2">No Clubs Yet</h3>
+                <p class="text-white/70 text-sm mb-4">You haven't joined any clubs yet. Start exploring clubs to join!</p>
+                <a href="/student/discover" class="btn-primary inline-block">Discover Clubs →</a>
+              </div>
+            <% } else { %>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <% clubsList.forEach((club) => { %>
+                  <a href="/student/clubs/<%= club.id %>" class="block p-4 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all group">
+                    <div class="flex items-start gap-4">
+                      <!-- Club Photo/Icon -->
+                      <% if (club.photo) { %>
+                        <div class="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                          <img src="<%= club.photo %>" alt="<%= club.name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                          <div class="hidden w-full h-full bg-gradient-to-br from-red-500 to-orange-500 items-center justify-center text-white text-xl font-bold">
+                            <%= club.name ? club.name.charAt(0).toUpperCase() : 'C' %>
+                          </div>
+                        </div>
+                      <% } else { %>
+                        <div class="w-16 h-16 rounded-lg bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
+                          <%= club.name ? club.name.charAt(0).toUpperCase() : 'C' %>
+                        </div>
+                      <% } %>
+                      
+                      <!-- Club Info -->
+                      <div class="flex-1 min-w-0">
+                        <h3 class="text-lg font-bold text-white mb-1 group-hover:text-red-400 transition-colors"><%= club.name %></h3>
+                        <% if (club.description) { %>
+                          <p class="text-sm text-white/70 line-clamp-2 mb-2"><%= club.description.length > 100 ? club.description.substring(0, 100) + '...' : club.description %></p>
+                        <% } %>
+                        <div class="flex items-center gap-4 text-xs text-white/60 mt-2">
+                          <% if (club.category) { %>
+                            <span class="flex items-center gap-1">
+                              <i class="fas fa-tag"></i>
+                              <%= club.category %>
+                            </span>
+                          <% } %>
+                          <% if (club.member_count !== undefined && club.member_count > 0) { %>
+                            <span class="flex items-center gap-1">
+                              <i class="fas fa-users"></i>
+                              <%= club.member_count %> <%= club.member_count === 1 ? 'member' : 'members' %>
+                            </span>
+                          <% } %>
+                          <% if (club.event_count !== undefined && club.event_count > 0) { %>
+                            <span class="flex items-center gap-1">
+                              <i class="fas fa-calendar"></i>
+                              <%= club.event_count %> <%= club.event_count === 1 ? 'event' : 'events' %>
+                            </span>
+                          <% } %>
+                          <% if (club.department) { %>
+                            <span class="flex items-center gap-1">
+                              <i class="fas fa-building"></i>
+                              <%= club.department %>
+                            </span>
+                          <% } %>
+                        </div>
+                        <% if (club.joined_date) { %>
+                          <p class="text-xs text-white/50 mt-2">
+                            Joined <%= new Date(club.joined_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) %>
+                          </p>
+                        <% } %>
+                      </div>
+                      
+                      <!-- Arrow Icon -->
+                      <i class="fas fa-chevron-right text-white/40 group-hover:text-red-400 group-hover:translate-x-1 transition-all mt-1"></i>
+                    </div>
+                  </a>
+                <% }); %>
+              </div>
+              
+              <!-- View All Link -->
+              <div class="mt-6 text-center">
+                <a href="/student/my-clubs" class="btn-secondary inline-block">
+                  View All My Clubs →
+                </a>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Achievements Tab Content -->
+        <div id="tab-achievements" class="tab-content <%= activeTabValue === 'achievements' ? '' : 'hidden' %>">
+          <div class="content-section">
+            <h2 class="section-title">Achievements</h2>
+            <p class="text-white/70 text-sm mt-2">Your achievements and badges will appear here.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column (40%) - Sidebar -->
+      <div class="space-y-6">
+        <!-- Quick Stats -->
+        <div class="content-section">
+          <h2 class="section-title mb-4">🎯 Quick Stats</h2>
+          <div class="space-y-4 text-sm">
+            <div class="flex justify-between">
+              <span class="text-white/70">Points Earned</span>
+              <span class="text-white font-semibold"><%= points %> pts</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-white/70">Current Level</span>
+              <span class="text-white font-semibold">Level <%= level %></span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-white/70">Next Level</span>
+              <span class="text-white font-semibold"><%= 100 - (points % 100) %> pts away</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-white/70">Clubs Joined</span>
+              <span class="text-white font-semibold"><%= clubsJoined %> clubs</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-white/70">Events Attended</span>
+              <span class="text-white font-semibold"><%= eventsAttended %> events</span>
+            </div>
+            <% if (memberSince) { %>
+              <div class="flex justify-between">
+                <span class="text-white/70">Member Since</span>
+                <span class="text-white font-semibold"><%= memberSince %></span>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Social Links -->
+        <div class="content-section">
+          <h2 class="section-title mb-4">🔗 Social Links</h2>
+          <% if (!user.social_links || Object.keys(user.social_links || {}).length === 0) { %>
+            <div class="text-center py-6">
+              <div class="text-3xl mb-3">🔗</div>
+              <h3 class="text-sm font-semibold text-white mb-2">Add Social Links</h3>
+              <p class="text-white/70 text-xs mb-4">Connect your social media profiles so others can find you!</p>
+              <button id="addSocialBtn" class="btn-primary text-sm">Add Social Links →</button>
+            </div>
+          <% } else { %>
+            <div class="space-y-3">
+              <% if (user.social_links.facebook) { %>
+                <div class="social-link-item">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <i class="fab fa-facebook text-blue-500"></i>
+                      <span class="text-sm font-medium text-white">Facebook</span>
+                    </div>
+                    <button class="btn-secondary text-xs py-1 px-2" data-edit-social>
+                      <i class="fas fa-edit text-xs"></i>
+                    </button>
+                  </div>
+                  <p class="text-xs text-white/70 mt-1"><%= user.social_links.facebook %></p>
+                </div>
+              <% } %>
+              <% if (user.social_links.linkedin) { %>
+                <div class="social-link-item">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <i class="fab fa-linkedin text-blue-600"></i>
+                      <span class="text-sm font-medium text-white">LinkedIn</span>
+                    </div>
+                    <button class="btn-secondary text-xs py-1 px-2" data-edit-social>
+                      <i class="fas fa-edit text-xs"></i>
+                    </button>
+                  </div>
+                  <p class="text-xs text-white/70 mt-1"><%= user.social_links.linkedin %></p>
+                </div>
+              <% } %>
+              <% if (user.social_links.twitter) { %>
+                <div class="social-link-item">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <i class="fab fa-twitter text-blue-400"></i>
+                      <span class="text-sm font-medium text-white">Twitter</span>
+                    </div>
+                    <button class="btn-secondary text-xs py-1 px-2" data-edit-social>
+                      <i class="fas fa-edit text-xs"></i>
+                    </button>
+                  </div>
+                  <p class="text-xs text-white/70 mt-1"><%= user.social_links.twitter %></p>
+                </div>
+              <% } %>
+              <% if (user.social_links.instagram) { %>
+                <div class="social-link-item">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <i class="fab fa-instagram text-pink-500"></i>
+                      <span class="text-sm font-medium text-white">Instagram</span>
+                    </div>
+                    <button class="btn-secondary text-xs py-1 px-2" data-edit-social>
+                      <i class="fas fa-edit text-xs"></i>
+                    </button>
+                  </div>
+                  <p class="text-xs text-white/70 mt-1"><%= user.social_links.instagram %></p>
+                </div>
+              <% } %>
+              <% if (user.social_links.github) { %>
+                <div class="social-link-item">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <i class="fab fa-github text-white"></i>
+                      <span class="text-sm font-medium text-white">GitHub</span>
+                    </div>
+                    <button class="btn-secondary text-xs py-1 px-2" data-edit-social>
+                      <i class="fas fa-edit text-xs"></i>
+                    </button>
+                  </div>
+                  <p class="text-xs text-white/70 mt-1"><%= user.social_links.github %></p>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+        </div>
+
+      </div>
+    </div>
+    </div>
+  </main>
+
+  <!-- Edit Modals -->
+  
+  <!-- Bio Modal -->
+  <div id="bioModal" class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div class="bg-[#1e293b] rounded-lg p-6 w-full max-w-2xl border border-white/10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-white">Edit Bio</h3>
+        <button id="closeBioModal" class="text-white/60 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <textarea id="bioText" class="w-full h-32 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400 resize-none" placeholder="Tell others about yourself..."></textarea>
+      <div class="flex gap-3 mt-4 justify-end">
+        <button id="cancelBioBtn" class="btn-secondary">Cancel</button>
+        <button id="saveBioBtn" class="btn-primary">Save Bio</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contact Modal -->
+  <div id="contactModal" class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div class="bg-[#1e293b] rounded-lg p-6 w-full max-w-md border border-white/10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-white">Edit Contact Information</h3>
+        <button id="closeContactModal" class="text-white/60 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Phone</label>
+          <input type="text" id="editPhone" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="+63 912 345 6789">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Discord</label>
+          <input type="text" id="editDiscord" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="username#1234">
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button id="cancelContactBtn" class="btn-secondary">Cancel</button>
+        <button id="saveContactBtn" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Academic Modal -->
+  <div id="academicModal" class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div class="bg-[#1e293b] rounded-lg p-6 w-full max-w-md border border-white/10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-white">Edit Academic Information</h3>
+        <button id="closeAcademicModal" class="text-white/60 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Program</label>
+          <input type="text" id="editProgram" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="e.g., BSIT">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Year Level</label>
+          <select id="editYearLevel" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white focus:outline-none focus:border-red-400">
+            <option value="">Select Year Level</option>
+            <option value="1st">1st Year</option>
+            <option value="2nd">2nd Year</option>
+            <option value="3rd">3rd Year</option>
+            <option value="4th">4th Year</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Department</label>
+          <input type="text" id="editDepartment" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="e.g., Department of IT">
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button id="cancelAcademicBtn" class="btn-secondary">Cancel</button>
+        <button id="saveAcademicBtn" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Skills Modal -->
+  <div id="skillsModal" class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div class="bg-[#1e293b] rounded-lg p-6 w-full max-w-md border border-white/10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-white">Edit Skills</h3>
+        <button id="closeSkillsModal" class="text-white/60 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-white/80 mb-2">Skills (comma-separated)</label>
+        <textarea id="skillsText" class="w-full h-32 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400 resize-none" placeholder="e.g., React, JavaScript, Node.js, Python"></textarea>
+        <p class="text-xs text-white/60 mt-2">Separate multiple skills with commas</p>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button id="cancelSkillsBtn" class="btn-secondary">Cancel</button>
+        <button id="saveSkillsBtn" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interests Modal -->
+  <div id="interestsModal" class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div class="bg-[#1e293b] rounded-lg p-6 w-full max-w-md border border-white/10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-white">Edit Interests</h3>
+        <button id="closeInterestsModal" class="text-white/60 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-white/80 mb-2">Interests (one per line)</label>
+        <textarea id="interestsText" class="w-full h-32 px-4 py-3 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400 resize-none" placeholder="e.g., Coding&#10;Hackathons&#10;Gaming"></textarea>
+        <p class="text-xs text-white/60 mt-2">Enter one interest per line</p>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button id="cancelInterestsBtn" class="btn-secondary">Cancel</button>
+        <button id="saveInterestsBtn" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Picture Upload Modal -->
+  <div id="pictureModal" class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div class="bg-[#1e293b] rounded-lg p-6 w-full max-w-md border border-white/10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-white">Change Profile Picture</h3>
+        <button id="closePictureModal" class="text-white/60 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <!-- Preview Section -->
+      <div class="mb-6">
+        <div class="relative w-48 h-48 mx-auto rounded-full overflow-hidden border-4 border-white/20 bg-gradient-to-br from-red-500 to-orange-500">
+          <img id="picturePreview" src="<%= user.profile_picture || '' %>" alt="Preview" class="w-full h-full object-cover hidden">
+          <div id="picturePreviewPlaceholder" class="w-full h-full flex items-center justify-center text-white text-6xl font-bold">
+            <%= user.first_name ? user.first_name.charAt(0).toUpperCase() : 'U' %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Options -->
+      <div class="space-y-4">
+        <!-- File Upload Option -->
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Upload Image</label>
+          <input type="file" id="pictureFileInput" accept="image/*" class="hidden">
+          <button onclick="document.getElementById('pictureFileInput').click()" class="btn-secondary w-full">
+            <i class="fas fa-upload mr-2"></i>Choose File
+          </button>
+          <p class="text-xs text-white/60 mt-2">Select an image file (JPG, PNG, etc.)</p>
+        </div>
+
+        <!-- URL Option -->
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-white/20"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-[#1e293b] text-white/60">OR</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Image URL</label>
+          <input type="url" id="pictureUrlInput" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="https://example.com/image.jpg">
+          <p class="text-xs text-white/60 mt-2">Paste an image URL</p>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-6 justify-end">
+        <button id="cancelPictureBtn" class="btn-secondary">Cancel</button>
+        <button id="savePictureBtn" class="btn-primary">Save Picture</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Social Links Modal -->
+  <div id="socialModal" class="modal-overlay hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4">
+    <div class="bg-[#1e293b] rounded-lg p-6 w-full max-w-md border border-white/10">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-white">Edit Social Links</h3>
+        <button id="closeSocialModal" class="text-white/60 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Facebook</label>
+          <input type="url" id="editFacebook" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="https://facebook.com/...">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">LinkedIn</label>
+          <input type="url" id="editLinkedIn" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="https://linkedin.com/in/...">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Twitter</label>
+          <input type="url" id="editTwitter" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="https://twitter.com/...">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">Instagram</label>
+          <input type="url" id="editInstagram" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="https://instagram.com/...">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-white/80 mb-2">GitHub</label>
+          <input type="url" id="editGitHub" class="w-full px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-red-400" placeholder="https://github.com/...">
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6 justify-end">
+        <button id="cancelSocialBtn" class="btn-secondary">Cancel</button>
+        <button id="saveSocialBtn" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Styles -->
+  <style>
+    .modal-overlay {
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-overlay > div {
+      animation: slideUp 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    body.light-mode .modal-overlay > div {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .modal-overlay input,
+    body.light-mode .modal-overlay textarea,
+    body.light-mode .modal-overlay select {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .modal-overlay input::placeholder,
+    body.light-mode .modal-overlay textarea::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode .modal-overlay label {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .modal-overlay h3 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .modal-overlay button.btn-secondary {
+      background: rgba(0, 0, 0, 0.05) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .modal-overlay button.btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.1) !important;
+    }
+  </style>
+
+  <!-- Footer -->
+  <footer class="border-t border-white/10 py-6 px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <img src="/img/logo.png" alt="UM Logo" class="w-6 h-6 object-contain">
+          <p class="text-white font-semibold text-sm">UniClub</p>
+        </div>
+        <p class="text-xs text-white/50">© 2024 University of Mindanao</p>
+        <div class="flex gap-4 text-xs text-white/50">
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Privacy</a>
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Terms</a>
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Contact</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Tab Navigation
+    document.querySelectorAll('.tab-link').forEach(link => {
+      link.addEventListener('click', function() {
+        const tabName = this.dataset.tab;
+        
+        // Update active tab
+        document.querySelectorAll('.tab-link').forEach(l => l.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Show/hide tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.add('hidden');
+        });
+        const targetContent = document.getElementById(`tab-${tabName}`);
+        if (targetContent) {
+          targetContent.classList.remove('hidden');
+        }
+      });
+    });
+
+    // Skeleton loading toggle
+    function toggleSkeleton(show) {
+      const skeletonElements = document.querySelectorAll('.skeleton-content');
+      const normalElements = document.querySelectorAll('.normal-content');
+      
+      if (show) {
+        skeletonElements.forEach(el => el.classList.remove('hidden'));
+        normalElements.forEach(el => el.classList.add('hidden'));
+      } else {
+        skeletonElements.forEach(el => el.classList.add('hidden'));
+        normalElements.forEach(el => el.classList.remove('hidden'));
+      }
+    }
+
+    // Example: Show skeleton on page load if data is loading
+    // Uncomment if you need skeleton loading on initial load
+    // window.addEventListener('load', () => {
+    //   const isLoading = true; // Replace with actual loading state
+    //   if (isLoading) {
+    //     toggleSkeleton(true);
+    //   }
+    // });
+
+    // Theme toggle functionality is handled by the shared navbar component
+  </script>
+
+  <!-- User Data Script -->
+  <script id="user-data" type="application/json"><%- JSON.stringify({
+    bio: user.bio || '',
+    phone: user.phone || '',
+    discord: user.discord || '',
+    program: user.program || '',
+    year_level: user.year_level || '',
+    department: user.department || '',
+    skills: user.skills || [],
+    interests: user.interests || [],
+    social_links: user.social_links || {},
+    profile_picture: user.profile_picture || '',
+    first_name: user.first_name || ''
+  }) %></script>
+  <script>
+    // Store user data from server (parsed from JSON script tag)
+    const userData = JSON.parse(document.getElementById('user-data').textContent || '{}');
+  </script>
+
+  <script>
+    // ===== PROFILE EDIT FUNCTIONALITY =====
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    // Helper function to show toast notification
+    function showToast(message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `fixed top-20 right-4 px-6 py-3 rounded-lg shadow-lg z-[10000] ${
+        type === 'success' ? 'bg-green-500' : 'bg-red-500'
+      } text-white font-medium transition-all duration-300`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Helper function to reload page data
+    function reloadPage() {
+      window.location.reload();
+    }
+
+    // Bio Edit Modal
+    function openBioModal() {
+      const modal = document.getElementById('bioModal');
+      const textarea = document.getElementById('bioText');
+      if (modal && textarea) {
+        textarea.value = userData.bio;
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeBioModal() {
+      const modal = document.getElementById('bioModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    document.getElementById('editBioBtn')?.addEventListener('click', openBioModal);
+    document.getElementById('addBioBtn')?.addEventListener('click', openBioModal);
+    document.getElementById('closeBioModal')?.addEventListener('click', closeBioModal);
+    document.getElementById('cancelBioBtn')?.addEventListener('click', closeBioModal);
+
+    document.getElementById('saveBioBtn')?.addEventListener('click', async function() {
+      const bio = document.getElementById('bioText').value.trim();
+      
+      try {
+        // Get CSRF token from meta tag
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        const response = await fetch('/student/profile/bio', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ bio, _csrf: csrfTokenValue })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast('Bio updated successfully!');
+          closeBioModal();
+          setTimeout(reloadPage, 500);
+        } else {
+          showToast(data.error || 'Failed to update bio', 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // Contact Info Edit Modal
+    function openContactModal() {
+      const modal = document.getElementById('contactModal');
+      if (modal) {
+        document.getElementById('editPhone').value = userData.phone;
+        document.getElementById('editDiscord').value = userData.discord;
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeContactModal() {
+      const modal = document.getElementById('contactModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    document.getElementById('editContactBtn')?.addEventListener('click', openContactModal);
+    document.getElementById('closeContactModal')?.addEventListener('click', closeContactModal);
+    document.getElementById('cancelContactBtn')?.addEventListener('click', closeContactModal);
+
+    document.getElementById('saveContactBtn')?.addEventListener('click', async function() {
+      const phone = document.getElementById('editPhone').value.trim();
+      const discord = document.getElementById('editDiscord').value.trim();
+      
+      try {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        const response = await fetch('/student/profile/contact', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ phone, discord, _csrf: csrfTokenValue })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast('Contact information updated successfully!');
+          closeContactModal();
+          setTimeout(reloadPage, 500);
+        } else {
+          showToast(data.error || 'Failed to update contact information', 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // Academic Info Edit Modal
+    function openAcademicModal() {
+      const modal = document.getElementById('academicModal');
+      if (modal) {
+        document.getElementById('editProgram').value = userData.program;
+        document.getElementById('editYearLevel').value = userData.year_level;
+        document.getElementById('editDepartment').value = userData.department;
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeAcademicModal() {
+      const modal = document.getElementById('academicModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    document.getElementById('editAcademicBtn')?.addEventListener('click', openAcademicModal);
+    document.getElementById('closeAcademicModal')?.addEventListener('click', closeAcademicModal);
+    document.getElementById('cancelAcademicBtn')?.addEventListener('click', closeAcademicModal);
+
+    document.getElementById('saveAcademicBtn')?.addEventListener('click', async function() {
+      const program = document.getElementById('editProgram').value.trim();
+      const year_level = document.getElementById('editYearLevel').value.trim();
+      const department = document.getElementById('editDepartment').value.trim();
+      
+      try {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        const response = await fetch('/student/profile/academic', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ program, year_level, department, _csrf: csrfTokenValue })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast('Academic information updated successfully!');
+          closeAcademicModal();
+          setTimeout(reloadPage, 500);
+        } else {
+          showToast(data.error || 'Failed to update academic information', 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // Skills Edit Modal
+    function openSkillsModal() {
+      const modal = document.getElementById('skillsModal');
+      const textarea = document.getElementById('skillsText');
+      if (modal && textarea) {
+        textarea.value = userData.skills.join(', ');
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeSkillsModal() {
+      const modal = document.getElementById('skillsModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    document.getElementById('editSkillsBtn')?.addEventListener('click', openSkillsModal);
+    document.getElementById('closeSkillsModal')?.addEventListener('click', closeSkillsModal);
+    document.getElementById('cancelSkillsBtn')?.addEventListener('click', closeSkillsModal);
+
+    document.getElementById('saveSkillsBtn')?.addEventListener('click', async function() {
+      const skillsText = document.getElementById('skillsText').value.trim();
+      const skills = skillsText.split(',').map(s => s.trim()).filter(s => s.length > 0);
+      
+      try {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        const response = await fetch('/student/profile/skills', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ skills, _csrf: csrfTokenValue })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast('Skills updated successfully!');
+          closeSkillsModal();
+          setTimeout(reloadPage, 500);
+        } else {
+          showToast(data.error || 'Failed to update skills', 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // Interests Edit Modal
+    function openInterestsModal() {
+      const modal = document.getElementById('interestsModal');
+      const textarea = document.getElementById('interestsText');
+      if (modal && textarea) {
+        textarea.value = userData.interests.join('\n');
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeInterestsModal() {
+      const modal = document.getElementById('interestsModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    document.getElementById('editInterestsBtn')?.addEventListener('click', openInterestsModal);
+    document.getElementById('closeInterestsModal')?.addEventListener('click', closeInterestsModal);
+    document.getElementById('cancelInterestsBtn')?.addEventListener('click', closeInterestsModal);
+
+    document.getElementById('saveInterestsBtn')?.addEventListener('click', async function() {
+      const interestsText = document.getElementById('interestsText').value.trim();
+      const interests = interestsText.split('\n').map(i => i.trim()).filter(i => i.length > 0);
+      
+      try {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        const response = await fetch('/student/profile/interests', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ interests, _csrf: csrfTokenValue })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast('Interests updated successfully!');
+          closeInterestsModal();
+          setTimeout(reloadPage, 500);
+        } else {
+          showToast(data.error || 'Failed to update interests', 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // Social Links Edit Modal
+    function openSocialModal(socialType = null) {
+      const modal = document.getElementById('socialModal');
+      if (modal) {
+        document.getElementById('editFacebook').value = userData.social_links.facebook || '';
+        document.getElementById('editLinkedIn').value = userData.social_links.linkedin || '';
+        document.getElementById('editTwitter').value = userData.social_links.twitter || '';
+        document.getElementById('editInstagram').value = userData.social_links.instagram || '';
+        document.getElementById('editGitHub').value = userData.social_links.github || '';
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closeSocialModal() {
+      const modal = document.getElementById('socialModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    document.getElementById('addSocialBtn')?.addEventListener('click', () => openSocialModal());
+    document.querySelectorAll('[data-edit-social]').forEach(btn => {
+      btn.addEventListener('click', () => openSocialModal());
+    });
+    document.getElementById('closeSocialModal')?.addEventListener('click', closeSocialModal);
+    document.getElementById('cancelSocialBtn')?.addEventListener('click', closeSocialModal);
+
+    document.getElementById('saveSocialBtn')?.addEventListener('click', async function() {
+      const facebook = document.getElementById('editFacebook').value.trim();
+      const linkedin = document.getElementById('editLinkedIn').value.trim();
+      const twitter = document.getElementById('editTwitter').value.trim();
+      const instagram = document.getElementById('editInstagram').value.trim();
+      const github = document.getElementById('editGitHub').value.trim();
+      
+      try {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        const response = await fetch('/student/profile/social', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ facebook, linkedin, twitter, instagram, github, _csrf: csrfTokenValue })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast('Social links updated successfully!');
+          closeSocialModal();
+          setTimeout(reloadPage, 500);
+        } else {
+          showToast(data.error || 'Failed to update social links', 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // Profile Picture Upload Modal
+    let selectedPicture = null;
+    let pictureSource = null; // 'file' or 'url'
+
+    function openPictureModal() {
+      const modal = document.getElementById('pictureModal');
+      if (modal) {
+        // Reset preview to current profile picture
+        const preview = document.getElementById('picturePreview');
+        const placeholder = document.getElementById('picturePreviewPlaceholder');
+        const urlInput = document.getElementById('pictureUrlInput');
+        const fileInput = document.getElementById('pictureFileInput');
+        
+        if (userData.profile_picture) {
+          preview.src = userData.profile_picture;
+          preview.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+        } else {
+          preview.classList.add('hidden');
+          placeholder.classList.remove('hidden');
+        }
+        
+        urlInput.value = '';
+        fileInput.value = '';
+        selectedPicture = null;
+        pictureSource = null;
+        modal.classList.remove('hidden');
+      }
+    }
+
+    function closePictureModal() {
+      const modal = document.getElementById('pictureModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // Camera button click
+    document.getElementById('cameraBtn')?.addEventListener('click', openPictureModal);
+    document.getElementById('closePictureModal')?.addEventListener('click', closePictureModal);
+    document.getElementById('cancelPictureBtn')?.addEventListener('click', closePictureModal);
+
+    // File input change handler
+    document.getElementById('pictureFileInput')?.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          showToast('Please select a valid image file', 'error');
+          return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('Image size must be less than 5MB', 'error');
+          return;
+        }
+
+        // Clear URL input when file is selected
+        document.getElementById('pictureUrlInput').value = '';
+        
+        // Read file and show preview
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          selectedPicture = e.target.result; // Base64 data URL
+          pictureSource = 'file';
+          
+          const preview = document.getElementById('picturePreview');
+          const placeholder = document.getElementById('picturePreviewPlaceholder');
+          preview.src = selectedPicture;
+          preview.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // URL input change handler
+    document.getElementById('pictureUrlInput')?.addEventListener('input', function(e) {
+      const url = e.target.value.trim();
+      if (url) {
+        // Clear file input when URL is entered
+        document.getElementById('pictureFileInput').value = '';
+        selectedPicture = null;
+        pictureSource = 'url';
+        
+        // Try to load and preview URL
+        const preview = document.getElementById('picturePreview');
+        const placeholder = document.getElementById('picturePreviewPlaceholder');
+        
+        preview.onload = function() {
+          preview.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+        };
+        
+        preview.onerror = function() {
+          preview.classList.add('hidden');
+          placeholder.classList.remove('hidden');
+          showToast('Could not load image from URL. Please check the URL.', 'error');
+        };
+        
+        preview.src = url;
+      } else {
+        // Reset to current profile picture
+        const preview = document.getElementById('picturePreview');
+        const placeholder = document.getElementById('picturePreviewPlaceholder');
+        if (userData.profile_picture) {
+          preview.src = userData.profile_picture;
+          preview.classList.remove('hidden');
+          placeholder.classList.add('hidden');
+        } else {
+          preview.classList.add('hidden');
+          placeholder.classList.remove('hidden');
+        }
+        pictureSource = null;
+      }
+    });
+
+    // Save picture button
+    document.getElementById('savePictureBtn')?.addEventListener('click', async function() {
+      let pictureToSave = null;
+
+      // Determine which source to use
+      if (pictureSource === 'file' && selectedPicture) {
+        // Use base64 from file upload
+        pictureToSave = selectedPicture;
+      } else if (pictureSource === 'url') {
+        // Use URL
+        const urlInput = document.getElementById('pictureUrlInput').value.trim();
+        if (urlInput) {
+          pictureToSave = urlInput;
+        }
+      }
+
+      if (!pictureToSave) {
+        showToast('Please select an image file or enter an image URL', 'error');
+        return;
+      }
+
+      try {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        const response = await fetch('/student/profile/picture', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ profile_picture: pictureToSave, _csrf: csrfTokenValue })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          showToast('Profile picture updated successfully!');
+          closePictureModal();
+          setTimeout(reloadPage, 500);
+        } else {
+          showToast(data.error || 'Failed to update profile picture', 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred. Please try again.', 'error');
+      }
+    });
+
+    // Close modals on outside click
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          overlay.classList.add('hidden');
+        }
+      });
+    });
+
+    // Award retroactive points function
+    async function awardRetroactivePoints() {
+      const btn = document.getElementById('awardPointsBtn');
+      if (!btn) return;
+      
+      btn.disabled = true;
+      btn.textContent = 'Awarding...';
+      
+      try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '';
+        const response = await fetch('/student/profile/award-retroactive-points', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ _csrf: csrfToken })
+        });
+        
+        const data = await response.json();
+        if (data.success) {
+          showToast(`Awarded ${data.newPoints} points! Total: ${data.totalPoints} points`, 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          showToast(data.error || 'Failed to award points', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Award Points';
+        }
+      } catch (error) {
+        console.error('Error awarding points:', error);
+        showToast('An error occurred. Please try again.', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Award Points';
+      }
+    }
+  </script>
+</body>
+</html>
+

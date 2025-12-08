@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'Analytics' %></title>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'] },
+          colors: {
+            primary: { 700: '#7a0e0e', 800: '#6a0c0c', 900: '#5b0a0a' }
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .chart-container {
+      animation: fadeIn 0.6s ease-out;
+    }
+    
+    .kpi-card {
+      animation: slideIn 0.4s ease-out;
+    }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <%- include('./partials/sidebar', {
+      activePage: 'analytics',
+      club: (typeof club !== 'undefined' ? club : null),
+      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0)
+    }) %>
+
+    <!-- Main -->
+    <main class="flex-1 overflow-auto">
+      <!-- Header -->
+      <header class="bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200 sticky top-0 z-10">
+        <div class="flex items-center justify-between px-6 md:px-8 py-4">
+          <div class="flex items-center gap-3">
+            <div>
+              <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Analytics</h1>
+              <p class="text-gray-500 mt-1 text-sm">Track your club's performance and growth</p>           
+            </div>
+          </div>
+          <div class="relative flex items-center gap-3 md:gap-5">
+            <!-- Refresh Button -->
+            <button 
+              id="refreshBtn" 
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-sm flex items-center gap-2"
+              title="Fetch the latest analytics data"
+            >
+              <i data-lucide="refresh-cw" class="w-4 h-4" id="refreshIcon"></i>
+              <span id="refreshText">Refresh</span>
+            </button>
+            <!-- Profile -->
+            <div class="relative pl-2 md:pl-4 border-l border-gray-200">
+              <button id="profileBtn" class="flex items-center gap-3 hover:bg-gray-100 px-2 py-1.5 rounded-lg" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu">
+                <div class="text-right hidden sm:block py-1">
+                  <p class="text-sm font-bold text-gray-900 leading-tight"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
+                  <p class="text-xs text-gray-500 mt-1"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
+                </div>
+                <% if (typeof officer !== 'undefined' && officer && officer.photo_url) { %>
+                  <img src="<%= officer.photo_url %>" alt="Profile" class="w-10 h-10 rounded-full ring-1 ring-red-600 object-cover">
+                <% } else { %>
+                  <div class="w-10 h-10 rounded-full ring-1 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">UC</div>
+                <% } %>
+              </button>
+              <div id="profileMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
+                <div class="p-4 bg-gray-50 border-b">
+                  <p class="font-semibold text-gray-800"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
+                  <p class="text-sm text-gray-500"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
+                  <% if (typeof club !== 'undefined' && club) { %>
+                    <p class="text-xs text-gray-500 mt-1"><%= club.name %></p>
+                  <% } %>
+                </div>
+                <div class="p-2">
+                  <a href="/officer/profile" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm">View Profile</a>
+                  <a href="/officer/settings" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm">Settings</a>
+                  <a href="/help" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm">Help & Support</a>
+                </div>
+                <div class="border-t p-2 bg-gray-50">
+                  <form action="/officer/logout" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                    <button type="submit" class="w-full text-left px-3 py-2 rounded-lg hover:bg-gray-100 text-sm text-red-600">Logout</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Page content -->
+      <div class="p-6 md:p-8">
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          <!-- Total Members -->
+          <div class="bg-white border-2 border-blue-200 rounded-2xl shadow-sm p-6 hover:shadow-md transition-all duration-300 kpi-card" style="animation-delay: 0.1s">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">👥</span>
+                <p class="text-gray-500 text-sm">Total Members</p>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= (typeof totalMembers !== 'undefined' ? totalMembers : 0) %></p>
+              <% 
+                const memberTrend = (typeof memberGrowth !== 'undefined' && memberGrowth > 0) ? 'up' : ((typeof memberGrowth !== 'undefined' && memberGrowth < 0) ? 'down' : 'neutral');
+                const memberColor = memberTrend === 'up' ? 'text-green-600' : (memberTrend === 'down' ? 'text-red-600' : 'text-gray-500');
+                const memberIcon = memberTrend === 'up' ? '↑' : (memberTrend === 'down' ? '↓' : '—');
+                const memberLabel = (typeof memberGrowth !== 'undefined' && memberGrowth > 0) ? `+${memberGrowth}%` : ((typeof memberGrowth !== 'undefined' && memberGrowth < 0) ? `${memberGrowth}%` : 'No change');
+              %>
+              <span class="text-sm font-semibold <%= memberColor %> flex items-center gap-1" title="Month-over-month growth">
+                <%= memberIcon %> <span class="text-xs"><%= memberLabel %></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Attendance Rate -->
+          <div class="bg-white border-2 border-green-200 rounded-2xl shadow-sm p-6 hover:shadow-md transition-all duration-300 kpi-card" style="animation-delay: 0.2s">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">📈</span>
+                <p class="text-gray-500 text-sm">Attendance Rate</p>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= (typeof attendanceStats !== 'undefined' && attendanceStats.rate) ? attendanceStats.rate : 0 %>%</p>
+              <span class="text-sm font-semibold text-green-600 flex items-center gap-1">
+                <span class="text-xs">Present: <%= (typeof attendanceStats !== 'undefined' && attendanceStats.present) ? attendanceStats.present : 0 %></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Pending Applications -->
+          <div class="bg-white border-2 border-amber-200 rounded-2xl shadow-sm p-6 hover:shadow-md transition-all duration-300 kpi-card" style="animation-delay: 0.3s">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">⏳</span>
+                <p class="text-gray-500 text-sm">Pending Applications</p>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= (typeof appStats !== 'undefined' && appStats.pending) ? appStats.pending : 0 %></p>
+              <span class="text-sm font-semibold text-amber-600 flex items-center gap-1">
+                <span class="text-xs">Action needed</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Total Events -->
+          <div class="bg-white border-2 border-purple-200 rounded-2xl shadow-sm p-6 hover:shadow-md transition-all duration-300 kpi-card" style="animation-delay: 0.4s">
+            <div class="flex items-start justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-2xl">📅</span>
+                <p class="text-gray-500 text-sm">Total Events</p>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-2">
+              <p class="text-3xl font-extrabold text-gray-900"><%= (typeof eventStats !== 'undefined' && eventStats.total) ? eventStats.total : 0 %></p>
+              <span class="text-sm font-semibold text-purple-600 flex items-center gap-1">
+                <span class="text-xs"><%= (typeof eventStats !== 'undefined' && eventStats.upcoming) ? eventStats.upcoming : 0 %> upcoming</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <!-- Monthly Attendance Trends -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="mb-4">
+              <h2 class="text-lg font-semibold text-gray-800">Monthly Attendance Trends</h2>
+              <p class="text-sm text-gray-500 mt-1">Attendance records over the last 6 months</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="attendanceChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Member Growth Chart -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div class="mb-4">
+              <h2 class="text-lg font-semibold text-gray-800">Member Growth</h2>
+              <p class="text-sm text-gray-500 mt-1">New members approved per month</p>
+            </div>
+            <div class="chart-container">
+              <canvas id="memberGrowthChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Events Chart -->
+        <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
+          <div class="mb-4">
+            <h2 class="text-lg font-semibold text-gray-800">Monthly Events Activity</h2>
+            <p class="text-sm text-gray-500 mt-1">Events hosted per month (last 6 months)</p>
+          </div>
+          <div class="chart-container">
+            <canvas id="eventsChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- Applications Breakdown -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Applications Overview</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Approved</span>
+                <span class="text-lg font-bold text-green-600"><%= (typeof appStats !== 'undefined' && appStats.approved) ? appStats.approved : 0 %></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Pending</span>
+                <span class="text-lg font-bold text-amber-600"><%= (typeof appStats !== 'undefined' && appStats.pending) ? appStats.pending : 0 %></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Rejected</span>
+                <span class="text-lg font-bold text-red-600"><%= (typeof appStats !== 'undefined' && appStats.rejected) ? appStats.rejected : 0 %></span>
+              </div>
+              <div class="pt-3 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-semibold text-gray-700">Total</span>
+                  <span class="text-lg font-bold text-gray-900"><%= (typeof appStats !== 'undefined' && appStats.total) ? appStats.total : 0 %></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Breakdown -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Attendance Overview</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Present</span>
+                <span class="text-lg font-bold text-green-600"><%= (typeof attendanceStats !== 'undefined' && attendanceStats.present) ? attendanceStats.present : 0 %></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Absent</span>
+                <span class="text-lg font-bold text-red-600"><%= (typeof attendanceStats !== 'undefined' && attendanceStats.absent) ? attendanceStats.absent : 0 %></span>
+              </div>
+              <div class="pt-3 border-t border-gray-200">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm font-semibold text-gray-700">Total Records</span>
+                  <span class="text-lg font-bold text-gray-900"><%= (typeof attendanceStats !== 'undefined' && attendanceStats.total) ? attendanceStats.total : 0 %></span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Events Summary -->
+          <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Events Summary</h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Total Events</span>
+                <span class="text-lg font-bold text-purple-600"><%= (typeof eventStats !== 'undefined' && eventStats.total) ? eventStats.total : 0 %></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Upcoming</span>
+                <span class="text-lg font-bold text-blue-600"><%= (typeof eventStats !== 'undefined' && eventStats.upcoming) ? eventStats.upcoming : 0 %></span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600">Past Events</span>
+                <span class="text-lg font-bold text-gray-600"><%= (typeof eventStats !== 'undefined' && eventStats.total && eventStats.upcoming) ? (eventStats.total - eventStats.upcoming) : 0 %></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    // Initialize Lucide icons
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLucideIcons();
+    });
+
+    // Monthly Attendance Chart
+    const monthlyAttendance = <%- JSON.stringify(monthlyAttendance || []) %>;
+    const attendanceCtx = document.getElementById('attendanceChart');
+    if (attendanceCtx) {
+      const months = monthlyAttendance.map(m => {
+        const date = new Date(m.month + '-01');
+        return date.toLocaleDateString('en-US', { month: 'short' });
+      });
+      const presentData = monthlyAttendance.map(m => m.present || 0);
+      const absentData = monthlyAttendance.map(m => m.absent || 0);
+
+      new Chart(attendanceCtx, {
+        type: 'line',
+        data: {
+          labels: months.length > 0 ? months : ['No data'],
+          datasets: [
+            {
+              label: 'Present',
+              data: presentData.length > 0 ? presentData : [0],
+              borderColor: '#10b981',
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              tension: 0.4,
+              fill: true
+            },
+            {
+              label: 'Absent',
+              data: absentData.length > 0 ? absentData : [0],
+              borderColor: '#ef4444',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              tension: 0.4,
+              fill: true
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              position: 'top',
+            },
+            title: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // Member Growth Chart
+    const monthlyMembers = <%- JSON.stringify(monthlyMembers || []) %>;
+    const memberCtx = document.getElementById('memberGrowthChart');
+    if (memberCtx) {
+      const months = monthlyMembers.map(m => {
+        const date = new Date(m.month + '-01');
+        return date.toLocaleDateString('en-US', { month: 'short' });
+      });
+      const memberData = monthlyMembers.map(m => m.new_members || 0);
+
+      new Chart(memberCtx, {
+        type: 'bar',
+        data: {
+          labels: months.length > 0 ? months : ['No data'],
+          datasets: [{
+            label: 'New Members',
+            data: memberData.length > 0 ? memberData : [0],
+            backgroundColor: '#3b82f6',
+            borderColor: '#2563eb',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // Events Chart
+    const monthlyEvents = <%- JSON.stringify(monthlyEvents || []) %>;
+    const eventsCtx = document.getElementById('eventsChart');
+    if (eventsCtx) {
+      const months = monthlyEvents.map(m => {
+        const date = new Date(m.month + '-01');
+        return date.toLocaleDateString('en-US', { month: 'short' });
+      });
+      const eventsData = monthlyEvents.map(m => m.events_count || 0);
+
+      new Chart(eventsCtx, {
+        type: 'line',
+        data: {
+          labels: months.length > 0 ? months : ['No data'],
+          datasets: [{
+            label: 'Events',
+            data: eventsData.length > 0 ? eventsData : [0],
+            borderColor: '#8b5cf6',
+            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 6,
+            pointHoverRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshBtn');
+    const refreshIcon = document.getElementById('refreshIcon');
+    const refreshText = document.getElementById('refreshText');
+    
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', function() {
+        this.disabled = true;
+        this.classList.add('opacity-75', 'cursor-not-allowed');
+        if (refreshIcon) {
+          refreshIcon.setAttribute('data-lucide', 'loader-2');
+          refreshIcon.classList.add('animate-spin');
+          renderLucideIcons();
+        }
+        if (refreshText) refreshText.textContent = 'Refreshing...';
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
+      });
+    }
+
+    // Profile dropdown
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    
+    if (profileBtn && profileMenu) {
+      profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isHidden = profileMenu.classList.contains('hidden');
+        if (isHidden) {
+          profileMenu.classList.remove('hidden');
+          profileBtn.setAttribute('aria-expanded', 'true');
+        } else {
+          profileMenu.classList.add('hidden');
+          profileBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+    
+    document.addEventListener('click', (e) => {
+      const withinProfile = profileMenu && profileMenu.contains(e.target);
+      const withinProfileBtn = profileBtn && profileBtn.contains(e.target);
+      if (!withinProfile && !withinProfileBtn) {
+        if (profileMenu) profileMenu.classList.add('hidden');
+        if (profileBtn) profileBtn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    // Collapsible Records group
+    const recordsToggle = document.getElementById('recordsToggle');
+    const recordsGroup = document.getElementById('recordsGroup');
+    const recordsChevron = document.getElementById('recordsChevron');
+    if (recordsToggle && recordsGroup) {
+      recordsToggle.addEventListener('click', () => {
+        const isHidden = recordsGroup.classList.contains('hidden');
+        recordsGroup.classList.toggle('hidden');
+        if (recordsChevron) {
+          recordsChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+

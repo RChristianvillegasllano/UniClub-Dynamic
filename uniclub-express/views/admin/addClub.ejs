@@ -5,17 +5,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Add Club | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/clubs'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/clubs'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main -->
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
       <header class="mb-6 flex items-center justify-between">
         <div>
           <h1 class="text-2xl font-bold text-slate-800">Add Club</h1>
@@ -28,7 +46,8 @@
       </header>
 
       <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <form action="/admin/clubs/add" method="POST" class="space-y-5">
+        <form action="/admin/clubs/add" method="POST" enctype="multipart/form-data" class="space-y-5">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <!-- Club Name -->
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Club Name</label>
@@ -36,17 +55,48 @@
               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
           </div>
 
-          <!-- Department & Program -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Department</label>
-              <input type="text" name="department"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
+          <!-- Department -->
+          <div data-dept-program>
+            <div class="mb-4">
+              <label class="block text-sm font-medium text-slate-600 mb-2">Department <span class="text-gray-400 text-xs font-normal">(Optional)</span></label>
+              <select name="department" data-dept-select
+                class="w-full border border-slate-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] transition">
+                <option value="">Select Department (Optional)</option>
+                <option value="Department of Accounting Education">Department of Accounting Education</option>
+                <option value="Department of Arts and Sciences Education">Department of Arts and Sciences Education</option>
+                <option value="Department of Business Administration Education">Department of Business Administration Education</option>
+                <option value="Department of Computing Education">Department of Computing Education</option>
+                <option value="Department of Criminal Justice Education">Department of Criminal Justice Education</option>
+                <option value="Department of Engineering Education">Department of Engineering Education</option>
+                <option value="Department of Hospitality Education">Department of Hospitality Education</option>
+                <option value="Department of Teacher Education">Department of Teacher Education</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Select a department to filter programs, or leave empty to see all programs</p>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Program</label>
-              <input type="text" name="program"
-                class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
+          </div>
+
+          <!-- Programs -->
+          <div class="mt-4" id="programsSection" style="display: none;">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-sm font-medium text-slate-600">Programs <span class="text-gray-400 text-xs font-normal">(Optional, select one or more)</span></label>
+              <div class="flex items-center gap-2">
+                <button type="button" id="selectAllPrograms" 
+                  class="px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap">
+                  Select All
+                </button>
+                <button type="button" id="clearAllPrograms" 
+                  class="px-4 py-2 text-sm font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition whitespace-nowrap">
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <!-- Program Checkboxes Container -->
+            <div id="programOptions" class="border border-slate-200 rounded-lg p-4 bg-slate-50 max-h-80 overflow-y-auto">
+              <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <!-- Programs will be populated dynamically based on department selection -->
+              </div>
+              <p id="noProgramsMessage" class="text-sm text-gray-500 text-center py-4 hidden">No programs available.</p>
             </div>
           </div>
 
@@ -64,6 +114,19 @@
               class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]"></textarea>
           </div>
 
+          <!-- Category -->
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Category</label>
+            <select name="category" required
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1]">
+              <option value="">Select Category</option>
+              <option value="Prime Organization">Prime Organization</option>
+              <option value="Academic">Academic</option>
+              <option value="Civic">Civic</option>
+              <option value="Religious">Religious</option>
+            </select>
+          </div>
+
           <!-- Status -->
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Status</label>
@@ -72,6 +135,17 @@
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
             </select>
+          </div>
+
+          <!-- Club Photo -->
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Club Logo/Photo</label>
+            <p class="text-xs text-slate-500 mb-2">Upload a logo or photo for this club (optional). Max size: 5MB. Supported formats: JPG, PNG, GIF, WebP</p>
+            <input type="file" name="photo" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+            <div id="photoPreview" class="mt-3 hidden">
+              <img id="previewImage" src="" alt="Preview" class="max-w-xs max-h-48 rounded-lg border border-slate-300">
+            </div>
           </div>
 
           <!-- Submit -->
@@ -95,5 +169,209 @@
   </div>
 
   <script> window.lucide && window.lucide.replace(); </script>
+  <script>
+    // Custom logic for Add Club page - show programs as checkboxes based on department selection
+    (function() {
+      const container = document.querySelector('[data-dept-program]');
+      if (!container) return;
+      
+      const deptSelect = container.querySelector('[data-dept-select]');
+      const programOptions = document.getElementById('programOptions');
+      
+      if (!deptSelect || !programOptions) return;
+      
+      const DEPT_TO_PROGRAMS = {
+        "Department of Accounting Education": [
+          "Bachelor of Science in Accountancy",
+          "Bachelor of Science in Management Accounting",
+        ],
+        "Department of Arts and Sciences Education": [
+          "Bachelor of Arts Major in English Language",
+          "Bachelor of Science in Psychology",
+        ],
+        "Department of Business Administration Education": [
+          "Bachelor of Science in Business Administration - Financial Management",
+          "Bachelor of Science in Business Administration - Human Resource Management",
+          "Bachelor of Science in Business Administration - Marketing Management",
+        ],
+        "Department of Computing Education": [
+          "Bachelor of Science in Information Technology",
+          "Bachelor of Science in Computer Science",
+        ],
+        "Department of Criminal Justice Education": [
+          "Bachelor of Science in Criminology",
+        ],
+        "Department of Engineering Education": [
+          "Bachelor of Science in Computer Engineering",
+          "Bachelor of Science in Electrical Engineering",
+          "Bachelor of Science in Electronics & Communications Engineering",
+        ],
+        "Department of Hospitality Education": [
+          "Bachelor of Science in Hospitality Management",
+          "Bachelor of Science in Tourism Management",
+        ],
+        "Department of Teacher Education": [
+          "Bachelor of Elementary Education",
+          "Bachelor of Physical Education",
+          "Bachelor of Secondary Education - Major in English",
+          "Bachelor of Secondary Education - Major in Filipino",
+          "Bachelor of Secondary Education - Major in General Science",
+          "Bachelor of Secondary Education - Major in Mathematics",
+          "Bachelor of Secondary Education - Major in Social Studies",
+        ],
+      };
+      
+      const ALL_PROGRAMS = Array.from(new Set(Object.values(DEPT_TO_PROGRAMS).flat()));
+      
+      // Store all program checkboxes for search functionality
+      let allProgramCheckboxes = [];
+      
+      function populatePrograms() {
+        const deptValue = deptSelect.value || '';
+        const programsSection = document.getElementById('programsSection');
+        
+        // Hide programs section if no department is selected
+        if (!deptValue) {
+          if (programsSection) {
+            programsSection.style.display = 'none';
+          }
+          return;
+        }
+        
+        // Show programs section when department is selected
+        if (programsSection) {
+          programsSection.style.display = 'block';
+        }
+        
+        // Get currently checked programs before clearing
+        const checkedPrograms = Array.from(programOptions.querySelectorAll('input[type="checkbox"]:checked'))
+          .map(cb => cb.value);
+        
+        // Clear container
+        programOptions.innerHTML = '';
+        allProgramCheckboxes = [];
+        
+        // Get programs to show for the selected department
+        const programsToShow = DEPT_TO_PROGRAMS[deptValue] || [];
+        
+        // Get or create the container for checkboxes
+        let checkboxContainer = programOptions.querySelector('.grid');
+        const noProgramsMsg = document.getElementById('noProgramsMessage');
+        
+        // Clear and recreate container if needed
+        if (!checkboxContainer) {
+          programOptions.innerHTML = '<div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>';
+          checkboxContainer = programOptions.querySelector('.grid');
+        } else {
+          checkboxContainer.innerHTML = '';
+        }
+        
+        // Show/hide no programs message
+        if (noProgramsMsg) {
+          noProgramsMsg.classList.toggle('hidden', programsToShow.length > 0);
+        }
+        
+        // Create checkboxes for each program
+        programsToShow.forEach(program => {
+          const label = document.createElement('label');
+          label.className = 'flex items-start gap-3 p-3 bg-white border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition group';
+          
+          const checkbox = document.createElement('input');
+          checkbox.type = 'checkbox';
+          checkbox.name = 'program';
+          checkbox.value = program;
+          checkbox.className = 'program-option mt-0.5 w-4 h-4 text-[#a10109d1] border-slate-300 rounded focus:ring-[#a10109d1] cursor-pointer';
+          
+          // Restore selection if it was previously checked
+          if (checkedPrograms.includes(program)) {
+            checkbox.checked = true;
+            label.classList.add('bg-blue-50', 'border-blue-300');
+          }
+          
+          const textDiv = document.createElement('div');
+          textDiv.className = 'flex-1 text-sm text-slate-700 leading-relaxed';
+          textDiv.textContent = program;
+          
+          label.appendChild(checkbox);
+          label.appendChild(textDiv);
+          checkboxContainer.appendChild(label);
+          
+          // Update label style when checkbox is checked
+          checkbox.addEventListener('change', function() {
+            if (this.checked) {
+              label.classList.add('bg-blue-50', 'border-blue-300');
+              label.classList.remove('bg-white', 'border-slate-200');
+            } else {
+              label.classList.remove('bg-blue-50', 'border-blue-300');
+              label.classList.add('bg-white', 'border-slate-200');
+            }
+          });
+          
+          allProgramCheckboxes.push({ checkbox, label, program });
+        });
+      }
+      
+      // Select All button
+      document.getElementById('selectAllPrograms')?.addEventListener('click', () => {
+        allProgramCheckboxes.forEach(({ checkbox, label }) => {
+          if (label.style.display !== 'none') {
+            checkbox.checked = true;
+          }
+        });
+      });
+      
+      // Clear All button
+      document.getElementById('clearAllPrograms')?.addEventListener('click', () => {
+        allProgramCheckboxes.forEach(({ checkbox }) => {
+          checkbox.checked = false;
+        });
+      });
+      
+      // Initialize on page load
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', populatePrograms);
+      } else {
+        populatePrograms();
+      }
+      
+      // Listen to department changes
+      deptSelect.addEventListener('change', function() {
+        populatePrograms();
+      });
+    })();
+
+    // Photo preview
+    const photoInput = document.querySelector('input[name="photo"]');
+    const photoPreview = document.getElementById('photoPreview');
+    const previewImage = document.getElementById('previewImage');
+    
+    if (photoInput && photoPreview && previewImage) {
+      photoInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            photoPreview.classList.remove('hidden');
+          };
+          reader.readAsDataURL(file);
+        } else {
+          photoPreview.classList.add('hidden');
+        }
+      });
+    }
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+  </script>
 </body>
 </html>

@@ -39,7 +39,7 @@ router.post("/add", async (req, res) => {
 
   try {
     await pool.query(
-      "INSERT INTO events (name, club, date, location, description, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW())",
+      "INSERT INTO events (name, club, date, location, description, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())",
       [name, club, date, location, description, status]
     );
     res.redirect("/admin/events");
@@ -57,7 +57,7 @@ router.get("/edit/:id", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
   try {
-    const result = await pool.query("SELECT * FROM events WHERE id = $1", [req.params.id]);
+    const result = await pool.query("SELECT * FROM events WHERE id = ?", [req.params.id]);
     if (result.rows.length === 0) return res.redirect("/admin/events");
 
     res.render("admin/editEvent", {
@@ -77,7 +77,7 @@ router.post("/edit/:id", async (req, res) => {
 
   try {
     await pool.query(
-      "UPDATE events SET name=$1, club=$2, date=$3, location=$4, description=$5, status=$6 WHERE id=$7",
+      "UPDATE events SET name=?, club=?, date=?, location=?, description=?, status=? WHERE id=?",
       [name, club, date, location, description, status, req.params.id]
     );
     res.redirect("/admin/events");
@@ -94,7 +94,7 @@ router.post("/edit/:id", async (req, res) => {
 // Delete Event
 router.post("/delete/:id", async (req, res) => {
   try {
-    await pool.query("DELETE FROM events WHERE id = $1", [req.params.id]);
+    await pool.query("DELETE FROM events WHERE id = ?", [req.params.id]);
     res.redirect("/admin/events");
   } catch (err) {
     console.error("Error deleting event:", err);

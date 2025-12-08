@@ -1,0 +1,212 @@
+<aside id="sidebar" class="bg-gradient-to-b from-[#7a1a1f] to-[#6a1519] text-white transition-all duration-300 shadow-xl w-64 overflow-y-auto border-r border-red-900/30">
+  <div class="p-6 flex items-center justify-between border-b border-red-700/50">
+    <div class="flex items-center gap-3">
+      <div id="sidebarBrandLogo" class="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center ring-1 ring-white/10">
+        <img src="/img/logo.png" alt="UniClub" class="w-7 h-7" onerror="this.style.display='none'">
+      </div>
+      <div id="sidebarBrandText" class="hidden md:block">
+        <h1 class="text-lg font-bold tracking-tight">Club Portal</h1>
+        <% if (typeof club !== 'undefined' && club) { %>
+          <p class="text-xs text-white/80"><%= club.name %></p>
+        <% } %>
+      </div>
+    </div>
+  </div>
+  <nav class="mt-4">
+    <% const sidebarActive = typeof activePage !== 'undefined' ? activePage : ''; %>
+    <% 
+      // Get accessible pages - EJS automatically makes res.locals available
+      // accessiblePages should be set by the middleware in routes
+      let accessiblePagesList = [];
+      if (typeof accessiblePages !== 'undefined' && Array.isArray(accessiblePages)) {
+        accessiblePagesList = accessiblePages;
+      } else {
+        // Fallback: if not passed explicitly, default to showing all (for backwards compatibility)
+        // In production, this should always be set by the middleware
+        accessiblePagesList = ['all'];
+      }
+      
+      // Map sidebar items to tier page identifiers
+      const sidebarPageMap = {
+        'dashboard': 'home',
+        'approvals': 'members',
+        'calendar': 'events',
+        'attendance': 'attendance',
+        'analytics': 'reports',
+        'messages': 'home', // Messages accessible to all
+        'communication': 'announcements',
+        'finance': 'finance'
+      };
+      
+      // Detect role for role-specific filtering
+      // Try to get officer from template variable or from parent scope
+      let officerObj = null;
+      if (typeof officer !== 'undefined' && officer) {
+        officerObj = officer;
+      }
+      const officerRole = (officerObj && officerObj.role) ? officerObj.role.toLowerCase() : '';
+      const isAuditor = officerRole.includes('auditor');
+      
+      // Filter nav items based on accessible pages
+      const allNavItems = [
+        { id: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard', href: '/officer', alwaysShow: true },
+        { id: 'approvals', icon: 'user-check', label: 'Member Approvals', href: '/officer/member-approvals', alwaysShow: false },
+        { id: 'calendar', icon: 'calendar', label: 'Calendar', href: '/officer/calendar', alwaysShow: false },
+        { id: 'attendance', icon: 'calendar-check', label: 'Attendance', href: '/officer/attendance', alwaysShow: false },
+        { id: 'analytics', icon: 'bar-chart-3', label: 'Analytics', href: '/officer/analytics', alwaysShow: false },
+        { id: 'messages', icon: 'inbox', label: 'Messages', href: '/officer/messages', alwaysShow: true },
+        { id: 'communication', icon: 'message-square', label: 'Communication', href: '/officer/communication', alwaysShow: false },
+        { id: 'finance', icon: 'wallet', label: 'Finance', href: '/officer/finance', alwaysShow: false }
+      ];
+      
+      // Filter items: show if accessiblePagesList includes 'all' (Tier 1) or includes the mapped page
+      // Dashboard and Messages are always visible
+      // Hide Member Approvals for auditors (they don't handle member approvals)
+      const navItems = allNavItems.filter(function(item) {
+        // Always show Dashboard and Messages
+        if (item.alwaysShow) return true;
+        
+        // Hide Member Approvals for auditors
+        if (item.id === 'approvals' && isAuditor) return false;
+        
+        // For other items, check tier permissions
+        if (accessiblePagesList.includes('all')) return true; // Tier 1 has access to all
+        const pageId = sidebarPageMap[item.id];
+        return pageId && accessiblePagesList.includes(pageId);
+      });
+    %>
+    <% navItems.forEach(function(item) { 
+      const isActive = sidebarActive === item.id;
+    %>
+      <a
+        href="<%= item.href %>"
+        class="w-full flex items-center justify-between gap-3 px-6 py-3 hover:bg-amber-500/10 hover:border-l-2 hover:border-amber-400/50 transition-all <%= isActive ? 'relative bg-white/15 ring-1 ring-white/20' : '' %>"
+        title="<%= item.label %>"
+        aria-current="<%= isActive ? 'page' : 'false' %>">
+        <div class="flex items-center gap-3 flex-1">
+          <% if (isActive) { %>
+            <span class="absolute left-0 top-0 h-full w-1 bg-amber-300/90"></span>
+          <% } %>
+          <i data-lucide="<%= item.icon %>" class="w-5 h-5 <%= isActive ? 'text-amber-300' : '' %>"></i>
+          <span class="sidebar-label <%= isActive ? 'text-amber-100' : '' %>"><%= item.label %></span>
+        </div>
+        <% if (item.id === 'messages' && typeof unreadCount !== 'undefined' && unreadCount > 0) { %>
+          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-400/90 text-amber-900 shadow-sm"><%= unreadCount %></span>
+        <% } %>
+      </a>
+    <% }) %>
+    <% 
+      // Check if Records section should be shown (members or documents access)
+      const showRecords = accessiblePagesList.includes('all') || 
+                          accessiblePagesList.includes('members') || 
+                          accessiblePagesList.includes('documents');
+      
+      // Check individual record items
+      const showRecordsMain = accessiblePagesList.includes('all') || accessiblePagesList.includes('members');
+      const showRecordsRoles = accessiblePagesList.includes('all') || accessiblePagesList.includes('members');
+      const showRecordsRequirements = accessiblePagesList.includes('all') || accessiblePagesList.includes('documents');
+    %>
+    <% if (showRecords) { %>
+    <div class="mt-2">
+      <button type="button" id="recordsToggle" class="w-full flex items-center justify-between px-6 py-3 hover:bg-amber-500/10 hover:border-l-2 hover:border-amber-400/50 transition-all" aria-expanded="false" aria-controls="recordsGroup">
+        <span class="flex items-center gap-3">
+          <i data-lucide="folder-open" class="w-5 h-5"></i>
+          <span class="sidebar-label">Records</span>
+        </span>
+        <i data-lucide="chevron-down" class="w-4 h-4 transition-transform" id="recordsChevron"></i>
+      </button>
+      <div id="recordsGroup" class="pl-6 space-y-1 <%= sidebarActive && sidebarActive.startsWith('records') ? '' : 'hidden' %>">
+        <% if (showRecordsMain) { %>
+        <a href="/officer/records" class="w-full flex items-center gap-3 px-6 py-2 hover:bg-amber-500/10 hover:border-l-2 hover:border-amber-400/50 transition-all <%= sidebarActive === 'records' ? 'relative bg-white/15 ring-1 ring-white/20' : '' %>" title="Club Records">
+          <% if (sidebarActive === 'records') { %>
+            <span class="absolute left-0 top-0 h-full w-1 bg-amber-300/90"></span>
+          <% } %>
+          <i data-lucide="users" class="w-5 h-5 <%= sidebarActive === 'records' ? 'text-amber-300' : '' %>"></i>
+          <span class="sidebar-label <%= sidebarActive === 'records' ? 'text-amber-100' : '' %>">Club Records</span>
+        </a>
+        <% } %>
+        <% if (showRecordsRoles) { %>
+        <a href="/officer/records-roles" class="w-full flex items-center gap-3 px-6 py-2 hover:bg-amber-500/10 hover:border-l-2 hover:border-amber-400/50 transition-all <%= sidebarActive === 'records-roles' ? 'relative bg-white/15 ring-1 ring-white/20' : '' %>" title="Officer Roles">
+          <% if (sidebarActive === 'records-roles') { %>
+            <span class="absolute left-0 top-0 h-full w-1 bg-amber-300/90"></span>
+          <% } %>
+          <i data-lucide="shield" class="w-5 h-5 <%= sidebarActive === 'records-roles' ? 'text-amber-300' : '' %>"></i>
+          <span class="sidebar-label <%= sidebarActive === 'records-roles' ? 'text-amber-100' : '' %>">Officer Roles</span>
+        </a>
+        <% } %>
+        <% if (showRecordsRequirements) { %>
+        <a href="/officer/records-requirements" class="w-full flex items-center gap-3 px-6 py-2 hover:bg-amber-500/10 hover:border-l-2 hover:border-amber-400/50 transition-all <%= sidebarActive === 'records-requirements' ? 'relative bg-white/15 ring-1 ring-white/20' : '' %>" title="Requirements/Activities">
+          <% if (sidebarActive === 'records-requirements') { %>
+            <span class="absolute left-0 top-0 h-full w-1 bg-amber-300/90"></span>
+          <% } %>
+          <i data-lucide="clipboard-list" class="w-5 h-5 <%= sidebarActive === 'records-requirements' ? 'text-amber-300' : '' %>"></i>
+          <span class="sidebar-label <%= sidebarActive === 'records-requirements' ? 'text-amber-100' : '' %>">Requirements/Activities</span>
+        </a>
+        <% } %>
+      </div>
+    </div>
+    <% } %>
+  </nav>
+</aside>
+
+<script>
+  // Records dropdown toggle functionality
+  (function() {
+    let isInitialized = false;
+    
+    function initRecordsDropdown() {
+      // Prevent multiple initializations
+      if (isInitialized) return;
+      
+      const recordsToggle = document.getElementById('recordsToggle');
+      const recordsGroup = document.getElementById('recordsGroup');
+      const recordsChevron = document.getElementById('recordsChevron');
+      
+      if (!recordsToggle || !recordsGroup) {
+        // Elements not found yet, try again later
+        setTimeout(initRecordsDropdown, 100);
+        return;
+      }
+      
+      isInitialized = true;
+      
+      // Set initial state based on whether records page is active
+      const sidebarActive = '<%= typeof activePage !== "undefined" ? activePage : "" %>';
+      if (sidebarActive && sidebarActive.startsWith('records')) {
+        recordsGroup.classList.remove('hidden');
+        if (recordsChevron) {
+          recordsChevron.style.transform = 'rotate(180deg)';
+        }
+        recordsToggle.setAttribute('aria-expanded', 'true');
+      }
+      
+      // Add click event listener
+      recordsToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const isHidden = recordsGroup.classList.contains('hidden');
+        recordsGroup.classList.toggle('hidden');
+        
+        if (recordsChevron) {
+          recordsChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+        
+        // Update aria-expanded for accessibility
+        recordsToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+      });
+    }
+    
+    // Run when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initRecordsDropdown);
+    } else {
+      // DOM is already ready, but wait a bit for EJS to render
+      setTimeout(initRecordsDropdown, 50);
+    }
+    
+    // Backup: also try on window load
+    window.addEventListener('load', initRecordsDropdown);
+  })();
+</script>
+

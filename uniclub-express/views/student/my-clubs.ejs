@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title>My Clubs | UniClub</title>
+  <%
+    // Ensure announcements is always defined
+    if (typeof announcements === 'undefined') {
+      announcements = [];
+    }
+    if (typeof stats === 'undefined') {
+      stats = { clubsJoined: 0, eventsAttended: 0, pointsEarned: 0, achievements: 0 };
+    }
+    // Ensure clubsJoined matches myClubs length if stats.clubsJoined is 0 but myClubs has items
+    if (typeof myClubs !== 'undefined' && myClubs.length > 0 && (!stats.clubsJoined || stats.clubsJoined === 0)) {
+      stats.clubsJoined = myClubs.length;
+    }
+    if (typeof myClubs === 'undefined') {
+      myClubs = [];
+    }
+    if (typeof activeClubsCount === 'undefined') {
+      activeClubsCount = 0;
+    }
+    if (typeof upcomingEventsCount === 'undefined') {
+      upcomingEventsCount = 0;
+    }
+    if (typeof upcomingEventsThisWeek === 'undefined') {
+      upcomingEventsThisWeek = 0;
+    }
+    if (typeof unreadMessagesCount === 'undefined') {
+      unreadMessagesCount = 0;
+    }
+    if (typeof suggestedClubs === 'undefined') {
+      suggestedClubs = [];
+    }
+  %>
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+  
+  <!-- CRITICAL ANTI-FLICKER: Block rendering until theme is set -->
+  <script>
+    // This script MUST run synchronously - blocks all rendering
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      
+      // Set theme attribute immediately for CSS to use
+      html.setAttribute('data-theme', theme);
+      
+      // Apply theme class immediately
+      if (theme === 'light') {
+        html.classList.add('light-mode');
+      } else {
+        html.classList.remove('light-mode');
+      }
+      
+      // Set background colors inline with !important - overrides all CSS
+      if (theme === 'light') {
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+      } else {
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+      }
+    })();
+  </script>
+  
+  <!-- Blocking inline CSS that uses theme attribute -->
+  <style>
+    /* Set background based on data-theme attribute - prevents dark flash */
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f8fafc !important;
+    }
+    html[data-theme="dark"],
+    html:not([data-theme]) body {
+      background-color: #0a0f1a !important;
+    }
+    /* Hide body until it's ready */
+    body:not([data-theme-ready]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+    body[data-theme-ready] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.1s ease;
+    }
+  </style>
+
+  <!-- Apply theme to body once it exists -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      
+      function applyThemeToBody() {
+        if (!document.body) return;
+        
+        if (theme === 'light') {
+          document.body.classList.add('light-mode');
+          document.body.style.setProperty('background-color', '#f8fafc', 'important');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.style.setProperty('background-color', '#0a0f1a', 'important');
+        }
+        
+        // Mark body as ready
+        document.body.setAttribute('data-theme-ready', 'true');
+      }
+      
+      // Try immediately
+      if (document.body) {
+        applyThemeToBody();
+      } else {
+        // Watch for body creation
+        const observer = new MutationObserver(function(mutations) {
+          if (document.body) {
+            applyThemeToBody();
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        
+        // Fallback on DOMContentLoaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyThemeToBody);
+        }
+      }
+    })();
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      scroll-behavior: smooth;
+    }
+
+    body { 
+      background:#0a0f1a; 
+      font-family: 'Inter', system-ui, sans-serif;
+      color: white;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    /* Subtle Color Tint Overlay - Matching Stat Card Colors */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    body > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    body.light-mode::before {
+      background: 
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      opacity: 1;
+      z-index: 0;
+    }
+
+    body.light-mode {
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    body.light-mode .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-white\/80,
+    body.light-mode .text-white\/70,
+    body.light-mode .text-white\/60 {
+      color: #475569 !important;
+    }
+
+    body.light-mode footer {
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode footer .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .nav-link {
+      color: #475569;
+    }
+
+    body.light-mode .nav-link:hover,
+    body.light-mode .nav-link.active {
+      color: #1e293b;
+    }
+
+    body.light-mode #navbar {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode #navbar[style*="background"] {
+      background: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    body.light-mode .card,
+    body.light-mode .club-card,
+    body.light-mode .stat-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .card:hover,
+    body.light-mode .club-card:hover {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .btn-icon {
+      background: rgba(0, 0, 0, 0.05) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .btn-icon:hover {
+      background: rgba(0, 0, 0, 0.08) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-pill {
+      background: rgba(0, 0, 0, 0.05) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-pill:hover {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .profile-pill .text-white\/85 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-caret {
+      color: #64748b !important;
+    }
+
+    body.light-mode .stat-card:hover {
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .quick-action-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .quick-action-card:hover {
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .my-club-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .my-club-card:hover {
+      background: rgba(255, 255, 255, 1);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .suggested-club-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .suggested-club-card:hover {
+      background: rgba(255, 255, 255, 1);
+    }
+
+    body.light-mode .action-btn-primary {
+      background: linear-gradient(135deg, #C62828, #E53935) !important;
+      color: white !important;
+    }
+
+    body.light-mode .action-btn-primary:hover {
+      background: linear-gradient(135deg, #B71C1C, #C62828) !important;
+    }
+
+    body.light-mode .action-btn-secondary {
+      background: rgba(0, 0, 0, 0.05) !important;
+      color: #1e293b !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .action-btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .action-btn-danger {
+      background: rgba(239, 68, 68, 0.15) !important;
+      color: #dc2626 !important;
+      border-color: rgba(239, 68, 68, 0.3) !important;
+    }
+
+    body.light-mode .action-btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25) !important;
+    }
+
+    body.light-mode .status-active {
+      background: rgba(34, 197, 94, 0.15) !important;
+      color: #059669 !important;
+      border-color: rgba(34, 197, 94, 0.3) !important;
+    }
+
+    body.light-mode .status-inactive {
+      background: rgba(148, 163, 184, 0.15) !important;
+      color: #64748b !important;
+      border-color: rgba(148, 163, 184, 0.3) !important;
+    }
+
+    body.light-mode .activity-very-active {
+      background: rgba(34, 197, 94, 0.15) !important;
+      color: #059669 !important;
+    }
+
+    body.light-mode .activity-active {
+      background: rgba(59, 130, 246, 0.15) !important;
+      color: #2563eb !important;
+    }
+
+    body.light-mode .activity-quiet {
+      background: rgba(148, 163, 184, 0.15) !important;
+      color: #64748b !important;
+    }
+
+    body.light-mode .club-logo {
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .section-header {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .section-subtitle {
+      color: #64748b !important;
+    }
+
+    body.light-mode h1,
+    body.light-mode h2,
+    body.light-mode h3,
+    body.light-mode h4 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-red-400 {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode .text-red-300 {
+      color: #f87171 !important;
+    }
+
+    body.light-mode .bg-white\/5 {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .bg-white\/10 {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.12) !important;
+    }
+
+    body.light-mode .border-white\/20 {
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .hover\:bg-white\/10:hover {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .mobile-menu {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-top-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .mobile-menu .nav-link {
+      color: #475569 !important;
+    }
+
+    body.light-mode .mobile-menu .nav-link:hover {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .mobile-menu hr {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .stat-icon {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .empty-state {
+      color: #1e293b;
+    }
+
+    body.light-mode .empty-state-icon {
+      opacity: 0.3;
+    }
+
+    body.light-mode .notification-badge {
+      background: #C62828;
+      color: white;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/65,
+    body.light-mode .profile-dropdown .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .profile-dropdown .bg-white\/10 {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.12) !important;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-red-500\/15:hover {
+      background: rgba(220, 38, 38, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .text-red-400 {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode .profile-dropdown .h-px.bg-white\/15 {
+      background: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .h-px.bg-white\/10 {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .profile-dropdown .h-px.bg-white\/20 {
+      background: rgba(0, 0, 0, 0.12) !important;
+    }
+
+    body.light-mode .profile-dropdown i {
+      color: #475569 !important;
+    }
+
+    /* Theme Toggle Button - Light Mode */
+    body.light-mode #themeToggle {
+      color: #1e293b;
+    }
+
+    body.light-mode #themeToggle:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    body.light-mode #themeToggle .w-9 {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode #themeIcon {
+      color: #475569;
+    }
+
+    body.light-mode #themeLabel {
+      color: #1e293b;
+    }
+
+    body.light-mode #themeDescription {
+      color: #64748b;
+    }
+
+    /* Theme Toggle Switch - Light Mode */
+    body.light-mode #themeSwitch {
+      background: #C62828;
+    }
+
+    body.light-mode #themeSwitchThumb {
+      transform: translateX(16px);
+      background: white;
+    }
+
+    /* Fix all text-white classes in light mode */
+    body.light-mode .text-white\/70,
+    body.light-mode p.text-white\/70 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .text-white\/60,
+    body.light-mode p.text-white\/60 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode .text-white\/50,
+    body.light-mode p.text-white\/50 {
+      color: #cbd5e1 !important;
+    }
+
+    body.light-mode .text-white\/45,
+    body.light-mode p.text-white\/45 {
+      color: #e2e8f0 !important;
+    }
+
+    body.light-mode .text-white\/80,
+    body.light-mode p.text-white\/80 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .text-white\/90,
+    body.light-mode p.text-white\/90 {
+      color: #334155 !important;
+    }
+
+    body.light-mode h1.text-white,
+    body.light-mode h2.text-white,
+    body.light-mode h3.text-white,
+    body.light-mode h4.text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode span.text-white,
+    body.light-mode p.text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .font-bold.text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .font-semibold.text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode i.text-white\/60 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode a.text-white\/50 {
+      color: #cbd5e1 !important;
+    }
+
+    body.light-mode a.text-white\/50:hover {
+      color: #1e293b !important;
+    }
+
+    body.light-mode a.text-white:hover {
+      color: #1e293b !important;
+    }
+
+    /* Fix navbar text in light mode */
+    body.light-mode #navbar .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    body.light-mode #navbar .text-white {
+      color: #1e293b !important;
+    }
+
+    /* Fix notification menu text */
+    body.light-mode #notificationMenu .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode #notificationMenu .text-white\/65 {
+      color: #64748b !important;
+    }
+
+    body.light-mode #notificationMenu .text-white\/45 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode #notificationMenu .text-white\/60 {
+      color: #94a3b8 !important;
+    }
+
+    /* Fix profile dropdown text */
+    body.light-mode #profileMenu .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode #profileMenu .text-white\/65 {
+      color: #64748b !important;
+    }
+
+    body.light-mode #profileMenu .text-white\/80 {
+      color: #475569 !important;
+    }
+
+    /* Fix stat card text */
+    body.light-mode .stat-card .text-white\/70 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .stat-card .text-white\/50 {
+      color: #94a3b8 !important;
+    }
+
+    /* Fix quick action card text */
+    body.light-mode .quick-action-card .text-white\/60 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode .quick-action-card .text-white\/70 {
+      color: #64748b !important;
+    }
+
+    /* Fix club card text */
+    body.light-mode .my-club-card .text-white\/70 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .my-club-card .text-white\/60 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode .my-club-card .text-white\/80 {
+      color: #475569 !important;
+    }
+
+    /* Fix suggested club card text */
+    body.light-mode .suggested-club-card .text-white\/60 {
+      color: #94a3b8 !important;
+    }
+
+    /* Fix filter and sort text */
+    body.light-mode .filter-btn {
+      color: #1e293b !important;
+    }
+
+    body.light-mode select.filter-btn {
+      color: #1e293b !important;
+    }
+
+    body.light-mode select.filter-btn option {
+      background: white !important;
+      color: #1e293b !important;
+    }
+
+    /* Fix select dropdown in light mode */
+    body.light-mode select {
+      background: rgba(255, 255, 255, 0.9) !important;
+      color: #1e293b !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode select option {
+      background: white !important;
+      color: #1e293b !important;
+    }
+
+    /* Main Content Background - Light Mode */
+    body.light-mode main {
+      background: #f8fafc !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode main.bg-\[#0a0f1a\] {
+      background: #f8fafc !important;
+    }
+
+    /* Override any inline or Tailwind dark background classes */
+    body.light-mode main[class*="bg-\[#0a0f1a\]"] {
+      background: #f8fafc !important;
+    }
+
+    body.light-mode main[class*="bg-[#0a0f1a]"] {
+      background: #f8fafc !important;
+    }
+
+    /* Fix empty state text */
+    body.light-mode .empty-state h3 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .empty-state p {
+      color: #64748b !important;
+    }
+
+    /* Navbar Styles */
+    .nav-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      position: relative;
+      padding: 8px 0;
+      text-decoration: none;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C62828;
+      transition: width 0.2s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .nav-link.active::after {
+      width: 100%;
+      background: #C62828;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background: #C62828;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 10px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .profile-dropdown {
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      min-width: 280px;
+      max-width: 90vw;
+      overflow: hidden;
+    }
+
+    body.light-mode .profile-dropdown {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/65,
+    body.light-mode .profile-dropdown .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    .profile-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .profile-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    body.light-mode .profile-pill:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Mobile Menu */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 80px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(10, 15, 26, 0.98);
+      backdrop-filter: blur(20px);
+      z-index: 40;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    body.light-mode .mobile-menu {
+      background: rgba(248, 250, 252, 0.98) !important;
+    }
+
+    .mobile-menu.active {
+      display: block;
+    }
+
+    .mobile-menu-content {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Stat Cards */
+    .stat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #C62828, #E53935, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    body.light-mode .stat-value {
+      background: linear-gradient(135deg, #C62828, #E53935, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Quick Action Cards */
+    .quick-action-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .quick-action-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Club Card */
+    .my-club-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .my-club-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .club-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.3));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .status-active {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status-inactive {
+      background: rgba(148, 163, 184, 0.2);
+      color: #94a3b8;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .activity-level {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .activity-very-active {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22c55e;
+    }
+
+    .activity-active {
+      background: rgba(59, 130, 246, 0.2);
+      color: #3b82f6;
+    }
+
+    .activity-quiet {
+      background: rgba(148, 163, 184, 0.2);
+      color: #94a3b8;
+    }
+
+    /* Filter Buttons */
+    .filter-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .filter-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .filter-btn.active {
+      background: rgba(198, 40, 40, 0.3);
+      border-color: rgba(198, 40, 40, 0.5);
+      color: white;
+    }
+
+    body.light-mode .filter-btn {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.15);
+      color: #1e293b;
+    }
+
+    body.light-mode .filter-btn.active {
+      background: rgba(198, 40, 40, 0.2);
+      border-color: rgba(198, 40, 40, 0.4);
+      color: #C62828;
+    }
+
+    /* Action Buttons */
+    .action-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .action-btn-primary {
+      background: linear-gradient(135deg, #C62828, #E53935);
+      color: white;
+    }
+
+    .action-btn-primary:hover {
+      background: linear-gradient(135deg, #B71C1C, #C62828);
+      transform: translateY(-2px);
+    }
+
+    .action-btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .action-btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .action-btn-danger {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .action-btn-danger:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    /* Suggested Club Card */
+    .suggested-club-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .suggested-club-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      transform: translateY(-4px);
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+    }
+
+    .empty-state-icon {
+      font-size: 64px;
+      margin-bottom: 24px;
+      opacity: 0.5;
+    }
+
+    /* Search Bar */
+    .search-bar {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 14px;
+      width: 100%;
+      transition: all 0.2s ease;
+    }
+
+    .search-bar:focus {
+      outline: none;
+      border-color: rgba(198, 40, 40, 0.5);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    body.light-mode .search-bar {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.15);
+      color: #1e293b;
+    }
+
+    body.light-mode .search-bar::placeholder {
+      color: #64748b;
+    }
+
+    /* Section Headers */
+    .section-header {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.6);
+      margin-bottom: 24px;
+    }
+
+    body.light-mode .section-subtitle {
+      color: #64748b !important;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .stat-card {
+        padding: 20px;
+      }
+
+      .my-club-card {
+        padding: 20px;
+      }
+
+      .section-header {
+        font-size: 20px;
+      }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #C62828, #E53935);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #E53935, #FF6B6B);
+    }
+  </style>
+</head>
+
+<body class="min-h-screen text-white light-mode:text-[#1e293b]">
+
+  <!-- Shared Student Navigation -->
+  <%- include('../layouts/studentNav', { 
+    currentPath: '/student/my-clubs',
+    student: typeof student !== 'undefined' ? student : {},
+    announcements: typeof announcements !== 'undefined' ? announcements : [],
+    csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : ''
+  }) %>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="min-h-screen bg-[#0a0f1a] text-white px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 light-mode:bg-[#f8fafc] light-mode:text-[#1e293b]">
+    <div class="max-w-7xl mx-auto">
+
+      <!-- ===== PAGE HEADER ===== -->
+      <div class="mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 class="text-3xl sm:text-4xl font-bold mb-2">
+              👋 Hi, <%= student ? (student.first_name || 'Student') : 'Student' %>!
+            </h1>
+            <div class="h-1 w-20 bg-gradient-to-r from-red-600 to-orange-500 rounded-full mb-4"></div>
+            <h2 class="text-2xl sm:text-3xl font-bold mb-2">My Clubs</h2>
+            <p class="text-white/70 text-sm sm:text-base">You're a member of <span class="font-bold text-white"><%= stats.clubsJoined || 0 %></span> clubs</p>
+          </div>
+          <div class="w-full sm:w-auto">
+            <div class="relative">
+              <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-white/60"></i>
+              <input type="text" id="searchInput" placeholder="🔍 Search my clubs..." class="search-bar pl-12">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ACTIVITY SUMMARY ===== -->
+      <section class="mb-8">
+        <h2 class="section-header">
+          📊 YOUR ACTIVITY SUMMARY
+        </h2>
+        <div class="h-1 w-32 bg-gradient-to-r from-red-600 to-orange-500 rounded-full mb-6"></div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Clubs Joined -->
+          <div class="stat-card">
+            <div class="stat-icon bg-red-500/20 text-red-400">
+              🎯
+            </div>
+            <div class="stat-value"><%= stats.clubsJoined || 0 %></div>
+            <p class="text-white/70 text-sm mb-2">Clubs Joined</p>
+            <p class="text-white/50 text-xs">Active in <%= activeClubsCount || 0 %></p>
+          </div>
+
+          <!-- Events Attended -->
+          <div class="stat-card">
+            <div class="stat-icon bg-orange-500/20 text-orange-400">
+              📅
+            </div>
+            <div class="stat-value"><%= stats.eventsAttended || 0 %></div>
+            <p class="text-white/70 text-sm mb-2">Events Attended</p>
+            <p class="text-white/50 text-xs"><%= upcomingEventsCount || 0 %> upcoming</p>
+          </div>
+
+          <!-- Points Earned -->
+          <div class="stat-card">
+            <div class="stat-icon bg-amber-500/20 text-amber-400">
+              🏆
+            </div>
+            <div class="stat-value"><%= stats.pointsEarned || 0 %></div>
+            <p class="text-white/70 text-sm mb-2">Points Earned</p>
+            <p class="text-white/50 text-xs">Level <%= Math.floor((stats.pointsEarned || 0) / 50) + 1 %></p>
+          </div>
+
+          <!-- Achievements -->
+          <div class="stat-card">
+            <div class="stat-icon bg-purple-500/20 text-purple-400">
+              ⭐
+            </div>
+            <div class="stat-value"><%= stats.achievements || 0 %></div>
+            <p class="text-white/70 text-sm mb-2">Achievements</p>
+            <p class="text-white/50 text-xs">
+              <% 
+                const achievementText = [];
+                if (stats.clubsJoined >= 1) achievementText.push('First Club');
+                if (stats.clubsJoined >= 3) achievementText.push('Active Member');
+                if (stats.eventsAttended >= 5) achievementText.push('Event Enthusiast');
+                if (stats.pointsEarned >= 100) achievementText.push('Point Collector');
+                if (achievementText.length === 0) achievementText.push('Keep going!');
+              %>
+              <%= achievementText.slice(0, 2).join(', ') %><%= achievementText.length > 2 ? '...' : '' %>
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== QUICK ACTIONS ===== -->
+      <section class="mb-8">
+        <h2 class="section-header">
+          ⚡ QUICK ACTIONS
+        </h2>
+        <div class="h-1 w-32 bg-gradient-to-r from-red-600 to-orange-500 rounded-full mb-6"></div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Upcoming Events -->
+          <a href="/student/events" class="quick-action-card block">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-xl">
+                📅
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Upcoming Events</h3>
+                <p class="text-white/60 text-xs">From your clubs</p>
+              </div>
+            </div>
+            <p class="text-white/70 text-sm mb-4">
+              <% 
+                const eventsThisWeek = typeof upcomingEventsThisWeek !== 'undefined' ? upcomingEventsThisWeek : upcomingEventsCount || 0;
+                if (eventsThisWeek === 0) {
+              %>
+                No events this week
+              <% } else { %>
+                <%= eventsThisWeek %> <%= eventsThisWeek === 1 ? 'event' : 'events' %> this week
+              <% } %>
+            </p>
+            <span class="text-red-400 hover:text-red-300 font-semibold text-sm flex items-center gap-2">
+              View All → <i class="fas fa-arrow-right text-xs"></i>
+            </span>
+          </a>
+
+          <!-- Messages -->
+          <a href="/student/messages" class="quick-action-card block">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-12 h-12 rounded-lg bg-green-500/20 flex items-center justify-center text-green-400 text-xl">
+                💬
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Messages</h3>
+                <p class="text-white/60 text-xs">From club officers</p>
+              </div>
+            </div>
+            <p class="text-white/70 text-sm mb-4"><%= unreadMessagesCount || 0 %> unread messages</p>
+            <span class="text-red-400 hover:text-red-300 font-semibold text-sm flex items-center gap-2">
+              View All → <i class="fas fa-arrow-right text-xs"></i>
+            </span>
+          </a>
+
+          <!-- Discover More -->
+          <div class="quick-action-card" onclick="window.location.href='/student/discover'">
+            <div class="flex items-center gap-3 mb-3">
+              <div class="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 text-xl">
+                🔍
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg">Discover More</h3>
+                <p class="text-white/60 text-xs">Find new clubs</p>
+              </div>
+            </div>
+            <p class="text-white/70 text-sm mb-4"><%= suggestedClubs.length || 0 %> suggestions</p>
+            <a href="/student/discover" class="text-red-400 hover:text-red-300 font-semibold text-sm flex items-center gap-2">
+              Browse → <i class="fas fa-arrow-right text-xs"></i>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== FILTER & SORT ===== -->
+      <section class="mb-8">
+        <h2 class="section-header">
+          🎯 FILTER & SORT
+        </h2>
+        <div class="h-1 w-32 bg-gradient-to-r from-red-600 to-orange-500 rounded-full mb-6"></div>
+        
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <button class="filter-btn active" data-filter="all">
+            All Clubs (<%= myClubs.length || 0 %>)
+          </button>
+          <button class="filter-btn" data-filter="active">
+            Active (<%= myClubs.filter(c => {
+              const daysSinceActive = c.last_active ? 
+                Math.floor((new Date() - new Date(c.last_active)) / (1000 * 60 * 60 * 24)) : 999;
+              return daysSinceActive < 30;
+            }).length || 0 %>)
+          </button>
+          <button class="filter-btn" data-filter="inactive">
+            Inactive (<%= myClubs.filter(c => {
+              const daysSinceActive = c.last_active ? 
+                Math.floor((new Date() - new Date(c.last_active)) / (1000 * 60 * 60 * 24)) : 999;
+              return daysSinceActive >= 30;
+            }).length || 0 %>)
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-white/70 text-sm">Sort by:</span>
+            <select id="sortSelect" class="filter-btn border-none bg-transparent cursor-pointer">
+              <option value="most-active">Most Active</option>
+              <option value="recent">Recently Joined</option>
+              <option value="name">Name (A-Z)</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-white/70 text-sm">View:</span>
+            <button class="filter-btn active" data-view="grid">
+              Grid 📊
+            </button>
+            <button class="filter-btn" data-view="list">
+              List 📋
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== MY CLUBS ===== -->
+      <section class="mb-8">
+        <h2 class="section-header">
+          📚 MY CLUBS (<%= myClubs.length || 0 %> clubs)
+        </h2>
+        <div class="h-1 w-32 bg-gradient-to-r from-red-600 to-orange-500 rounded-full mb-6"></div>
+
+        <% if (myClubs.length === 0) { %>
+          <!-- Empty State -->
+          <div class="empty-state">
+            <div class="empty-state-icon">🎯</div>
+            <h3 class="text-2xl font-bold mb-3">You haven't joined any clubs yet</h3>
+            <p class="text-white/70 mb-6">Start exploring and join clubs that match your interests!</p>
+            <a href="/student/discover" class="action-btn action-btn-primary inline-block">
+              Discover Clubs →
+            </a>
+          </div>
+        <% } else { %>
+          <div id="clubsContainer" class="space-y-6">
+            <% myClubs.forEach((club) => { 
+              const joinedDate = new Date(club.joined_date);
+              const monthsAgo = Math.floor((new Date() - joinedDate) / (1000 * 60 * 60 * 24 * 30));
+              const daysSinceActive = club.last_active ? 
+                Math.floor((new Date() - new Date(club.last_active)) / (1000 * 60 * 60 * 24)) : 999;
+              const isActive = daysSinceActive < 30;
+              const activityLevel = club.upcoming_event_count > 3 ? 'very-active' : 
+                                   club.upcoming_event_count > 0 ? 'active' : 'quiet';
+              const activityText = activityLevel === 'very-active' ? 'Very Active' : 
+                                   activityLevel === 'active' ? 'Active' : 'Quiet';
+            %>
+              <div class="my-club-card club-item" 
+                   data-status="<%= isActive ? 'active' : 'inactive' %>" 
+                   data-name="<%= club.name.toLowerCase() %>"
+                   data-joined-date="<%= new Date(club.joined_date).getTime() %>"
+                   data-activity-level="<%= activityLevel %>"
+                   data-upcoming-events="<%= club.upcoming_event_count || 0 %>"
+                   data-events-attended="<%= club.events_attended || 0 %>"
+                   data-points-earned="<%= club.points_earned || 0 %>">
+                <div class="flex flex-col md:flex-row gap-6">
+                  <!-- Club Logo and Basic Info -->
+                  <div class="flex items-start gap-4 flex-1">
+                    <div class="club-logo">
+                      <% if (club.photo) { %>
+                        <img src="<%= club.photo %>" alt="<%= club.name %>" class="w-full h-full object-cover rounded-lg" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <% } %>
+                      <div class="<%= club.photo ? 'hidden' : 'flex' %> w-full h-full items-center justify-center">
+                        <%= club.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() %>
+                      </div>
+                    </div>
+                    <div class="flex-1">
+                      <div class="flex items-start justify-between mb-2">
+                        <div>
+                          <h3 class="text-xl font-bold mb-1"><%= club.name %></h3>
+                          <p class="text-white/70 text-sm line-clamp-2"><%= club.description || 'No description available' %></p>
+                        </div>
+                        <span class="status-badge <%= isActive ? 'status-active' : 'status-inactive' %>">
+                          <%= isActive ? '●' : '○' %> <%= isActive ? 'Active' : 'Inactive' %>
+                        </span>
+                      </div>
+                      <p class="text-white/60 text-xs mb-4">
+                        Joined: <%= joinedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %> • 
+                        Member for <%= monthsAgo %> <%= monthsAgo === 1 ? 'month' : 'months' %>
+                      </p>
+
+                      <!-- Club Stats -->
+                      <div class="bg-white/5 rounded-lg p-4 mb-4">
+                        <% if (club.next_event_name) { %>
+                          <div class="mb-3">
+                            <p class="text-white/80 text-sm mb-1">
+                              📅 Next Event: <strong><%= club.next_event_name %></strong>
+                              <% if (club.next_event_date) { %>
+                                • <%= new Date(club.next_event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                                <% if (club.next_event_location) { %>
+                                  • <%= club.next_event_location %>
+                                <% } %>
+                              <% } %>
+                            </p>
+                          </div>
+                        <% } else { %>
+                          <div class="mb-3">
+                            <p class="text-white/80 text-sm">📅 No upcoming events</p>
+                          </div>
+                        <% } %>
+                        <div class="flex flex-wrap items-center gap-4 text-sm">
+                          <!-- Member Display with Names and Avatars -->
+                          <% 
+                            const memberCount = Number(club.member_count || 0);
+                            const memberNames = club.member_names || [];
+                            const firstMemberName = club.first_member_name || (memberNames.length > 0 ? memberNames[0] : null);
+                            const otherCount = Math.max(memberCount - (firstMemberName ? 1 : 0), 0);
+                          %>
+                          <% if (memberCount > 0 && firstMemberName) { %>
+                            <div class="flex items-center gap-2">
+                              <div class="flex -space-x-2">
+                                <% 
+                                  const avatarCount = Math.min(3, Math.max(memberNames.length, memberCount));
+                                  for (let i = 0; i < avatarCount; i++) { 
+                                    const memberName = memberNames[i];
+                                    const initial = memberName ? memberName.charAt(0).toUpperCase() : String.fromCharCode(65 + (i % 26));
+                                %>
+                                  <div class="w-6 h-6 rounded-full bg-gradient-to-br <%= ['from-blue-400 to-blue-600', 'from-purple-400 to-purple-600', 'from-pink-400 to-pink-600'][i % 3] %> border-2 border-white/30 flex items-center justify-center text-[10px] font-bold text-white" title="<%= memberName || 'Member ' + (i + 1) %>">
+                                    <%= initial %>
+                                  </div>
+                                <% } %>
+                              </div>
+                              <div class="flex-1 min-w-0">
+                                <p class="text-xs font-medium text-white/90">
+                                  <span class="font-semibold"><%= firstMemberName %></span>
+                                  <% if (otherCount > 0) { %>
+                                    <span class="text-white/70"> and <%= otherCount %> <%= otherCount === 1 ? 'other' : 'others' %></span>
+                                  <% } %>
+                                  <span class="text-white/70"> are members</span>
+                                </p>
+                              </div>
+                            </div>
+                          <% } else if (memberCount > 0) { %>
+                            <span class="flex items-center gap-1 text-white/90">
+                              <i class="fas fa-users text-xs"></i>
+                              <span><%= memberCount %> <%= memberCount === 1 ? 'member' : 'members' %></span>
+                            </span>
+                          <% } else { %>
+                            <span class="flex items-center gap-1 text-white/60">
+                              <i class="fas fa-users text-xs"></i>
+                              <span>No members yet</span>
+                            </span>
+                          <% } %>
+                          
+                          <span class="text-white/70">📅 <%= club.upcoming_event_count || 0 %> upcoming events</span>
+                          <span class="activity-level activity-<%= activityLevel %>">⚡ <%= activityText %></span>
+                        </div>
+                      </div>
+
+                      <!-- Your Activity -->
+                      <div class="mb-4">
+                        <p class="text-white/80 text-sm font-semibold mb-2">Your Activity:</p>
+                        <p class="text-white/70 text-sm">
+                          • <%= club.events_attended || 0 %> events attended • 
+                          <%= club.points_earned || 0 %> points earned • 
+                          Last active: 
+                          <% if (daysSinceActive === 0) { %>
+                            Today
+                          <% } else if (daysSinceActive === 1) { %>
+                            1 day ago
+                          <% } else if (daysSinceActive < 30) { %>
+                            <%= daysSinceActive %> days ago
+                          <% } else { %>
+                            <%= Math.floor(daysSinceActive / 30) %> months ago
+                          <% } %>
+                        </p>
+                      </div>
+
+                      <!-- Action Buttons -->
+                      <div class="flex flex-wrap gap-3">
+                        <a href="/student/club/<%= club.id %>" class="action-btn action-btn-primary">
+                          View Club →
+                        </a>
+                        <a href="/student/club/<%= club.id %>" class="action-btn action-btn-secondary">
+                          Manage Settings
+                        </a>
+                        <button class="action-btn action-btn-danger leave-club-btn" 
+                                data-club-id="<%= club.id %>" 
+                                data-club-name="<%= club.name.replace(/'/g, "&#39;") %>">
+                          Leave Club
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } %>
+      </section>
+
+      <!-- ===== SUGGESTED CLUBS ===== -->
+      <% if (suggestedClubs.length > 0) { %>
+        <section class="mb-8">
+          <h2 class="section-header">
+            💡 SUGGESTED CLUBS FOR YOU
+          </h2>
+          <div class="h-1 w-32 bg-gradient-to-r from-red-600 to-orange-500 rounded-full mb-4"></div>
+          <p class="text-white/70 text-sm mb-6">Based on your interests and clubs</p>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <% suggestedClubs.forEach((club) => { %>
+              <div class="suggested-club-card">
+                <div class="club-logo mx-auto mb-3" style="width: 48px; height: 48px; font-size: 18px;">
+                  <% if (club.photo) { %>
+                    <img src="<%= club.photo %>" alt="<%= club.name %>" class="w-full h-full object-cover rounded-lg" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <% } %>
+                  <div class="<%= club.photo ? 'hidden' : 'flex' %> w-full h-full items-center justify-center">
+                    <%= club.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() %>
+                  </div>
+                </div>
+                <h3 class="font-semibold mb-1"><%= club.name %></h3>
+                <% 
+                  const suggestedMemberCount = Number(club.member_count || 0);
+                  const suggestedMemberNames = club.member_names || [];
+                  const suggestedFirstMemberName = club.first_member_name || (suggestedMemberNames.length > 0 ? suggestedMemberNames[0] : null);
+                %>
+                <% if (suggestedMemberCount > 0 && suggestedFirstMemberName) { %>
+                  <div class="flex items-center gap-2 mb-3">
+                    <div class="flex -space-x-1">
+                      <% 
+                        const suggestedAvatarCount = Math.min(2, Math.max(suggestedMemberNames.length, suggestedMemberCount));
+                        for (let i = 0; i < suggestedAvatarCount; i++) { 
+                          const memberName = suggestedMemberNames[i];
+                          const initial = memberName ? memberName.charAt(0).toUpperCase() : String.fromCharCode(65 + (i % 26));
+                      %>
+                        <div class="w-5 h-5 rounded-full bg-gradient-to-br <%= ['from-blue-400 to-blue-600', 'from-purple-400 to-purple-600', 'from-pink-400 to-pink-600'][i % 3] %> border-2 border-white/30 flex items-center justify-center text-[8px] font-bold text-white" title="<%= memberName || 'Member ' + (i + 1) %>">
+                          <%= initial %>
+                        </div>
+                      <% } %>
+                    </div>
+                    <p class="text-white/60 text-xs">
+                      <%= suggestedFirstMemberName %><% if (suggestedMemberCount > 1) { %> and <%= suggestedMemberCount - 1 %> <%= suggestedMemberCount - 1 === 1 ? 'other' : 'others' %><% } %>
+                    </p>
+                  </div>
+                <% } else if (suggestedMemberCount > 0) { %>
+                  <p class="text-white/60 text-xs mb-3"><%= suggestedMemberCount %> <%= suggestedMemberCount === 1 ? 'member' : 'members' %></p>
+                <% } else { %>
+                  <p class="text-white/60 text-xs mb-3">No members yet</p>
+                <% } %>
+                <a href="/student/club/<%= club.id %>" class="action-btn action-btn-primary text-sm py-2 px-4 inline-block">
+                  Join →
+                </a>
+              </div>
+            <% }) %>
+          </div>
+          <div class="text-center">
+            <a href="/student/discover" class="text-red-400 hover:text-red-300 font-semibold text-sm">
+              View All Suggestions →
+            </a>
+          </div>
+        </section>
+      <% } %>
+
+    </div>
+  </main>
+
+  <!-- ===== FOOTER (Minimal) ===== -->
+  <footer class="border-t border-white/10 py-6 px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <img src="/img/logo.png" alt="UM Logo" class="w-6 h-6 object-contain">
+          <p class="text-white font-semibold text-sm">UniClub</p>
+        </div>
+        <p class="text-xs text-white/50">© 2024 University of Mindanao</p>
+        <div class="flex gap-4 text-xs text-white/50">
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Privacy</a>
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // Navbar functionality (dropdowns, theme toggle, mobile menu) is handled by the shared navbar component (studentNav.ejs)
+
+    // ===== DYNAMIC FILTERING, SORTING, AND SEARCH =====
+    let currentFilter = 'all';
+    let currentSort = 'most-active';
+    let currentView = 'grid';
+    let searchTerm = '';
+
+    // Update filter counts dynamically
+    function updateFilterCounts() {
+      const clubItems = Array.from(document.querySelectorAll('.club-item'));
+      
+      // Calculate counts from ALL clubs (not filtered by search)
+      const allClubs = clubItems;
+      const activeClubs = allClubs.filter(item => item.getAttribute('data-status') === 'active');
+      const inactiveClubs = allClubs.filter(item => item.getAttribute('data-status') === 'inactive');
+      
+      // Get visible items (after search and filter)
+      const visibleItems = clubItems.filter(item => {
+        const matchesSearch = !searchTerm || item.getAttribute('data-name').includes(searchTerm.toLowerCase());
+        const matchesFilter = currentFilter === 'all' || item.getAttribute('data-status') === currentFilter;
+        return matchesSearch && matchesFilter && item.style.display !== 'none';
+      });
+
+      // Update filter button counts (show total counts, not filtered)
+      const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
+      const activeBtn = document.querySelector('.filter-btn[data-filter="active"]');
+      const inactiveBtn = document.querySelector('.filter-btn[data-filter="inactive"]');
+
+      if (allBtn) allBtn.textContent = `All Clubs (${allClubs.length})`;
+      if (activeBtn) activeBtn.textContent = `Active (${activeClubs.length})`;
+      if (inactiveBtn) inactiveBtn.textContent = `Inactive (${inactiveClubs.length})`;
+
+      // Update section header count (show visible count after filters)
+      const sectionHeader = document.querySelector('section h2.section-header');
+      if (sectionHeader && sectionHeader.textContent.includes('MY CLUBS')) {
+        sectionHeader.textContent = `📚 MY CLUBS (${visibleItems.length} clubs)`;
+      }
+    }
+
+    // Apply filters, search, and sort
+    function applyFiltersAndSort() {
+      const clubItems = Array.from(document.querySelectorAll('.club-item'));
+      const container = document.getElementById('clubsContainer');
+      
+      // Filter and search
+      clubItems.forEach(item => {
+        const matchesSearch = !searchTerm || item.getAttribute('data-name').includes(searchTerm.toLowerCase());
+        const matchesFilter = currentFilter === 'all' || item.getAttribute('data-status') === currentFilter;
+        
+        if (matchesSearch && matchesFilter) {
+          item.style.display = '';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      // Get visible items
+      const visibleItems = clubItems.filter(item => item.style.display !== 'none');
+
+      // Sort visible items
+      visibleItems.sort((a, b) => {
+        if (currentSort === 'name') {
+          return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+        } else if (currentSort === 'recent') {
+          const dateA = parseInt(a.getAttribute('data-joined-date') || 0);
+          const dateB = parseInt(b.getAttribute('data-joined-date') || 0);
+          return dateB - dateA; // Most recent first
+        } else if (currentSort === 'most-active') {
+          const activityA = a.getAttribute('data-upcoming-events') || 0;
+          const activityB = b.getAttribute('data-upcoming-events') || 0;
+          const eventsA = parseInt(a.getAttribute('data-events-attended') || 0);
+          const eventsB = parseInt(b.getAttribute('data-events-attended') || 0);
+          // Sort by upcoming events first, then by events attended
+          if (parseInt(activityB) !== parseInt(activityA)) {
+            return parseInt(activityB) - parseInt(activityA);
+          }
+          return parseInt(eventsB) - parseInt(eventsA);
+        }
+        return 0;
+      });
+
+      // Reorder in DOM
+      visibleItems.forEach(item => container.appendChild(item));
+
+      // Update counts
+      updateFilterCounts();
+
+      // Show empty state if no clubs match
+      const emptyState = container.querySelector('.empty-state');
+      if (visibleItems.length === 0 && clubItems.length > 0) {
+        if (!emptyState) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'empty-state';
+          emptyDiv.innerHTML = `
+            <div class="empty-state-icon">🔍</div>
+            <h3 class="text-2xl font-bold mb-3">No clubs match your filters</h3>
+            <p class="text-white/70 mb-6">Try adjusting your search or filter criteria</p>
+            <button onclick="clearAllFilters()" class="action-btn action-btn-primary inline-block">
+              Clear Filters →
+            </button>
+          `;
+          container.appendChild(emptyDiv);
+        }
+      } else if (emptyState && visibleItems.length > 0) {
+        emptyState.remove();
+      }
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchTerm = e.target.value.toLowerCase();
+        applyFiltersAndSort();
+      });
+    }
+
+    // Filter functionality
+    const filterButtons = document.querySelectorAll('.filter-btn[data-filter]');
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.getAttribute('data-filter');
+        applyFiltersAndSort();
+      });
+    });
+
+    // Clear all filters function
+    window.clearAllFilters = function() {
+      searchTerm = '';
+      currentFilter = 'all';
+      if (searchInput) searchInput.value = '';
+      filterButtons.forEach(b => {
+        if (b.getAttribute('data-filter') === 'all') {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+      applyFiltersAndSort();
+    };
+
+    // Sort functionality
+    const sortSelect = document.getElementById('sortSelect');
+    if (sortSelect) {
+      sortSelect.addEventListener('change', (e) => {
+        currentSort = e.target.value;
+        applyFiltersAndSort();
+      });
+    }
+
+    // View toggle functionality
+    const viewButtons = document.querySelectorAll('.filter-btn[data-view]');
+    const clubsContainer = document.getElementById('clubsContainer');
+    viewButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        viewButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentView = btn.getAttribute('data-view');
+        
+        if (currentView === 'list') {
+          clubsContainer.classList.remove('space-y-6');
+          clubsContainer.classList.add('space-y-4');
+          document.querySelectorAll('.my-club-card').forEach(card => {
+            card.classList.add('flex-row');
+            card.querySelector('.flex.flex-col.md\\:flex-row')?.classList.add('flex-row');
+          });
+        } else {
+          clubsContainer.classList.remove('space-y-4');
+          clubsContainer.classList.add('space-y-6');
+          document.querySelectorAll('.my-club-card').forEach(card => {
+            card.classList.remove('flex-row');
+            card.querySelector('.flex.flex-col.md\\:flex-row')?.classList.remove('flex-row');
+          });
+        }
+      });
+    });
+
+    // Initialize on page load
+    applyFiltersAndSort();
+
+    // Leave Club handler
+    const leaveClubButtons = document.querySelectorAll('.leave-club-btn');
+    leaveClubButtons.forEach(btn => {
+      btn.addEventListener('click', async function() {
+        const clubId = this.getAttribute('data-club-id');
+        const clubName = this.getAttribute('data-club-name');
+        
+        if (!confirm(`Are you sure you want to leave ${clubName}?`)) {
+          return;
+        }
+
+        try {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+          const response = await fetch('/student/clubs/leave', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRF-Token': csrfToken
+            },
+            body: JSON.stringify({ 
+              club_id: clubId,
+              _csrf: csrfToken
+            })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert(data.message || 'Successfully left the club');
+            window.location.reload();
+          } else {
+            alert(data.error || 'Failed to leave the club');
+          }
+        } catch (error) {
+          console.error('Error leaving club:', error);
+          alert('An error occurred while leaving the club. Please try again.');
+        }
+      });
+    });
+
+    // Sync theme across tabs
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'theme') {
+        const theme = e.newValue || 'light';
+        if (theme === 'light') {
+          document.documentElement.classList.add('light-mode');
+          document.body.classList.add('light-mode');
+          updateThemeUI(true);
+        } else {
+          document.documentElement.classList.remove('light-mode');
+          document.body.classList.remove('light-mode');
+          updateThemeUI(false);
+        }
+      }
+    });
+  </script>
+</body>
+</html>

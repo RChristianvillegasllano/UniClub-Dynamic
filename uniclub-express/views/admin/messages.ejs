@@ -6,83 +6,446 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Messages | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
 </head>
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/messages'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/messages'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main Content -->
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-6 lg:mt-0 mt-16 min-h-[calc(100vh-8rem)]">
       <!-- Header -->
       <header class="mb-2 flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800">Messages Inbox</h1>
-          <p class="text-sm text-slate-500">View and manage received messages</p>
+          <h1 class="text-3xl font-bold text-gray-900 mb-1">Messages Inbox</h1>
+          <p class="text-base text-gray-600">View and manage received messages</p>
         </div>
+        <button id="showComposeBtn" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-sm hover:shadow">
+          <i data-lucide="plus" class="w-4 h-4 inline mr-1"></i> Compose Message
+        </button>
+        <a href="/admin/dashboard" class="px-4 py-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold transition-colors">
+          <i data-lucide="send" class="w-4 h-4 inline mr-1"></i> Send Announcement
+        </a>
       </header>
 
-      <!-- Messages Table -->
-      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <!-- Messages Section with 2-column layout -->
+      <section class="flex-1 grid lg:grid-cols-2 gap-6">
+        <!-- Left: Message List -->
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col">
+          <!-- Inbox Controls -->
+          <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex flex-wrap items-center gap-3 mb-3">
+              <!-- Search -->
+              <div class="flex-1 min-w-[200px]">
+                <input 
+                  type="text" 
+                  id="messageSearch" 
+                  placeholder="Search messages..." 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                />
+              </div>
+              <!-- Filter -->
+              <select id="messageFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                <option value="all">All Senders</option>
+                <option value="students">From Students</option>
+                <option value="officers">From Officers</option>
+                <option value="clubs">From Clubs</option>
+              </select>
+            </div>
+            <!-- Tabs -->
+            <div class="flex gap-2 border-b border-gray-200">
+              <button class="tab-button px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-blue-600 pb-2 transition-colors" data-tab="all">
+                All
+              </button>
+              <button class="tab-button px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors" data-tab="unread">
+                Unread
+              </button>
+              <button class="tab-button px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors" data-tab="archived">
+                Archived
+              </button>
+            </div>
+          </div>
+
+          <!-- Message List -->
+          <div class="flex-1 overflow-y-auto">
         <% const _msgs = (typeof messages !== 'undefined' && Array.isArray(messages)) ? messages : []; %>
         <% if (_msgs.length > 0) { %>
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-              <thead class="bg-slate-100 text-slate-700">
-                <tr>
-                  <th class="p-3 text-left font-semibold">From</th>
-                  <th class="p-3 text-left font-semibold">Email</th>
-                  <th class="p-3 text-left font-semibold">Subject</th>
-                  <th class="p-3 text-center font-semibold">Date</th>
-                  <th class="p-3 text-center font-semibold">Status</th>
-                  <th class="p-3 text-center font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200">
+              <div id="messagesList" class="divide-y divide-gray-200">
                 <% _msgs.forEach(m => { %>
-                  <tr class="hover:bg-slate-50 <%= m.read ? '' : 'bg-red-50' %>">
-                    <td class="p-3 font-medium"><%= m.sender_name %></td>
-                    <td class="p-3"><%= m.sender_email %></td>
-                    <td class="p-3"><%= m.subject %></td>
-                    <td class="p-3 text-center"><%= m.created_at ? new Date(m.created_at).toLocaleDateString() : '' %></td>
-                    <td class="p-3 text-center">
-                      <% if (m.read) { %>
-                        <span class="text-green-600 text-xs font-semibold">Read</span>
-                      <% } else { %>
-                        <span class="text-red-600 text-xs font-semibold">Unread</span>
+                  <div class="message-item px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors <%= m.read ? '' : 'bg-blue-50 border-l-4 border-blue-600' %>" 
+                       data-message-id="<%= m.id %>"
+                       data-sender="<%= (m.sender_name || '').toLowerCase() %>"
+                       data-subject="<%= (m.subject || '').toLowerCase() %>"
+                       data-read="<%= m.read ? 'true' : 'false' %>"
+                       onclick="window.location.href='/admin/messages/view/<%= m.id %>'">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                          <span class="font-semibold text-gray-900 text-sm truncate"><%= m.sender_name %></span>
+                          <% if (!m.read) { %>
+                            <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">New</span>
                       <% } %>
-                    </td>
-                    <td class="p-3 flex justify-center gap-2">
-                      <a href="/admin/messages/view/<%= m.id %>"
-                         class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs flex items-center gap-1">
-                        <i data-lucide="eye" class="w-3 h-3"></i> View
-                      </a>
+                        </div>
+                        <p class="text-sm font-medium text-gray-700 truncate mb-1"><%= m.subject %></p>
+                        <p class="text-xs text-gray-500 truncate"><%= m.sender_email %></p>
+                      </div>
+                      <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                        <span class="text-xs text-gray-500">
+                          <%= m.created_at ? new Date(m.created_at).toLocaleDateString() : '' %>
+                        </span>
+                        <div class="flex gap-1" onclick="event.stopPropagation()">
                       <form action="/admin/messages/delete/<%= m.id %>" method="POST" onsubmit="return confirm('Delete this message?')">
-                        <button type="submit"
-                                class="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs flex items-center gap-1">
-                          <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <button type="submit" class="p-1.5 text-gray-400 hover:text-red-600 transition-colors">
+                              <i data-lucide="trash-2" class="w-4 h-4"></i>
                         </button>
                       </form>
-                    </td>
-                  </tr>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 <% }) %>
-              </tbody>
-            </table>
           </div>
         <% } else { %>
-          <p class="text-center text-slate-500 py-6">No messages available.</p>
+              <!-- Empty State -->
+              <div class="text-center py-12 px-4">
+                <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                  <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">You're all caught up</h3>
+                <p class="text-sm text-gray-600 mb-6 max-w-md mx-auto">No messages yet. When students or officers contact admins, their messages will appear here.</p>
+                <a href="/admin/dashboard" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-sm">
+                  <i data-lucide="send" class="w-4 h-4"></i> Send Announcement
+                </a>
+              </div>
         <% } %>
-      </section>
+          </div>
+        </div>
 
-      <!-- Footer -->
-      <footer class="text-center text-xs text-slate-400 py-4 border-t mt-2">
-        &copy; <%= new Date().getFullYear() %> UniClub Management System. All rights reserved.
-      </footer>
+        <!-- Right: Compose Message Panel -->
+        <div id="composePanel" class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <i data-lucide="send" class="w-5 h-5 text-blue-600"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-gray-900">Compose Message</h2>
+                <p class="text-sm text-gray-600">Send a message to officers or students</p>
+              </div>
+            </div>
+            <button id="toggleCompose" class="p-2 text-gray-400 hover:text-gray-600 transition">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+
+          <form id="composeForm" method="POST" action="/admin/messages/send" class="space-y-4">
+            <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+            
+            <!-- Recipient Type -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Send To</label>
+              <select name="recipient_type" id="recipientType" required class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                <option value="">Select recipient type...</option>
+                <option value="all_students">All Students</option>
+                <option value="all_officers">All Officers</option>
+                <option value="specific_student">Specific Student</option>
+                <option value="specific_officer">Specific Officer</option>
+              </select>
+            </div>
+
+            <!-- Specific Recipient Selection -->
+            <div id="specificRecipientContainer" class="hidden">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Select Recipient</label>
+              <select name="recipient_id" id="recipientSelect" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                <option value="">Choose a recipient...</option>
+              </select>
+            </div>
+
+            <!-- Subject -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Subject <span class="text-red-500">*</span></label>
+              <input type="text" name="subject" required class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Message subject...">
+            </div>
+
+            <!-- Message Content -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Message <span class="text-red-500">*</span></label>
+              <textarea name="content" rows="6" required class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none" placeholder="Write your message here..."></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex gap-3">
+              <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-4 py-2.5 transition-colors shadow-sm hover:shadow">
+                <i data-lucide="send" class="w-4 h-4 inline mr-2"></i> Send Message
+              </button>
+              <button type="button" id="cancelCompose" class="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
     </main>
   </div>
 
-  <script>window.lucide && window.lucide.replace();</script>
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+    // Message filtering and search
+    const messageSearch = document.getElementById('messageSearch');
+    const messageFilter = document.getElementById('messageFilter');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const messageItems = document.querySelectorAll('.message-item');
+    const messagesList = document.getElementById('messagesList');
+
+    let currentTab = 'all';
+
+    function filterMessages() {
+      const searchTerm = (messageSearch?.value || '').toLowerCase();
+      const filterValue = messageFilter?.value || 'all';
+
+      let visibleCount = 0;
+
+      messageItems.forEach(item => {
+        const sender = item.dataset.sender || '';
+        const subject = item.dataset.subject || '';
+        const isRead = item.dataset.read === 'true';
+        const matchesSearch = !searchTerm || 
+          sender.includes(searchTerm) || 
+          subject.includes(searchTerm);
+        
+        const matchesFilter = filterValue === 'all' || 
+          (filterValue === 'students' && sender.includes('student')) ||
+          (filterValue === 'officers' && sender.includes('officer')) ||
+          (filterValue === 'clubs' && sender.includes('club'));
+
+        const matchesTab = currentTab === 'all' ||
+          (currentTab === 'unread' && !isRead) ||
+          (currentTab === 'archived' && isRead);
+
+        if (matchesSearch && matchesFilter && matchesTab) {
+          item.style.display = '';
+          visibleCount++;
+        } else {
+          item.style.display = 'none';
+        }
+      });
+
+      // Show empty state if no messages visible
+      if (visibleCount === 0 && messagesList) {
+        const existingEmpty = messagesList.querySelector('.empty-state-message');
+        if (!existingEmpty) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'empty-state-message text-center py-12 px-4';
+          emptyDiv.innerHTML = `
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+            <p class="text-sm text-gray-600">No messages match your filters.</p>
+          `;
+          messagesList.appendChild(emptyDiv);
+        }
+      } else {
+        const emptyDiv = messagesList?.querySelector('.empty-state-message');
+        if (emptyDiv) {
+          emptyDiv.remove();
+        }
+      }
+    }
+
+    // Tab switching
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        currentTab = button.dataset.tab;
+        
+        // Update active tab
+        tabButtons.forEach(btn => {
+          btn.className = btn.className.replace('text-gray-700 border-b-2 border-blue-600', 'text-gray-500');
+          btn.className = btn.className.replace('border-b-2 border-blue-600', '');
+        });
+        button.className = button.className.replace('text-gray-500', 'text-gray-700');
+        button.className += ' border-b-2 border-blue-600 pb-2';
+        
+        filterMessages();
+      });
+    });
+
+    // Search and filter event listeners
+    messageSearch?.addEventListener('input', filterMessages);
+    messageFilter?.addEventListener('change', filterMessages);
+
+    // Compose Message Functionality
+    const composePanel = document.getElementById('composePanel');
+    const showComposeBtn = document.getElementById('showComposeBtn');
+    const toggleComposeBtn = document.getElementById('toggleCompose');
+    const cancelComposeBtn = document.getElementById('cancelCompose');
+    const recipientType = document.getElementById('recipientType');
+    const specificRecipientContainer = document.getElementById('specificRecipientContainer');
+    const recipientSelect = document.getElementById('recipientSelect');
+    const composeForm = document.getElementById('composeForm');
+
+    // Students and officers data from server
+    const students = <%- JSON.stringify(typeof students !== 'undefined' ? students : []) %>;
+    const officers = <%- JSON.stringify(typeof officers !== 'undefined' ? officers : []) %>;
+
+    // Show compose panel
+    function showCompose() {
+      if (composePanel) {
+        composePanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        composePanel.style.display = 'block';
+        // Reinitialize icons
+        if (window.lucide) {
+          setTimeout(() => lucide.createIcons(), 100);
+        }
+      }
+    }
+
+    // Hide compose panel
+    function hideCompose() {
+      if (composePanel) {
+        composePanel.style.display = 'none';
+        if (composeForm) composeForm.reset();
+        if (specificRecipientContainer) {
+          specificRecipientContainer.classList.add('hidden');
+        }
+        if (recipientSelect) {
+          recipientSelect.innerHTML = '<option value="">Choose a recipient...</option>';
+        }
+      }
+    }
+
+    // Handle recipient type change
+    recipientType?.addEventListener('change', (e) => {
+      const type = e.target.value;
+      const container = specificRecipientContainer;
+      const select = recipientSelect;
+
+      if (type === 'specific_student' || type === 'specific_officer') {
+        container?.classList.remove('hidden');
+        select.innerHTML = '<option value="">Choose a recipient...</option>';
+
+        if (type === 'specific_student') {
+          students.forEach(student => {
+            const option = document.createElement('option');
+            option.value = student.id;
+            option.textContent = `${student.name} (${student.email || 'No email'})`;
+            select?.appendChild(option);
+          });
+        } else if (type === 'specific_officer') {
+          officers.forEach(officer => {
+            const option = document.createElement('option');
+            option.value = officer.id;
+            option.textContent = `${officer.name} (${officer.username || 'No username'})`;
+            select?.appendChild(option);
+          });
+        }
+      } else {
+        container?.classList.add('hidden');
+        select.innerHTML = '<option value="">Choose a recipient...</option>';
+      }
+    });
+
+    // Event listeners
+    showComposeBtn?.addEventListener('click', showCompose);
+    toggleComposeBtn?.addEventListener('click', hideCompose);
+    cancelComposeBtn?.addEventListener('click', hideCompose);
+
+    // Handle form submission
+    composeForm?.addEventListener('submit', (e) => {
+      const recipientTypeValue = recipientType?.value;
+      const recipientIdValue = recipientSelect?.value;
+
+      if ((recipientTypeValue === 'specific_student' || recipientTypeValue === 'specific_officer') && !recipientIdValue) {
+        e.preventDefault();
+        showToast('Please select a recipient', 'error');
+        return false;
+      }
+    });
+
+    // Show success/error messages with toast notification
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'message_sent') {
+      const count = urlParams.get('count') || '1';
+      showToast(`Message sent successfully to ${count} recipient${count > 1 ? 's' : ''}!`, 'success');
+      window.history.replaceState({}, '', '/admin/messages');
+      // Reset form
+      if (composeForm) composeForm.reset();
+      if (specificRecipientContainer) specificRecipientContainer.classList.add('hidden');
+      if (recipientSelect) recipientSelect.innerHTML = '<option value="">Choose a recipient...</option>';
+    }
+    if (urlParams.get('error')) {
+      const error = urlParams.get('error');
+      let message = 'An error occurred';
+      if (error === 'missing_fields') message = 'Please fill in all required fields';
+      if (error === 'no_recipients') message = 'No recipients found';
+      if (error === 'server_error') message = 'Server error. Please try again.';
+      showToast(message, 'error');
+      window.history.replaceState({}, '', '/admin/messages');
+    }
+
+    // Toast notification function
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg text-white font-medium transition-all transform translate-x-full ${
+        type === 'success' ? 'bg-green-600' : type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+      }`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      // Animate in
+      setTimeout(() => {
+        toast.classList.remove('translate-x-full');
+      }, 10);
+      
+      // Remove after 4 seconds
+      setTimeout(() => {
+        toast.classList.add('translate-x-full');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    // Initialize icons after DOM updates
+    if (window.lucide) {
+      setTimeout(() => lucide.createIcons(), 100);
+    }
+  </script>
 </body>
 </html>

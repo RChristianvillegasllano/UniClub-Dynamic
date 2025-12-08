@@ -2,150 +2,382 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
     <title><%= title || 'Admin Dashboard | UniClub' %></title>
     <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = { theme: { extend: { colors: { brand: { 700:'#b91c1c' }}}}}
     </script>
+    <style>
+      /* Toast notification styles */
+      .toast {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+      }
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      .toast-success {
+        background: #10b981;
+        color: white;
+      }
+      .toast-error {
+        background: #ef4444;
+        color: white;
+      }
+      /* Mobile sidebar toggle */
+      @media (max-width: 1024px) {
+        .sidebar-hidden {
+          transform: translateX(-100%);
+        }
+      }
+      /* Counter animation */
+      @keyframes countUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .count-animate {
+        animation: countUp 0.6s ease-out;
+      }
+    </style>
   </head>
   <body class="bg-gray-50 text-gray-900">
-    <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Toast container -->
+    <div id="toastContainer"></div>
+    
+    <!-- Mobile menu button -->
+    <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+    <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
       <!-- Sidebar -->
-      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/dashboard'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+      <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+        <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/dashboard'), messages: (typeof messages !== 'undefined' ? messages : []), pendingCount: (typeof pendingApprovals !== 'undefined' ? pendingApprovals : 0) }) %>
+      </div>
+      <!-- Overlay for mobile -->
+      <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
       <!-- Main -->
-      <main class="flex flex-col gap-4">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-          <h1 class="text-2xl font-semibold">Dashboard</h1>
-          <p class="text-gray-500">Welcome, <span class="font-semibold"><%= (admin && admin.username) || 'Admin' %></span></p>
+      <main class="flex flex-col gap-6 lg:mt-0 mt-16">
+        <!-- Page Header -->
+        <div class="mb-2">
+          <h1 class="text-3xl font-bold text-gray-900 mb-1">Dashboard</h1>
+          <p class="text-base text-gray-600">Snapshot of system health and activity</p>
         </div>
 
-        <!-- Top stats -->
-        <section class="grid md:grid-cols-3 gap-4">
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <p class="text-gray-500">Total Officers</p>
-            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= (officers && officers.length) || 0 %></p>
-          </div>
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <p class="text-gray-500">Total Clubs</p>
-            <p class="text-3xl font-extrabold text-red-700 mt-1"><%= clubsCount || 0 %></p>
-          </div>
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <p class="text-gray-500">Reports Exported</p>
-            <p class="text-3xl font-extrabold text-red-700 mt-1">0</p>
-          </div>
+        <!-- Primary KPI Cards - Dominant Section -->
+        <section class="grid md:grid-cols-3 gap-6">
+          <a href="/admin/officers" class="bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 p-6 cursor-pointer group">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-100 rounded-lg">
+                  <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                  </svg>
+                </div>
+                <p class="text-gray-800 text-sm font-semibold">Total Officers</p>
+              </div>
+            </div>
+            <p class="text-4xl font-extrabold text-gray-900 mb-2" data-count="<%= analytics?.totalOfficers || 0 %>">0</p>
+            <p class="text-sm text-gray-600 font-medium">Active across all clubs</p>
+          </a>
+          <a href="/admin/clubs" class="bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 p-6 cursor-pointer group">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="p-2 bg-blue-100 rounded-lg">
+                  <svg class="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                  </svg>
+                </div>
+                <p class="text-gray-800 text-sm font-semibold">Total Clubs</p>
+              </div>
+            </div>
+            <p class="text-4xl font-extrabold text-gray-900 mb-2" data-count="<%= clubsCount || 0 %>">0</p>
+            <p class="text-sm text-gray-600 font-medium">Registered organizations</p>
+          </a>
+          <!-- Primary KPI: Pending Approvals (More Dominant) -->
+          <a href="/admin/approvals" class="bg-gradient-to-br <%= (typeof pendingApprovals !== 'undefined' && pendingApprovals > 0) ? 'from-orange-50 to-white border-2 border-orange-400 shadow-lg' : 'from-gray-50 to-white border-2 border-gray-200 shadow-md' %> rounded-xl hover:shadow-xl transition-all duration-200 <%= (typeof pendingApprovals !== 'undefined' && pendingApprovals > 0) ? 'p-7' : 'p-6' %> cursor-pointer group relative overflow-hidden">
+            <% if (typeof pendingApprovals !== 'undefined' && pendingApprovals > 0) { %>
+              <div class="absolute top-0 right-0 w-20 h-20 bg-orange-200 rounded-full -mr-10 -mt-10 opacity-20"></div>
+            <% } %>
+            <div class="flex items-center justify-between mb-4 relative z-10">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 <%= (typeof pendingApprovals !== 'undefined' && pendingApprovals > 0) ? 'bg-orange-200' : 'bg-gray-100' %> rounded-lg">
+                  <svg class="w-7 h-7 <%= (typeof pendingApprovals !== 'undefined' && pendingApprovals > 0) ? 'text-orange-700' : 'text-gray-500' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                </div>
+                <p class="text-gray-800 text-sm font-semibold">Pending Approvals</p>
+              </div>
+            </div>
+            <p class="text-5xl font-extrabold <%= (typeof pendingApprovals !== 'undefined' && pendingApprovals > 0) ? 'text-orange-600' : 'text-gray-500' %> mb-2 relative z-10" data-count="<%= typeof pendingApprovals !== 'undefined' ? pendingApprovals : 0 %>"><%= typeof pendingApprovals !== 'undefined' ? pendingApprovals : 0 %></p>
+            <% if (typeof pendingApprovals !== 'undefined' && pendingApprovals > 0) { %>
+              <p class="text-sm text-orange-700 font-semibold relative z-10"><%= pendingApprovals === 1 ? '1 item needs review' : pendingApprovals + ' items need review' %></p>
+            <% } else { %>
+              <p class="text-sm text-gray-600 font-medium relative z-10">All caught up</p>
+            <% } %>
+          </a>
         </section>
 
-        <!-- Middle row -->
-        <section class="grid lg:grid-cols-3 gap-4">
-          <!-- Quick Analytics -->
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <h2 class="text-lg font-semibold">Quick Analytics</h2>
-            <div class="my-3 h-px bg-gray-200"></div>
-            <div class="flex items-center py-1.5">
-              <span class="text-gray-500">Active Clubs</span>
-              <span class="ml-auto text-xl font-extrabold text-red-700"><%= analytics?.activeClubs || 0 %></span>
+        <!-- Middle row - 2 column layout -->
+        <section class="grid lg:grid-cols-2 gap-6 lg:items-start">
+          <!-- Left column: Analytics + Clubs -->
+          <div class="space-y-6">
+            <!-- Quick Stats - Compressed -->
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+              <h2 class="text-lg font-semibold text-gray-900 mb-3">Quick Stats</h2>
+              <div class="grid grid-cols-3 gap-3">
+                <div class="text-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition">
+                  <div class="text-2xl font-bold text-gray-900 mb-1" data-count="<%= analytics?.activeClubs || 0 %>">0</div>
+                  <div class="text-xs text-gray-600 font-medium">Active Clubs</div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition">
+                  <div class="text-2xl font-bold text-gray-900 mb-1" data-count="<%= analytics?.avgOfficersPerClub || 0 %>">0</div>
+                  <div class="text-xs text-gray-600 font-medium">Avg/Club</div>
+                </div>
+                <div class="text-center p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition">
+                  <div class="text-2xl font-bold <%= (analytics?.totalActivities || 0) > 0 ? 'text-purple-600' : 'text-gray-400' %> mb-1" data-count="<%= analytics?.totalActivities || 0 %>">0</div>
+                  <div class="text-xs text-gray-600 font-medium">Activities</div>
+                  <% if ((analytics?.totalActivities || 0) === 0) { %>
+                    <div class="mt-2 text-xs text-gray-500">No activities yet</div>
+                  <% } %>
+                </div>
+              </div>
             </div>
-            <div class="flex items-center py-1.5">
-              <span class="text-gray-500">Officers per Club (Avg)</span>
-              <span class="ml-auto text-xl font-extrabold text-red-700"><%= analytics?.avgOfficersPerClub || 0 %></span>
-            </div>
-            <div class="flex items-center py-1.5">
-              <span class="text-gray-500">Total Activities</span>
-              <span class="ml-auto text-xl font-extrabold text-red-700"><%= analytics?.totalActivities || 0 %></span>
-            </div>
-            <div class="flex items-center py-1.5">
-              <span class="text-gray-500">Most Active Department</span>
-              <span class="ml-auto text-xl font-extrabold text-red-700"><%= analytics?.mostActiveDept || '—' %></span>
-            </div>
-          </div>
 
-          <!-- Quick Communication -->
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <h2 class="text-lg font-semibold">Quick Communication</h2>
-            <div class="my-3 h-px bg-gray-200"></div>
-            <% const unread = (messages || []).filter(m => !m.read).length; %>
-            <% const pendingCount = (requirements || []).filter(r => {
-                 try { return String(r.status || '').toLowerCase() === 'pending'; } catch (_) { return false; }
-               }).length; %>
-            <div class="flex items-center py-1.5">
-              <span class="text-gray-500">Unread Messages</span>
-              <span class="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700"><%= unread %></span>
-            </div>
-            <div class="flex items-center py-1.5">
-              <span class="text-gray-500">Pending Notifications</span>
-              <span class="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700"><%= pendingCount %></span>
-            </div>
-            <% if (typeof announceSuccess !== 'undefined' && announceSuccess) { %>
-              <div class="mt-3 text-sm rounded-lg border border-green-200 bg-green-50 text-green-700 px-3 py-2">Announcement sent.</div>
-            <% } %>
-            <form class="mt-3 space-y-3" method="POST" action="/admin/announcements">
-              <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1">Audience</label>
-                <select name="audience" class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
-                  <option value="all">All (Students & Officers)</option>
-                  <option value="students">Students</option>
-                  <option value="officers">Officers</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1">Subject</label>
-                <input type="text" name="subject" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]" placeholder="Subject" />
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1">Message</label>
-                <textarea name="content" rows="3" required class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]" placeholder="Write your announcement..."></textarea>
-              </div>
-              <button type="submit"
-                class="w-full bg-red-700 hover:bg-red-800 text-white font-semibold rounded-xl px-4 py-2">
-                Send Announcement
-              </button>
-            </form>
-          </div>
-
-          <!-- Clubs list -->
-          <div class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <div class="flex items-center justify-between mb-3">
-              <h2 class="text-lg font-semibold">Clubs and Organizations</h2>
-              <a href="/admin/clubs" class="text-sm text-red-700 hover:text-red-800 font-medium">View All</a>
-            </div>
-            
-            <!-- Search input -->
-            <div class="mb-3">
-              <input 
-                type="text" 
-                id="clubSearch" 
-                placeholder="Search clubs..." 
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              />
-            </div>
-            
-            <!-- Clubs list container -->
-            <div id="clubsListContainer">
-              <ul class="mt-3 space-y-2 max-h-64 overflow-y-auto">
-                <% if ((clubsList || []).length) { %>
-                  <% clubsList.slice(0,8).forEach(c => { %>
-                    <li class="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 flex items-center hover:bg-gray-100 transition">
-                      <span class="font-semibold flex-1"><%= c.name %></span>
-                      <span class="text-gray-500 text-sm"><%= c.department || '—' %></span>
-                    </li>
+            <!-- Top Active Departments -->
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+              <h2 class="text-lg font-semibold text-gray-900 mb-3">Top Active Departments</h2>
+              <% if (analytics?.topActiveDepartments && analytics.topActiveDepartments.length > 0) { %>
+                <div class="space-y-2">
+                  <% analytics.topActiveDepartments.slice(0, 3).forEach((dept, index) => { 
+                    const isFirst = index === 0;
+                    const eventCount = dept.event_count || 0;
+                    const clubCount = dept.club_count || 0;
+                    const officerCount = dept.officer_count || 0;
+                    const bgColor = isFirst ? 'bg-blue-50 border-blue-200' : 'bg-gray-50 border-gray-200';
+                  %>
+                    <div class="p-3 <%= bgColor %> rounded-lg border hover:shadow-sm transition">
+                      <div class="flex items-center justify-between mb-1.5">
+                        <div class="text-gray-900 font-semibold text-sm flex-1">
+                          <%= dept.department %>
+                        </div>
+                        <% if (isFirst) { %>
+                          <span class="text-xs font-medium text-blue-600 ml-2">#1</span>
+                        <% } %>
+                      </div>
+                      <div class="text-xs text-gray-600 flex items-center justify-start gap-2 flex-wrap">
+                        <% if (eventCount > 0) { %>
+                          <span><%= eventCount %> activit<%= eventCount !== 1 ? 'ies' : 'y' %></span>
+                          <% if (clubCount > 0 || officerCount > 0) { %>
+                            <span class="text-gray-400">•</span>
+                          <% } %>
+                        <% } %>
+                        <% if (clubCount > 0) { %>
+                          <span><%= clubCount %> club<%= clubCount !== 1 ? 's' : '' %></span>
+                          <% if (officerCount > 0) { %>
+                            <span class="text-gray-400">•</span>
+                          <% } %>
+                        <% } %>
+                        <% if (officerCount > 0) { %>
+                          <span><%= officerCount %> officer<%= officerCount !== 1 ? 's' : '' %></span>
+                        <% } %>
+                        <% if (eventCount === 0 && clubCount === 0 && officerCount === 0) { %>
+                          <span class="text-gray-500 italic">No metrics</span>
+                        <% } %>
+                      </div>
+                    </div>
                   <% }) %>
-                  <% if (clubsCount > 8) { %>
-                    <li class="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
-                      Showing 8 of <%= clubsCount %> clubs
+                </div>
+              <% } else { %>
+                <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <p class="text-sm text-gray-600 text-center">No department activity data available</p>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Clubs list -->
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-lg font-semibold text-gray-900">Clubs and Organizations</h2>
+                <a href="/admin/clubs" class="text-sm text-blue-600 hover:text-blue-700 font-medium transition">View All →</a>
+              </div>
+              
+              <!-- Search and filters -->
+              <div class="mb-3 space-y-2">
+                <input 
+                  type="text" 
+                  id="clubSearch" 
+                  placeholder="Search clubs..." 
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                />
+                <div class="flex gap-2">
+                  <button class="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">All</button>
+                  <button class="px-3 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">Active</button>
+                  <button class="px-3 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">With Activities</button>
+                </div>
+              </div>
+              
+              <!-- Clubs list container -->
+              <div id="clubsListContainer" class="flex-1 overflow-hidden">
+                <ul class="space-y-2 max-h-80 overflow-y-auto">
+                  <% if ((clubsList || []).length) { %>
+                    <% clubsList.slice(0,8).forEach(c => { %>
+                      <li class="px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm transition-all duration-200 group min-h-[44px] flex items-center justify-between">
+                        <div class="flex items-center w-full gap-3 flex-1 min-w-0" onclick="window.location.href='/admin/clubs?club=<%= encodeURIComponent(c.id || c.name) %>'">
+                          <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            <% if (c.photo) { %>
+                              <img src="<%= c.photo %>" alt="<%= c.name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                            <% } %>
+                            <svg class="<%= c.photo ? 'hidden' : 'block' %> w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                            </svg>
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <div class="font-semibold text-gray-900 text-sm truncate"><%= c.name %></div>
+                            <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-600">
+                              <span><%= Number(c.officer_count || 0) %> officers</span>
+                              <span>•</span>
+                              <span><%= Number(c.activity_count || 0) %> activities</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onclick="event.stopPropagation()">
+                          <a href="/admin/clubs?club=<%= encodeURIComponent(c.id || c.name) %>" class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors" title="View">
+                            View
+                          </a>
+                          <a href="/admin/officers?club=<%= encodeURIComponent(c.id || c.name) %>" class="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors" title="Manage Officers">
+                            Officers
+                          </a>
+                        </div>
+                      </li>
+                    <% }) %>
+                    <% if (clubsCount > 8) { %>
+                      <li class="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-center text-sm text-gray-600">
+                        Showing 8 of <%= clubsCount %> clubs
+                      </li>
+                    <% } %>
+                  <% } else { %>
+                    <li class="text-gray-600 text-center py-6">
+                      <p class="text-sm mb-2">No clubs to show.</p>
+                      <a href="/admin/clubs" class="text-xs text-blue-600 hover:underline">Create your first club →</a>
                     </li>
                   <% } %>
-                <% } else { %>
-                  <li class="text-gray-500 text-center py-2">No clubs to show.</li>
-                <% } %>
-              </ul>
+                </ul>
+              </div>
+              
+              <!-- Loading indicator (hidden by default) -->
+              <div id="clubsLoading" class="text-center py-4 text-gray-500 text-sm" style="display: none;">
+                Loading...
+              </div>
             </div>
-            
-            <!-- Loading indicator (hidden by default) -->
-            <div id="clubsLoading" class="text-center py-4 text-gray-500 text-sm" style="display: none;">
-              Loading...
+          </div>
+
+          <!-- Right column: Communication -->
+          <div class="space-y-6">
+            <!-- Inbox / Notifications -->
+            <div class="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+              <h2 class="text-lg font-semibold text-gray-900 mb-3">Inbox & Notifications</h2>
+              <div class="space-y-2">
+                <% const unread = (messages || []).filter(m => !m.read).length; %>
+                <% const pendingCount = (requirements || []).filter(r => {
+                     try { return String(r.status || '').toLowerCase() === 'pending'; } catch (_) { return false; }
+                   }).length; %>
+                <a href="/admin/messages" class="block p-3 rounded-lg border <%= unread > 0 ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-gray-50' %> hover:shadow-sm transition cursor-pointer">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5 <%= unread > 0 ? 'text-orange-600' : 'text-gray-500' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                      </svg>
+                      <span class="text-sm font-medium <%= unread > 0 ? 'text-gray-900' : 'text-gray-700' %>">Unread Messages</span>
+                    </div>
+                    <% if (unread > 0) { %>
+                      <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700"><%= unread %></span>
+                    <% } else { %>
+                      <span class="text-xs text-gray-500">0</span>
+                    <% } %>
+                  </div>
+                </a>
+                <a href="/admin/requirements" class="block p-3 rounded-lg border <%= pendingCount > 0 ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-gray-50' %> hover:shadow-sm transition cursor-pointer">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <svg class="w-5 h-5 <%= pendingCount > 0 ? 'text-orange-600' : 'text-gray-500' %>" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                      </svg>
+                      <span class="text-sm font-medium <%= pendingCount > 0 ? 'text-gray-900' : 'text-gray-700' %>">Pending Notifications</span>
+                    </div>
+                    <% if (pendingCount > 0) { %>
+                      <span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-orange-100 text-orange-700"><%= pendingCount %></span>
+                    <% } else { %>
+                      <span class="text-xs text-gray-500">0</span>
+                    <% } %>
+                  </div>
+                </a>
+              </div>
+            </div>
+
+            <!-- Send Announcement -->
+            <div class="bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200 rounded-xl shadow-sm p-5 flex flex-col">
+              <div class="mb-4">
+                <h2 class="text-lg font-semibold text-gray-900 mb-1">Send Announcement</h2>
+                <p class="text-xs text-gray-600">Broadcast messages to students and officers</p>
+              </div>
+              
+              <% if (typeof lastAnnouncement !== 'undefined' && lastAnnouncement) { %>
+                <div class="mb-4 p-3 bg-blue-100 rounded-lg border border-blue-200">
+                  <p class="text-xs text-blue-700 font-medium mb-1">Last sent:</p>
+                  <p class="text-sm text-blue-900 font-medium"><%= lastAnnouncement.subject %></p>
+                  <p class="text-xs text-blue-700 mt-1">
+                    <%= lastAnnouncement.created_at ? new Date(lastAnnouncement.created_at).toLocaleDateString() : '' %>
+                  </p>
+                </div>
+              <% } %>
+              <% if (typeof announceSuccess !== 'undefined' && announceSuccess) { %>
+                <script>
+                  setTimeout(() => showToast('Announcement sent successfully!', 'success'), 100);
+                </script>
+              <% } %>
+
+              <form id="announcementForm" class="flex flex-col space-y-4" method="POST" action="/admin/announcements">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Audience</label>
+                  <select name="audience" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                    <option value="all">All (Students & Officers)</option>
+                    <option value="students">Students</option>
+                    <option value="officers">Officers</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Subject <span class="text-gray-500 font-normal">(optional)</span></label>
+                  <input type="text" name="subject" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Important Club Meeting" />
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Message <span class="text-red-500">*</span></label>
+                  <textarea name="content" rows="4" required class="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none" placeholder="Write your announcement message here..."></textarea>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg px-4 py-2.5 transition-colors shadow-sm hover:shadow">
+                  Send to Selected Audience
+                </button>
+              </form>
             </div>
           </div>
           
@@ -153,8 +385,11 @@
             // Store initial clubs data
             const initialClubsData = <%- JSON.stringify({
               clubs: (clubsList || []).slice(0, 8).map(c => ({
+                id: c.id,
                 name: c.name || '',
-                department: c.department || '—'
+                department: c.department || '—',
+                officer_count: Number(c.officer_count || 0),
+                activity_count: Number(c.activity_count || 0)
               })),
               totalCount: clubsCount || 0
             }) %>;
@@ -168,32 +403,51 @@
             function renderClubsList(clubs, totalCount, isSearch = false) {
               if (!clubs || clubs.length === 0) {
                 clubsListContainer.innerHTML = `
-                  <ul class="mt-3 space-y-2">
-                    <li class="text-gray-500 text-center py-2">No clubs to show.</li>
+                  <ul class="space-y-2">
+                    <li class="text-gray-500 text-center py-4">No clubs to show.</li>
                   </ul>
                 `;
                 return;
               }
               
               const listItems = clubs.map(club => `
-                <li class="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 flex items-center hover:bg-gray-100 transition">
-                  <span class="font-semibold flex-1">${club.name || '—'}</span>
-                  <span class="text-gray-500 text-sm">${club.department || '—'}</span>
+                <li class="px-3 py-2.5 rounded-lg border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:shadow-sm transition-all duration-200 group min-h-[44px] flex items-center justify-between">
+                  <div class="flex items-center w-full gap-3 flex-1 min-w-0" onclick="window.location.href='/admin/clubs?club=' + encodeURIComponent('${club.id || club.name}')">
+                    <svg class="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                    </svg>
+                    <div class="flex-1 min-w-0">
+                      <div class="font-semibold text-gray-900 text-sm truncate">${club.name || '—'}</div>
+                      <div class="flex items-center gap-2 mt-0.5 text-xs text-gray-600">
+                        <span>${club.officer_count || 0} officers</span>
+                        <span>•</span>
+                        <span>${club.activity_count || 0} activities</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onclick="event.stopPropagation()">
+                    <a href="/admin/clubs?club=${encodeURIComponent(club.id || club.name)}" class="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-100 rounded transition-colors" title="View">
+                      View
+                    </a>
+                    <a href="/admin/officers?club=${encodeURIComponent(club.id || club.name)}" class="px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors" title="Manage Officers">
+                      Officers
+                    </a>
+                  </div>
                 </li>
               `).join('');
               
               const footer = isSearch && totalCount > 10 
-                ? `<li class="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
+                ? `<li class="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
                      Showing ${clubs.length} of ${totalCount} results
                    </li>`
                 : !isSearch && totalCount > 8
-                ? `<li class="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
+                ? `<li class="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-center text-sm text-gray-500">
                      Showing 8 of ${totalCount} clubs
                    </li>`
                 : '';
               
               clubsListContainer.innerHTML = `
-                <ul class="mt-3 space-y-2 max-h-64 overflow-y-auto">
+                <ul class="space-y-2 max-h-80 overflow-y-auto">
                   ${listItems}
                   ${footer}
                 </ul>
@@ -201,69 +455,161 @@
             }
             
             // Initialize with original clubs
-            renderClubsList(initialClubsData.clubs, initialClubsData.totalCount);
-            
-            clubSearch?.addEventListener('input', function(e) {
-              const searchTerm = e.target.value.trim();
+            if (clubSearch && clubsListContainer) {
+              renderClubsList(initialClubsData.clubs, initialClubsData.totalCount);
               
-              // Clear previous timeout
-              clearTimeout(searchTimeout);
-              
-              // If search is empty, show original list
-              if (!searchTerm) {
-                renderClubsList(initialClubsData.clubs, initialClubsData.totalCount);
-                return;
-              }
-              
-              // Debounce search
-              searchTimeout = setTimeout(async () => {
-                clubsListContainer.style.display = 'none';
-                clubsLoading.style.display = 'block';
+              clubSearch.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.trim();
                 
-                try {
-                  const response = await fetch(`/api/clubs?search=${encodeURIComponent(searchTerm)}&limit=10`);
-                  const data = await response.json();
+                clearTimeout(searchTimeout);
+                
+                if (!searchTerm) {
+                  renderClubsList(initialClubsData.clubs, initialClubsData.totalCount);
+                  return;
+                }
+                
+                searchTimeout = setTimeout(async () => {
+                  clubsListContainer.style.display = 'none';
+                  if (clubsLoading) clubsLoading.style.display = 'block';
                   
-                  if (data.success && data.data.length > 0) {
-                    renderClubsList(data.data, data.pagination.total, true);
-                  } else {
+                  try {
+                    const response = await fetch(`/api/clubs?search=${encodeURIComponent(searchTerm)}&limit=10`);
+                    const data = await response.json();
+                    
+                    if (data.success && data.data.length > 0) {
+                      renderClubsList(data.data, data.pagination.total, true);
+                    } else {
+                      clubsListContainer.innerHTML = `
+                        <ul class="space-y-2">
+                          <li class="text-gray-500 text-center py-4">No clubs found matching "${searchTerm}"</li>
+                        </ul>
+                      `;
+                    }
+                  } catch (error) {
+                    console.error('Error searching clubs:', error);
                     clubsListContainer.innerHTML = `
-                      <ul class="mt-3 space-y-2">
-                        <li class="text-gray-500 text-center py-4">No clubs found matching "${searchTerm}"</li>
+                      <ul class="space-y-2">
+                        <li class="text-red-500 text-center py-4">Error loading clubs. Please try again.</li>
                       </ul>
                     `;
+                  } finally {
+                    clubsListContainer.style.display = 'block';
+                    if (clubsLoading) clubsLoading.style.display = 'none';
                   }
-                } catch (error) {
-                  console.error('Error searching clubs:', error);
-                  clubsListContainer.innerHTML = `
-                    <ul class="mt-3 space-y-2">
-                      <li class="text-red-500 text-center py-4">Error loading clubs. Please try again.</li>
-                    </ul>
-                  `;
-                } finally {
-                  clubsListContainer.style.display = 'block';
-                  clubsLoading.style.display = 'none';
-                }
-              }, 300);
-            });
+                }, 300);
+              });
+            }
           </script>
         </section>
 
+        <!-- Toast notification and mobile menu scripts -->
+        <script>
+          // Toast notification function
+          function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.textContent = message;
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+              toast.style.animation = 'slideIn 0.3s ease-out reverse';
+              setTimeout(() => toast.remove(), 300);
+            }, 3000);
+          }
+
+          // Mobile sidebar toggle
+          function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('sidebar-hidden');
+            overlay.classList.toggle('hidden');
+          }
+
+          document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+          document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+          // Form submission with toast
+          document.getElementById('announcementForm')?.addEventListener('submit', function(e) {
+            const form = this;
+            const formData = new FormData(form);
+            
+            // Basic validation
+            if (!formData.get('subject') || !formData.get('content')) {
+              e.preventDefault();
+              showToast('Please fill in all required fields', 'error');
+              return false;
+            }
+          });
+
+          // Counter animation function
+          function animateCounter(element, target, duration = 1000) {
+            const start = 0;
+            const increment = target / (duration / 16);
+            let current = start;
+            
+            const timer = setInterval(() => {
+              current += increment;
+              if (current >= target) {
+                element.textContent = Math.round(target);
+                element.classList.add('count-animate');
+                clearInterval(timer);
+              } else {
+                element.textContent = Math.round(current);
+              }
+            }, 16);
+          }
+
+          // Animate all counters on page load
+          document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('[data-count]').forEach(el => {
+              const target = parseInt(el.getAttribute('data-count')) || 0;
+              if (target > 0) {
+                el.textContent = '0';
+                setTimeout(() => animateCounter(el, target), 100);
+              }
+            });
+          });
+        </script>
+
         <!-- Recent Activity -->
-        <section class="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-          <h2 class="text-lg font-semibold">Recent Activity</h2>
-          <ul class="mt-3 space-y-2">
+        <section class="bg-white border border-gray-200 rounded-xl shadow-sm p-4">
+          <h2 class="text-lg font-semibold text-gray-900 mb-3">Recent Activity</h2>
+          <ul class="space-y-2">
             <% if ((recentActivities || []).length) { %>
               <% recentActivities.forEach(a => { %>
-                <li class="px-3 py-2 rounded-xl border border-gray-200 bg-gray-50 flex items-center">
-                  <span><%= a.name || a.activity || ('Record #' + a.id) %></span>
-                  <span class="ml-auto text-gray-500 text-sm">
-                    <%= a.created_at ? new Date(a.created_at).toLocaleString() : '' %>
+                <% 
+                  const activityType = a.activity ? 'activity' : (a.name ? 'student' : 'record');
+                  const colorMap = {
+                    'activity': 'text-blue-600 bg-blue-50 border-blue-200',
+                    'student': 'text-green-600 bg-green-50 border-green-200',
+                    'announcement': 'text-purple-600 bg-purple-50 border-purple-200',
+                    'report': 'text-orange-600 bg-orange-50 border-orange-200',
+                    'record': 'text-gray-600 bg-gray-50 border-gray-200'
+                  };
+                  const colors = colorMap[activityType] || 'text-gray-600 bg-gray-50 border-gray-200';
+                %>
+                <li class="px-3 py-3 rounded-lg border <%= colors.split(' ')[2] %> <%= colors.split(' ')[1] %> flex items-center hover:shadow-sm transition min-h-[44px]">
+                  <svg class="w-5 h-5 <%= colors.split(' ')[0] %> mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                  </svg>
+                  <span class="flex-1 text-gray-800 font-semibold text-sm"><%= a.name || a.activity || ('Record #' + a.id) %></span>
+                  <span class="ml-auto text-gray-600 text-xs font-medium">
+                    <%= a.created_at ? new Date(a.created_at).toLocaleDateString() : '' %>
                   </span>
                 </li>
               <% }) %>
             <% } else { %>
-              <li class="text-gray-500">No recent activity.</li>
+              <li class="text-center py-8 px-4">
+                <div class="flex flex-col items-center">
+                  <svg class="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path>
+                  </svg>
+                  <p class="text-gray-700 font-semibold mb-1">No recent activity</p>
+                  <p class="text-sm text-gray-600 mb-2">Once clubs start reporting, you'll see summaries here.</p>
+                  <a href="/admin/requirements" class="text-xs text-blue-600 hover:underline font-medium">View all activities →</a>
+                </div>
+              </li>
             <% } %>
           </ul>
         </section>

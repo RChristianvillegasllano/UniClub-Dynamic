@@ -1,18 +1,33 @@
 // routes/officerRoutes.js
 import express from "express";
+import bcrypt from "bcryptjs";
+import { body, validationResult } from "express-validator";
 import pool from "../config/db.js";
+import { writeLimiter, csrfProtection } from "../middleware/security.js";
 
 const router = express.Router();
+
+// Apply CSRF protection to all POST/PUT/DELETE routes
+router.use(csrfProtection);
 
 // ✅ View Officers Page
 router.get("/", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
   try {
-    const result = await pool.query("SELECT * FROM officers ORDER BY id ASC");
+    const [officersResult, clubsResult] = await Promise.all([
+      pool.query(
+        `SELECT o.*, c.name AS club_name
+           FROM officers o
+           LEFT JOIN clubs c ON c.id = o.club_id
+          ORDER BY o.id ASC`
+      ),
+      pool.query("SELECT id, name FROM clubs ORDER BY name"),
+    ]);
     res.render("admin/officers", {
       title: "Manage Officers | UniClub Admin",
-      officers: result.rows,
+      officers: officersResult.rows,
+      clubs: clubsResult.rows,
     });
   } catch (error) {
     console.error("Error loading officers:", error);
@@ -21,24 +36,82 @@ router.get("/", async (req, res) => {
 });
 
 // ✅ Add Officer Form
-router.get("/add", (req, res) => {
+router.get("/add", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
-  res.render("admin/addOfficer", { title: "Add Officer", error: null });
+
+  try {
+    const { rows: clubs } = await pool.query("SELECT id, name FROM clubs ORDER BY name");
+    res.render("admin/addOfficer", {
+      title: "Add Officer",
+      error: null,
+      clubs,
+      formData: null,
+    });
+  } catch (error) {
+    console.error("Error loading clubs for officer add:", error);
+    res.render("admin/addOfficer", {
+      title: "Add Officer",
+      error: "Unable to load clubs",
+      clubs: [],
+      formData: null,
+    });
+  }
 });
 
 // ✅ Handle Add Officer
-router.post("/add", async (req, res) => {
-  const { name, studentid, club, role } = req.body;
+router.post("/add", writeLimiter, async (req, res) => {
+  const {
+    name,
+    studentid,
+    club_id,
+    role,
+    username,
+    password,
+    department,
+    program,
+    photo_url,
+    permissions = "{}",
+  } = req.body;
 
   try {
+    const password_hash = await bcrypt.hash(password, 10);
+    const rawPermissions = permissions && permissions.trim() ? permissions : "{}";
+    let permissionsValue = "{}";
+    try {
+      permissionsValue = JSON.stringify(JSON.parse(rawPermissions));
+    } catch (err) {
+      permissionsValue = "{}";
+    }
+
     await pool.query(
-      "INSERT INTO officers (name, studentid, club, role) VALUES ($1, $2, $3, $4)",
-      [name, studentid, club, role]
+      `INSERT INTO officers (
+         name, studentid, club_id, role, department, program,
+         username, password_hash, photo_url, permissions
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        name,
+        studentid,
+        club_id ? Number(club_id) : null,
+        role,
+        department || null,
+        program || null,
+        username,
+        password_hash,
+        photo_url || null,
+        permissionsValue,
+      ]
     );
     res.redirect("/admin/officers");
   } catch (error) {
     console.error("Error adding officer:", error);
-    res.render("admin/addOfficer", { title: "Add Officer", error: "Failed to add officer" });
+    const { rows: clubs } = await pool.query("SELECT id, name FROM clubs ORDER BY name").catch(() => ({ rows: [] }));
+    res.render("admin/addOfficer", {
+      title: "Add Officer",
+      error: "Failed to add officer",
+      clubs,
+      formData: req.body,
+    });
   }
 });
 
@@ -47,13 +120,21 @@ router.get("/edit/:id", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
   try {
-    const result = await pool.query("SELECT * FROM officers WHERE id = $1", [req.params.id]);
-    if (result.rows.length === 0) return res.redirect("/admin/officers");
+    const [officerResult, clubsResult] = await Promise.all([
+      pool.query("SELECT * FROM officers WHERE id = ?", [req.params.id]),
+      pool.query("SELECT id, name FROM clubs ORDER BY name"),
+    ]);
+
+    if (officerResult.rows.length === 0) return res.redirect("/admin/officers");
+
+    const officer = officerResult.rows[0];
 
     res.render("admin/editOfficer", {
       title: "Edit Officer",
-      officer: result.rows[0],
+      officer,
+      clubs: clubsResult.rows,
       error: null,
+      formData: null,
     });
   } catch (error) {
     console.error("Error loading officer for edit:", error);
@@ -62,30 +143,87 @@ router.get("/edit/:id", async (req, res) => {
 });
 
 // ✅ Handle Edit Officer
-router.post("/edit/:id", async (req, res) => {
-  const { name, studentid, club, role } = req.body;
-  const id = req.params.id;
+router.post("/edit/:id", writeLimiter, async (req, res) => {
+  const id = Number(req.params.id);
+  const {
+    name,
+    studentid,
+    club_id,
+    role,
+    username,
+    password,
+    department,
+    program,
+    photo_url,
+    permissions = "{}",
+  } = req.body;
 
   try {
+    const existingRes = await pool.query("SELECT password_hash FROM officers WHERE id = ?", [id]);
+    if (!existingRes.rows.length) return res.redirect("/admin/officers");
+
+    let password_hash = existingRes.rows[0].password_hash;
+    if (password && password.trim()) {
+      password_hash = await bcrypt.hash(password, 10);
+    }
+
+    const rawPermissions = permissions && permissions.trim() ? permissions : "{}";
+    let permissionsValue = "{}";
+    try {
+      permissionsValue = JSON.stringify(JSON.parse(rawPermissions));
+    } catch (err) {
+      permissionsValue = "{}";
+    }
+
     await pool.query(
-      "UPDATE officers SET name = $1, studentid = $2, club = $3, role = $4 WHERE id = $5",
-      [name, studentid, club, role, id]
+      `UPDATE officers
+          SET name = ?,
+              studentid = ?,
+              club_id = ?,
+              role = ?,
+              department = ?,
+              program = ?,
+              username = ?,
+              password_hash = ?,
+              photo_url = ?,
+              permissions = ?
+        WHERE id = ?`,
+      [
+        name,
+        studentid,
+        club_id ? Number(club_id) : null,
+        role,
+        department || null,
+        program || null,
+        username,
+        password_hash,
+        photo_url || null,
+        permissionsValue,
+        id,
+      ]
     );
     res.redirect("/admin/officers");
   } catch (error) {
     console.error("Error updating officer:", error);
+    const [officerResult, clubsResult] = await Promise.all([
+      pool.query("SELECT * FROM officers WHERE id = ?", [id]).catch(() => ({ rows: [{ id }] })),
+      pool.query("SELECT id, name FROM clubs ORDER BY name").catch(() => ({ rows: [] })),
+    ]);
+    const officer = officerResult.rows[0] || { id };
     res.render("admin/editOfficer", {
       title: "Edit Officer",
-      officer: { id, name, studentid, club, role },
+      officer,
+      clubs: clubsResult.rows,
       error: "Failed to update officer",
+      formData: req.body,
     });
   }
 });
 
 // ✅ Delete Officer
-router.post("/delete/:id", async (req, res) => {
+router.post("/delete/:id", writeLimiter, async (req, res) => {
   try {
-    await pool.query("DELETE FROM officers WHERE id = $1", [req.params.id]);
+    await pool.query("DELETE FROM officers WHERE id = ?", [req.params.id]);
     res.redirect("/admin/officers");
   } catch (error) {
     console.error("Error deleting officer:", error);

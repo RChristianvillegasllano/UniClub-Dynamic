@@ -3,124 +3,331 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <title>Manage Officers | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+
+    .officer-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+    }
+
+    .officer-row {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .officer-row:hover {
+      background-color: #eff6ff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 9999px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .badge-slate {
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .badge-blue {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .status-badge {
+      border-radius: 9999px;
+      padding: 0.4rem 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .status-badge:hover {
+      transform: translateY(-1px);
+    }
+
+    .status-active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-graduated {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+    .status-inactive {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .status-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .status-rejected {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .status-menu {
+      position: fixed;
+      background: #ffffff;
+      border-radius: 0.85rem;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+      border: 1px solid #e2e8f0;
+      padding: 0.35rem;
+      z-index: 1200;
+      width: 190px;
+    }
+
+    .status-menu button {
+      width: 100%;
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 0.45rem 0.7rem;
+      border-radius: 0.6rem;
+      font-size: 0.78rem;
+      color: #1f2937;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .status-menu button:hover {
+      background: #f8fafc;
+      transform: translateX(2px);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1300;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 1rem;
+      padding: 1.5rem 1.75rem;
+      width: min(420px, 90vw);
+      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
+    }
+
+    .shadow-soft {
+      box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    .editable-cell {
+      cursor: pointer;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/officers'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/officers'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main Content -->
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
       <% 
         var _filters = (typeof filters !== 'undefined' && filters) ? filters : {}; 
         var _pagination = (typeof pagination !== 'undefined' && pagination) ? pagination : { page: 1, totalPages: 1, total: (officers && officers.length) || 0, limit: 20 };
         var _clubs = Array.isArray(clubs) ? clubs : []; 
       %>
       <!-- Header -->
-      <header class="mb-6 flex items-center justify-between">
+      <header class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 class="text-2xl font-bold text-slate-800">Manage Officers</h1>
-          <p class="text-sm text-slate-500">View, add, or update officer information</p>
+          <% if (typeof currentClub !== 'undefined' && currentClub) { %>
+            <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+              <span><%= currentClub.name %></span>
+              <span class="text-slate-300">•</span>
+              <span><%= currentClub.officer_count %> officer<%= Number(currentClub.officer_count || 0) !== 1 ? 's' : '' %></span>
+            </div>
+          <% } else { %>
+            <p class="text-sm text-slate-500">View, add, or update officer information</p>
+          <% } %>
         </div>
         <a href="/admin/officers/add"
-           class="flex items-center gap-2 px-4 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#870107] transition">
+           class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
           <i data-lucide="plus"></i> Add Officer
         </a>
       </header>
 
       <!-- Filters -->
-      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <form method="get" action="/admin/officers" class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6">
+        <form method="get" action="/admin/officers" class="grid grid-cols-1 md:grid-cols-3 gap-3" data-officer-filters>
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1">Search officer</label>
-            <input type="text" name="search" value="<%= _filters.search || '' %>" placeholder="Name or Student ID" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]" />
+            <input type="text" name="search" value="<%= _filters.search || '' %>" placeholder="Name or Student ID" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            <% if (typeof currentClub !== 'undefined' && currentClub) { %>
+              <input type="hidden" name="club_id" value="<%= currentClub.id %>" />
+            <% } %>
           </div>
           <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Filter by club</label>
-            <select name="club_id" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
-              <option value="">All clubs</option>
-              <% _clubs.forEach(club => { %>
-                <option value="<%= club.id %>" <%= (String(_filters.club_id || '') === String(club.id)) ? 'selected' : '' %>><%= club.name %></option>
-              <% }) %>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Jump to club</label>
+            <select name="club_id" onchange="if(this.value !== undefined) { window.location.href='/admin/officers?club_id=' + this.value; }" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+              <option value="">Choose a club…</option>
+              <% if (typeof allClubs !== 'undefined' && allClubs) { %>
+                <% allClubs.forEach((club) => { %>
+                  <option value="<%= club.id %>" <%= (typeof currentClub !== 'undefined' && currentClub && String(currentClub.id) === String(club.id)) ? 'selected' : '' %>>
+                    <%= club.name %> (<%= club.officer_count %>)
+                  </option>
+                <% }) %>
+              <% } %>
             </select>
           </div>
           <div class="flex items-end gap-2">
-            <button type="submit" class="px-4 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#870107]">Apply</button>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm">Search</button>
             <a href="/admin/officers" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300">Reset</a>
           </div>
         </form>
       </section>
 
       <!-- Officers Table -->
-      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6">
         <% if (officers && officers.length > 0) { %>
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-              <thead class="bg-slate-100 text-slate-700">
-                <tr>
-                  <th class="p-3 text-left font-semibold">Name</th>
-                  <th class="p-3 text-left font-semibold">Student ID</th>
-                  <th class="p-3 text-left font-semibold">Club</th>
-                  <th class="p-3 text-left font-semibold">Role</th>
-                  <th class="p-3 text-center font-semibold">Actions</th>
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full border-collapse text-sm" data-officers-table>
+              <thead class="bg-slate-100 text-slate-700 text-xs uppercase tracking-wide">
+                <tr class="text-left">
+                  <th class="p-3 font-semibold">Officer</th>
+                  <th class="p-3 font-semibold">Student ID</th>
+                  <th class="p-3 font-semibold">Club</th>
+                  <th class="p-3 font-semibold">Role</th>
+                  <th class="p-3 font-semibold">Status</th>
+                  <th class="p-3 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200">
                 <% officers.forEach(o => { %>
-                  <tr class="hover:bg-slate-50">
-                    <td class="p-3"><%= o.name %></td>
-                    <td class="p-3"><%= o.studentid %></td>
-                    <td class="p-3"><%= o.club %></td>
-                    <td class="p-3"><%= o.role %></td>
-                    <td class="p-3 flex justify-center gap-2">
-                      <a href="/admin/officers/edit/<%= o.id %>"
-                         class="px-3 py-1 rounded-md bg-blue-500 text-white text-xs hover:bg-blue-600">
-                        <i data-lucide="edit-3" class="w-3 h-3"></i> Edit
-                      </a>
-                      <form action="/admin/officers/delete/<%= o.id %>" method="POST" onsubmit="return confirm('Delete this officer?')">
-                        <button type="submit"
-                               class="px-3 py-1 rounded-md bg-red-500 text-white text-xs hover:bg-red-600">
-                          <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
+                  <tr class="officer-row">
+                    <td class="p-3">
+                      <div class="flex items-center gap-3">
+                        <div class="officer-avatar" title="<%= o.name %>">
+                          <%= (o.first_name || o.name || '?').charAt(0) %><%= (o.last_name || '').charAt(0) %>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="font-semibold text-slate-800 text-sm flex items-center gap-1 flex-wrap">
+                            <span><%= o.name %></span>
+                            <% if (o.program) { %>
+                              <span class="badge badge-slate inline-flex items-center gap-1" title="Program">
+                                <i data-lucide="book-open" class="w-3 h-3"></i>
+                                <span><%= o.program %></span>
+                              </span>
+                            <% } %>
+                          </div>
+                          <div class="mt-0.5 text-xs text-slate-500 flex items-center gap-1 flex-wrap">
+                            <span class="editable-cell hover:text-blue-600 transition inline-flex items-center gap-1" data-editable="department" data-field="department" data-officer-id="<%= o.id %>" data-original="<%= o.department || '' %>" title="Double-click to edit department">
+                              <i data-lucide="building" class="w-3 h-3"></i>
+                              <span><%= o.department || 'No department' %></span>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="editable-cell font-medium text-slate-700 hover:text-blue-600 transition" data-editable="studentid" data-field="studentid" data-officer-id="<%= o.id %>" data-original="<%= o.studentid || '' %>" title="Double-click to edit Student ID">
+                        <%= o.studentid || '—' %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="badge badge-blue" title="<%= o.club || 'Unassigned' %>">
+                        <i data-lucide="shield" class="w-3 h-3"></i><%= o.club || 'Unassigned' %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="badge badge-slate editable-cell hover:bg-blue-100 hover:text-blue-700 transition" data-editable="role" data-field="role" data-officer-id="<%= o.id %>" data-original="<%= o.role || '' %>" title="Double-click to change role">
+                        <i data-lucide="award" class="w-3 h-3"></i><%= o.role || 'Assign role' %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <button type="button"
+                              class="status-badge <%= 
+                                (o.status || 'Active').toLowerCase() === 'active' ? 'status-active' : 
+                                ((o.status || '').toLowerCase() === 'graduated' ? 'status-graduated' : 
+                                ((o.status || '').toLowerCase() === 'pending' ? 'status-pending' :
+                                ((o.status || '').toLowerCase() === 'rejected' ? 'status-rejected' : 'status-inactive'))) %>"
+                              data-status-pill
+                              data-status="<%= o.status || 'Active' %>"
+                              data-officer-id="<%= o.id %>"
+                              title="Click to update status">
+                        <span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>
+                        <%= o.status || 'Active' %>
+                      </button>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <div class="flex items-center justify-center gap-2">
+                        <a href="/admin/officers/edit/<%= o.id %>"
+                           class="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition shadow-sm flex items-center gap-1.5"
+                           title="Open full edit form">
+                          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
+                        </a>
+                        <button type="button"
+                                data-delete-officer
+                                data-officer-id="<%= o.id %>"
+                                data-officer-name="<%= o.name %>"
+                                class="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition shadow-sm flex items-center gap-1.5"
+                                title="Delete officer">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
                         </button>
-                      </form>
+                      </div>
                     </td>
                   </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
-          <!-- Pagination -->
-          <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
-            <div>
-              Page <strong><%= _pagination.page %></strong> of <strong><%= _pagination.totalPages %></strong>
-              • Total: <strong><%= _pagination.total %></strong>
-            </div>
-            <div class="flex items-center gap-2">
-              <% const qp = new URLSearchParams({
-                   search: _filters.search || '',
-                   club_id: _filters.club_id || '',
-                   limit: String(_pagination.limit || 20)
-                 });
-                 const cur = _pagination.page || 1;
-                 const totalPages = _pagination.totalPages || 1;
-              %>
-              <% if (cur > 1) { qp.set('page', String(cur - 1)); %>
-                <a href="/admin/officers?<%= qp.toString() %>" class="px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-50">Prev</a>
-              <% } else { %>
-                <span class="px-3 py-1 rounded-lg border border-slate-200 text-slate-400">Prev</span>
-              <% } %>
-              <% if (cur < totalPages) { qp.set('page', String(cur + 1)); %>
-                <a href="/admin/officers?<%= qp.toString() %>" class="px-3 py-1 rounded-lg border border-slate-300 hover:bg-slate-50">Next</a>
-              <% } else { %>
-                <span class="px-3 py-1 rounded-lg border border-slate-200 text-slate-400">Next</span>
-              <% } %>
-            </div>
-          </div>
+          <p class="mt-4 text-xs text-slate-400">Tip: double-click the role, department, or student ID to edit inline. Click the status pill to update availability.</p>
         <% } else { %>
           <p class="text-center text-slate-500 py-6">No officers found. Add your first officer to get started!</p>
         <% } %>
@@ -133,8 +340,411 @@
     </main>
   </div>
 
+  <!-- Delete confirmation modal -->
+  <div id="deleteModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-card">
+      <div class="flex items-start gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+          <h3 id="deleteModalTitle" class="text-lg font-semibold text-slate-800">Delete Officer</h3>
+          <p class="mt-1 text-sm text-slate-500">
+            Are you sure you want to remove <span id="deleteOfficerName" class="font-medium text-slate-700"></span>? This action cannot be undone.
+          </p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" id="cancelDeleteBtn" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100">
+          Cancel
+        </button>
+        <button type="button" id="confirmDeleteBtn" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[9999] space-y-2"></div>
+
   <script>
-    window.lucide && window.lucide.replace();
+    // Toast notification system
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const icons = {
+        success: '<i data-lucide="check-circle" class="w-5 h-5"></i>',
+        error: '<i data-lucide="x-circle" class="w-5 h-5"></i>',
+        warning: '<i data-lucide="alert-triangle" class="w-5 h-5"></i>',
+        info: '<i data-lucide="info" class="w-5 h-5"></i>'
+      };
+      
+      const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        warning: 'bg-amber-50 border-amber-200 text-amber-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+      };
+
+      toast.className = `${colors[type] || colors.info} border-l-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] max-w-[500px] animate-[slideIn_0.3s_ease]`;
+      toast.innerHTML = `
+        ${icons[type] || icons.info}
+        <span class="flex-1 font-medium text-sm">${message}</span>
+        <button onclick="this.parentElement.remove()" class="text-current opacity-60 hover:opacity-100">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      `;
+
+      container.appendChild(toast);
+      
+      // Re-render lucide icons
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+
+      // Auto remove after duration
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+
+      return toast;
+    }
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+    renderLucideIcons();
+
+    (function () {
+      const roleOptions = <%- JSON.stringify(typeof roleOptions !== 'undefined' ? roleOptions : []) %>;
+      const statusOptions = <%- JSON.stringify(typeof statusOptions !== 'undefined' ? statusOptions : []) %>;
+
+      const statusClassMap = {
+        "Active": "status-active",
+        "Graduated": "status-graduated",
+        "Inactive": "status-inactive",
+        "Pending": "status-pending",
+        "Rejected": "status-rejected"
+      };
+
+      function handleOutsideStatusMenu(event) {
+        if (!event.target.closest('.status-menu') && !event.target.closest('[data-status-pill]')) {
+          closeStatusMenu();
+        }
+      }
+
+      function closeStatusMenu() {
+        document.querySelectorAll('.status-menu').forEach(menu => menu.remove());
+        document.removeEventListener('click', handleOutsideStatusMenu);
+      }
+
+      function openStatusMenu(button) {
+        closeStatusMenu();
+        const officerId = button.dataset.officerId;
+        const currentStatus = button.dataset.status || "Active";
+        const rect = button.getBoundingClientRect();
+
+        const menu = document.createElement('div');
+        menu.className = 'status-menu';
+
+        statusOptions.forEach(status => {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.innerHTML = `
+            <span class="inline-flex h-2.5 w-2.5 rounded-full ${statusClassMap[status] || 'bg-slate-200'}"></span>
+            <span>${status}</span>
+          `;
+          if (status === currentStatus) {
+            option.style.fontWeight = '600';
+          }
+          option.addEventListener('click', () => updateStatus(officerId, status, button));
+          menu.appendChild(option);
+        });
+
+        document.body.appendChild(menu);
+        menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
+        menu.style.left = `${rect.left + window.scrollX}px`;
+
+        setTimeout(() => document.addEventListener('click', handleOutsideStatusMenu), 0);
+      }
+
+      async function updateStatus(id, status, button) {
+        try {
+          const response = await fetch(`/admin/officers/${id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+          });
+          const result = await response.json();
+          if (!result.success) throw new Error(result.error || 'Failed to update status');
+          button.dataset.status = status;
+          button.className = `status-badge ${statusClassMap[status] || 'status-active'}`;
+          button.innerHTML = `<span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>${status}`;
+        } catch (error) {
+          showToast(error.message || 'Unable to update status right now.', 'error');
+        } finally {
+          closeStatusMenu();
+        }
+      }
+
+      document.querySelectorAll('[data-status-pill]').forEach(button => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          openStatusMenu(button);
+        });
+      });
+
+      function createInput(type, value, placeholder = '') {
+        const input = document.createElement('input');
+        input.type = type;
+        input.value = value;
+        input.placeholder = placeholder;
+        input.className = 'w-full px-2 py-1 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+        return input;
+      }
+
+      function createSelect(options, currentValue) {
+        const select = document.createElement('select');
+        select.className = 'w-full px-2 py-1 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm';
+        options.forEach(option => {
+          const opt = document.createElement('option');
+          opt.value = option;
+          opt.textContent = option;
+          if ((option || '').toLowerCase() === (currentValue || '').toLowerCase()) {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+        return select;
+      }
+
+      async function saveField(officerId, field, value, cell, originalContent) {
+        try {
+          const response = await fetch(`/admin/officers/${officerId}/field`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ field, value })
+          });
+          const result = await response.json();
+          if (!result.success) throw new Error(result.error || 'Failed to update officer');
+          cell.dataset.original = value;
+          if (field === 'role') {
+            cell.innerHTML = `<i data-lucide="award" class="w-3 h-3"></i>${value || 'Assign role'}`;
+          } else if (field === 'department') {
+            cell.innerHTML = `<i data-lucide="building" class="w-3 h-3"></i>${value || 'No department'}`;
+          } else {
+            cell.textContent = value || '—';
+          }
+          renderLucideIcons();
+        } catch (error) {
+          showToast(error.message || 'Unable to save changes.', 'error');
+          cell.innerHTML = originalContent;
+        } finally {
+          cell.dataset.editing = 'false';
+        }
+      }
+
+
+      document.querySelectorAll('.editable-cell').forEach(cell => {
+        cell.addEventListener('dblclick', () => {
+          if (cell.dataset.editing === 'true') return;
+          const field = cell.dataset.field;
+          const officerId = cell.dataset.officerId;
+          const originalValue = cell.dataset.original || '';
+          const originalContent = cell.innerHTML;
+          cell.dataset.editing = 'true';
+
+          let editor;
+          if (field === 'role') {
+            editor = createSelect(roleOptions, originalValue);
+          } else if (field === 'studentid') {
+            editor = createInput('text', originalValue, '6-digit ID');
+          } else {
+            editor = createInput('text', originalValue);
+          }
+
+          cell.innerHTML = '';
+          cell.appendChild(editor);
+          editor.focus();
+          if (editor.select) editor.select();
+
+          const commit = () => {
+            const newValue = editor.value.trim();
+            if (field === 'studentid' && newValue && !/^\d{6}$/.test(newValue)) {
+              showToast('Student ID must be exactly 6 digits.', 'error');
+              editor.focus();
+              return;
+            }
+            if (newValue === originalValue) {
+              cell.innerHTML = originalContent;
+              cell.dataset.editing = 'false';
+              return;
+            }
+            saveField(officerId, field, newValue, cell, originalContent);
+          };
+
+          const cancel = () => {
+            cell.innerHTML = originalContent;
+            cell.dataset.editing = 'false';
+          };
+
+          editor.addEventListener('blur', commit);
+          editor.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              commit();
+            }
+            if (event.key === 'Escape') {
+              event.preventDefault();
+              cancel();
+            }
+          });
+        });
+      });
+
+      // Delete modal logic
+      const deleteModal = document.getElementById('deleteModal');
+      const deleteOfficerName = document.getElementById('deleteOfficerName');
+      const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+      const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+      let officerToDelete = null;
+
+      function openDeleteModal(officerId, officerName) {
+        officerToDelete = officerId;
+        deleteOfficerName.textContent = officerName;
+        deleteModal.classList.add('active');
+      }
+
+      function closeDeleteModal() {
+        officerToDelete = null;
+        deleteOfficerName.textContent = '';
+        deleteModal.classList.remove('active');
+      }
+
+      document.querySelectorAll('[data-delete-officer]').forEach(button => {
+        button.addEventListener('click', () => {
+          openDeleteModal(button.dataset.officerId, button.dataset.officerName);
+        });
+      });
+
+      cancelDeleteBtn?.addEventListener('click', closeDeleteModal);
+      deleteModal?.addEventListener('click', event => {
+        if (event.target === deleteModal) {
+          closeDeleteModal();
+        }
+      });
+
+      confirmDeleteBtn?.addEventListener('click', async () => {
+        if (!officerToDelete) return;
+        confirmDeleteBtn.disabled = true;
+        confirmDeleteBtn.textContent = 'Deleting…';
+        try {
+          // Get CSRF token from meta tag or hidden input
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                           document.querySelector('input[name="_csrf"]')?.value || '';
+          
+          if (!csrfToken) {
+            throw new Error('CSRF token not found. Please refresh the page and try again.');
+          }
+          
+          // Use URLSearchParams instead of FormData for better compatibility with body parser
+          const params = new URLSearchParams();
+          params.append('_csrf', csrfToken);
+          
+          const response = await fetch(`/admin/officers/delete/${officerToDelete}`, { 
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json'
+            },
+            body: params.toString(),
+            credentials: 'same-origin'
+          });
+          
+          // Try to parse as JSON first
+          let data;
+          const contentType = response.headers.get('content-type') || '';
+          
+          if (contentType.includes('application/json')) {
+            data = await response.json();
+          } else {
+            // If not JSON, try to read as text for debugging
+            const text = await response.text();
+            console.error('Non-JSON response received:', text.substring(0, 500));
+            
+            // Check if it's an HTML error page
+            if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+              throw new Error('Server returned an HTML error page. This usually means a CSRF token issue. Please refresh the page and try again.');
+            }
+            
+            throw new Error('Server returned an unexpected response. Please try again.');
+          }
+          
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to delete officer');
+          }
+          
+          // Success - show toast and reload page
+          showToast(data.message || 'Officer deleted successfully', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } catch (error) {
+          console.error('Delete error:', error);
+          showToast(error.message || 'Unable to delete officer right now. Please try again.', 'error');
+          confirmDeleteBtn.disabled = false;
+          confirmDeleteBtn.textContent = 'Delete';
+        }
+      });
+    })();
   </script>
 </body>
 </html>

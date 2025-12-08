@@ -1,8 +1,13 @@
 // routes/apiRoutes.js
 import express from "express";
+import { body, validationResult } from "express-validator";
 import pool from "../config/db.js";
+import { writeLimiter, apiLimiter } from "../middleware/security.js";
 
 const router = express.Router();
+
+// Apply API rate limiting to all routes
+router.use(apiLimiter);
 
 // Middleware to check admin authentication for protected routes
 const requireAdmin = (req, res, next) => {
@@ -41,7 +46,7 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
       pool.query("SELECT COUNT(*) AS count FROM events").catch(() => ({ rows: [{ count: 0 }] })),
       pool
         .query(
-          `SELECT id, name, created_at FROM students ORDER BY created_at DESC LIMIT 6`
+          `SELECT id, first_name, last_name, CONCAT(first_name, ' ', last_name) AS name, created_at FROM students ORDER BY created_at DESC LIMIT 6`
         )
         .catch(() => ({ rows: [] })),
       pool
@@ -49,7 +54,7 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
         .catch(() => ({ rows: [] })),
       pool
         .query(
-          "SELECT id, name, studentid, club_id, role, department, program FROM officers ORDER BY name LIMIT 8"
+          "SELECT id, first_name, last_name, CONCAT(first_name, ' ', last_name) AS name, studentid, club_id, role, department, program FROM officers ORDER BY last_name, first_name LIMIT 8"
         )
         .catch(() => ({ rows: [] })),
       pool
@@ -64,7 +69,7 @@ router.get("/dashboard", requireAdmin, async (req, res) => {
         .catch(() => ({ rows: [] })),
       pool
         .query(
-          `SELECT id, "from", subject, content, created_at, read FROM messages ORDER BY created_at DESC LIMIT 8`
+          `SELECT id, sender_name AS \`from\`, subject, content, created_at, \`read\` FROM messages ORDER BY created_at DESC LIMIT 8`
         )
         .catch(() => ({ rows: [] })),
     ]);
@@ -116,19 +121,20 @@ router.get("/students", requireAdmin, async (req, res) => {
     let paramCount = 0;
 
     if (search) {
-      query += ` WHERE name ILIKE $${++paramCount} OR studentid ILIKE $${paramCount}`;
-      params.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      query += ` WHERE (LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(CONCAT(first_name, ' ', last_name)) LIKE ? OR studentid LIKE ?)`;
+      params.push(searchLower, searchLower, searchLower, `%${search}%`);
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
     const countResult = await pool.query(
       search
-        ? "SELECT COUNT(*) FROM students WHERE name ILIKE $1 OR studentid ILIKE $1"
+        ? "SELECT COUNT(*) FROM students WHERE (LOWER(first_name) LIKE ? OR LOWER(last_name) LIKE ? OR LOWER(CONCAT(first_name, ' ', last_name)) LIKE ? OR studentid LIKE ?)"
         : "SELECT COUNT(*) FROM students",
-      search ? [`%${search}%`] : []
+      search ? [`%${search.toLowerCase()}%`, `%${search.toLowerCase()}%`, `%${search.toLowerCase()}%`, `%${search}%`] : []
     );
 
     setCacheHeaders(res, 30);
@@ -151,7 +157,7 @@ router.get("/students", requireAdmin, async (req, res) => {
 // Get single student
 router.get("/students/:id", requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM students WHERE id = $1", [req.params.id]);
+    const result = await pool.query("SELECT * FROM students WHERE id = ?", [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Student not found" });
     }
@@ -164,13 +170,46 @@ router.get("/students/:id", requireAdmin, async (req, res) => {
 });
 
 // Create student
-router.post("/students", requireAdmin, async (req, res) => {
+router.post("/students", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const { name, studentid, email, department, program, year } = req.body;
-    const result = await pool.query(
-      "INSERT INTO students (name, studentid, email, department, program, year, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *",
-      [name, studentid, email, department, program, year]
+    const { first_name, last_name, studentid, email, department, program, year } = req.body;
+    
+    // Check if student ID already exists
+    const studentIdCheck = await pool.query(
+      "SELECT id FROM students WHERE studentid = ?",
+      [studentid]
     );
+    if (studentIdCheck.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "A student with this Student ID already exists. Student ID must be unique." 
+      });
+    }
+
+    // Check if first name + last name combination already exists
+    // Note: This only rejects when BOTH first name AND last name match
+    // Examples: "John Doe" + "John Smith" = ACCEPTED (same first, different last)
+    //           "John Doe" + "Jane Doe" = ACCEPTED (same last, different first)
+    //           "John Doe" + "John Doe" = REJECTED (both match)
+    const nameCheck = await pool.query(
+      "SELECT id, studentid FROM students WHERE LOWER(TRIM(first_name)) = LOWER(TRIM(?)) AND LOWER(TRIM(last_name)) = LOWER(TRIM(?))",
+      [first_name, last_name]
+    );
+    if (nameCheck.rows.length > 0) {
+      const existingStudent = nameCheck.rows[0];
+      return res.status(400).json({ 
+        success: false, 
+        error: `A student with the name "${first_name} ${last_name}" already exists (Student ID: ${existingStudent.studentid || 'N/A'}). Each student must have a unique name combination.` 
+      });
+    }
+    
+    const result = await pool.query(
+      "INSERT INTO students (first_name, last_name, studentid, email, department, program, year_level, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
+      [first_name, last_name, studentid, email, department, program, year]
+    );
+    // MySQL doesn't support RETURNING, so fetch the inserted record
+    const inserted = await pool.query("SELECT * FROM students WHERE id = LAST_INSERT_ID()");
+    result.rows = inserted.rows;
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Error creating student:", error);
@@ -179,13 +218,46 @@ router.post("/students", requireAdmin, async (req, res) => {
 });
 
 // Update student
-router.put("/students/:id", requireAdmin, async (req, res) => {
+router.put("/students/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const { name, studentid, email, department, program, year } = req.body;
-    const result = await pool.query(
-      "UPDATE students SET name=$1, studentid=$2, email=$3, department=$4, program=$5, year=$6 WHERE id=$7 RETURNING *",
-      [name, studentid, email, department, program, year, req.params.id]
+    const { first_name, last_name, studentid, email, department, program, year } = req.body;
+    const studentId = req.params.id;
+    
+    // Check if student ID already exists (excluding current student)
+    const studentIdCheck = await pool.query(
+      "SELECT id FROM students WHERE studentid = ? AND id != ?",
+      [studentid, studentId]
     );
+    if (studentIdCheck.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "A student with this Student ID already exists. Student ID must be unique." 
+      });
+    }
+
+    // Check if first name + last name combination already exists (excluding current student)
+    // Note: This only rejects when BOTH first name AND last name match
+    // Examples: "John Doe" + "John Smith" = ACCEPTED (same first, different last)
+    //           "John Doe" + "Jane Doe" = ACCEPTED (same last, different first)
+    //           "John Doe" + "John Doe" = REJECTED (both match)
+    const nameCheck = await pool.query(
+      "SELECT id, studentid FROM students WHERE LOWER(TRIM(first_name)) = LOWER(TRIM(?)) AND LOWER(TRIM(last_name)) = LOWER(TRIM(?)) AND id != ?",
+      [first_name, last_name, studentId]
+    );
+    if (nameCheck.rows.length > 0) {
+      const existingStudent = nameCheck.rows[0];
+      return res.status(400).json({ 
+        success: false, 
+        error: `A student with the name "${first_name} ${last_name}" already exists (Student ID: ${existingStudent.studentid || 'N/A'}). Each student must have a unique name combination.` 
+      });
+    }
+    
+    await pool.query(
+      "UPDATE students SET first_name=?, last_name=?, studentid=?, email=?, department=?, program=?, year_level=? WHERE id=?",
+      [first_name, last_name, studentid, email, department, program, year, studentId]
+    );
+    // MySQL doesn't support RETURNING, so fetch the updated record
+    const result = await pool.query("SELECT * FROM students WHERE id = ?", [studentId]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Student not found" });
     }
@@ -197,11 +269,12 @@ router.put("/students/:id", requireAdmin, async (req, res) => {
 });
 
 // Delete student
-router.delete("/students/:id", requireAdmin, async (req, res) => {
+router.delete("/students/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM students WHERE id = $1 RETURNING id", [
-      req.params.id,
-    ]);
+    const result = await pool.query("SELECT id FROM students WHERE id = ?", [req.params.id]);
+    if (result.rows.length > 0) {
+      await pool.query("DELETE FROM students WHERE id = ?", [req.params.id]);
+    }
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Student not found" });
     }
@@ -227,19 +300,20 @@ router.get("/clubs", async (req, res) => {
     let paramCount = 0;
 
     if (search) {
-      query += ` WHERE name ILIKE $${++paramCount} OR department ILIKE $${paramCount}`;
-      params.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      query += ` WHERE LOWER(name) LIKE ? OR LOWER(department) LIKE ?`;
+      params.push(searchLower, searchLower);
     }
 
-    query += ` ORDER BY name ASC LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    query += ` ORDER BY name ASC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
     const countResult = await pool.query(
       search
-        ? "SELECT COUNT(*) FROM clubs WHERE name ILIKE $1 OR department ILIKE $1"
+        ? "SELECT COUNT(*) FROM clubs WHERE LOWER(name) LIKE ? OR LOWER(department) LIKE ?"
         : "SELECT COUNT(*) FROM clubs",
-      search ? [`%${search}%`] : []
+      search ? [`%${search.toLowerCase()}%`, `%${search.toLowerCase()}%`] : []
     );
 
     setCacheHeaders(res, 120);
@@ -262,7 +336,7 @@ router.get("/clubs", async (req, res) => {
 // Get single club
 router.get("/clubs/:id", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM clubs WHERE id = $1", [req.params.id]);
+    const result = await pool.query("SELECT * FROM clubs WHERE id = ?", [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Club not found" });
     }
@@ -275,13 +349,16 @@ router.get("/clubs/:id", async (req, res) => {
 });
 
 // Create club
-router.post("/clubs", requireAdmin, async (req, res) => {
+router.post("/clubs", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const { name, description, adviser, department } = req.body;
-    const result = await pool.query(
-      "INSERT INTO clubs (name, description, adviser, department) VALUES ($1, $2, $3, $4) RETURNING *",
-      [name, description, adviser, department]
+    const { name, description, adviser, department, category } = req.body;
+    await pool.query(
+      "INSERT INTO clubs (name, description, adviser, department, category) VALUES (?, ?, ?, ?, ?)",
+      [name, description, adviser, department, category]
     );
+    // MySQL doesn't support RETURNING, so fetch the inserted record
+    const inserted = await pool.query("SELECT * FROM clubs WHERE id = LAST_INSERT_ID()");
+    const result = { rows: inserted.rows };
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Error creating club:", error);
@@ -290,13 +367,15 @@ router.post("/clubs", requireAdmin, async (req, res) => {
 });
 
 // Update club
-router.put("/clubs/:id", requireAdmin, async (req, res) => {
+router.put("/clubs/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const { name, description, adviser, department } = req.body;
-    const result = await pool.query(
-      "UPDATE clubs SET name=$1, description=$2, adviser=$3, department=$4 WHERE id=$5 RETURNING *",
-      [name, description, adviser, department, req.params.id]
+    const { name, description, adviser, department, category } = req.body;
+    await pool.query(
+      "UPDATE clubs SET name=?, description=?, adviser=?, department=?, category=? WHERE id=?",
+      [name, description, adviser, department, category, req.params.id]
     );
+    // MySQL doesn't support RETURNING, so fetch the updated record
+    const result = await pool.query("SELECT * FROM clubs WHERE id = ?", [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Club not found" });
     }
@@ -308,11 +387,12 @@ router.put("/clubs/:id", requireAdmin, async (req, res) => {
 });
 
 // Delete club
-router.delete("/clubs/:id", requireAdmin, async (req, res) => {
+router.delete("/clubs/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM clubs WHERE id = $1 RETURNING id", [
-      req.params.id,
-    ]);
+    const result = await pool.query("SELECT id FROM clubs WHERE id = ?", [req.params.id]);
+    if (result.rows.length > 0) {
+      await pool.query("DELETE FROM clubs WHERE id = ?", [req.params.id]);
+    }
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Club not found" });
     }
@@ -340,12 +420,13 @@ router.get("/officers", async (req, res) => {
     const conditions = [];
 
     if (search) {
-      conditions.push(`(o.name ILIKE $${++paramCount} OR o.studentid ILIKE $${paramCount})`);
-      params.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      conditions.push(`(LOWER(o.first_name) LIKE ? OR LOWER(o.last_name) LIKE ? OR LOWER(CONCAT(o.first_name, ' ', o.last_name)) LIKE ? OR o.studentid LIKE ?)`);
+      params.push(searchLower, searchLower, searchLower, `%${search}%`);
     }
 
     if (club_id) {
-      conditions.push(`o.club_id = $${++paramCount}`);
+      conditions.push(`o.club_id = ?`);
       params.push(club_id);
     }
 
@@ -353,7 +434,7 @@ router.get("/officers", async (req, res) => {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += ` ORDER BY o.name ASC LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    query += ` ORDER BY o.last_name ASC, o.first_name ASC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
@@ -361,16 +442,16 @@ router.get("/officers", async (req, res) => {
     // Build count query with same conditions
     let countQuery = "SELECT COUNT(*) FROM officers o";
     const countParams = [];
-    let countParamCount = 0;
     const countConditions = [];
     
     if (search) {
-      countConditions.push(`(o.name ILIKE $${++countParamCount} OR o.studentid ILIKE $${countParamCount})`);
-      countParams.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      countConditions.push(`(LOWER(o.first_name) LIKE ? OR LOWER(o.last_name) LIKE ? OR LOWER(CONCAT(o.first_name, ' ', o.last_name)) LIKE ? OR o.studentid LIKE ?)`);
+      countParams.push(searchLower, searchLower, searchLower, `%${search}%`);
     }
     
     if (club_id) {
-      countConditions.push(`o.club_id = $${++countParamCount}`);
+      countConditions.push(`o.club_id = ?`);
       countParams.push(club_id);
     }
     
@@ -401,7 +482,7 @@ router.get("/officers", async (req, res) => {
 router.get("/officers/:id", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT o.*, c.name AS club_name FROM officers o LEFT JOIN clubs c ON o.club_id = c.id WHERE o.id = $1",
+      "SELECT o.*, c.name AS club_name FROM officers o LEFT JOIN clubs c ON o.club_id = c.id WHERE o.id = ?",
       [req.params.id]
     );
     if (result.rows.length === 0) {
@@ -416,14 +497,47 @@ router.get("/officers/:id", async (req, res) => {
 });
 
 // Create officer
-router.post("/officers", requireAdmin, async (req, res) => {
+router.post("/officers", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const { name, studentid, club_id, role, department, program, permissions } = req.body;
-    const result = await pool.query(
-      `INSERT INTO officers (name, studentid, club_id, role, department, program, permissions) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [name, studentid, club_id, role, department, program, permissions ? JSON.stringify(permissions) : null]
+    const { first_name, last_name, studentid, club_id, role, department, program, permissions } = req.body;
+    
+    // Check if student ID already exists
+    const studentIdCheck = await pool.query(
+      "SELECT id FROM officers WHERE studentid = ?",
+      [studentid]
     );
+    if (studentIdCheck.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "An officer with this Student ID already exists. Student ID must be unique." 
+      });
+    }
+
+    // Check if first name + last name combination already exists
+    // Note: This only rejects when BOTH first name AND last name match
+    // Examples: "John Doe" + "John Smith" = ACCEPTED (same first, different last)
+    //           "John Doe" + "Jane Doe" = ACCEPTED (same last, different first)
+    //           "John Doe" + "John Doe" = REJECTED (both match)
+    const nameCheck = await pool.query(
+      "SELECT id, studentid FROM officers WHERE LOWER(TRIM(first_name)) = LOWER(TRIM(?)) AND LOWER(TRIM(last_name)) = LOWER(TRIM(?))",
+      [first_name, last_name]
+    );
+    if (nameCheck.rows.length > 0) {
+      const existingOfficer = nameCheck.rows[0];
+      return res.status(400).json({ 
+        success: false, 
+        error: `An officer with the name "${first_name} ${last_name}" already exists (Student ID: ${existingOfficer.studentid || 'N/A'}). Each officer must have a unique name combination.` 
+      });
+    }
+    
+    await pool.query(
+      `INSERT INTO officers (first_name, last_name, studentid, club_id, role, department, program, permissions) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [first_name, last_name, studentid, club_id, role, department, program, permissions ? JSON.stringify(permissions) : null]
+    );
+    // MySQL doesn't support RETURNING, so fetch the inserted record
+    const inserted = await pool.query("SELECT * FROM officers WHERE id = LAST_INSERT_ID()");
+    const result = { rows: inserted.rows };
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Error creating officer:", error);
@@ -432,23 +546,57 @@ router.post("/officers", requireAdmin, async (req, res) => {
 });
 
 // Update officer
-router.put("/officers/:id", requireAdmin, async (req, res) => {
+router.put("/officers/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const { name, studentid, club_id, role, department, program, permissions } = req.body;
-    const result = await pool.query(
-      `UPDATE officers SET name=$1, studentid=$2, club_id=$3, role=$4, department=$5, program=$6, permissions=$7 
-       WHERE id=$8 RETURNING *`,
+    const { first_name, last_name, studentid, club_id, role, department, program, permissions } = req.body;
+    const officerId = req.params.id;
+    
+    // Check if student ID already exists (excluding current officer)
+    const studentIdCheck = await pool.query(
+      "SELECT id FROM officers WHERE studentid = ? AND id != ?",
+      [studentid, officerId]
+    );
+    if (studentIdCheck.rows.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "An officer with this Student ID already exists. Student ID must be unique." 
+      });
+    }
+
+    // Check if first name + last name combination already exists (excluding current officer)
+    // Note: This only rejects when BOTH first name AND last name match
+    // Examples: "John Doe" + "John Smith" = ACCEPTED (same first, different last)
+    //           "John Doe" + "Jane Doe" = ACCEPTED (same last, different first)
+    //           "John Doe" + "John Doe" = REJECTED (both match)
+    const nameCheck = await pool.query(
+      "SELECT id, studentid FROM officers WHERE LOWER(TRIM(first_name)) = LOWER(TRIM(?)) AND LOWER(TRIM(last_name)) = LOWER(TRIM(?)) AND id != ?",
+      [first_name, last_name, officerId]
+    );
+    if (nameCheck.rows.length > 0) {
+      const existingOfficer = nameCheck.rows[0];
+      return res.status(400).json({ 
+        success: false, 
+        error: `An officer with the name "${first_name} ${last_name}" already exists (Student ID: ${existingOfficer.studentid || 'N/A'}). Each officer must have a unique name combination.` 
+      });
+    }
+    
+    await pool.query(
+      `UPDATE officers SET first_name=?, last_name=?, studentid=?, club_id=?, role=?, department=?, program=?, permissions=? 
+       WHERE id=?`,
       [
-        name,
+        first_name,
+        last_name,
         studentid,
         club_id,
         role,
         department,
         program,
         permissions ? JSON.stringify(permissions) : null,
-        req.params.id,
+        officerId,
       ]
     );
+    // MySQL doesn't support RETURNING, so fetch the updated record
+    const result = await pool.query("SELECT * FROM officers WHERE id = ?", [officerId]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Officer not found" });
     }
@@ -460,11 +608,12 @@ router.put("/officers/:id", requireAdmin, async (req, res) => {
 });
 
 // Delete officer
-router.delete("/officers/:id", requireAdmin, async (req, res) => {
+router.delete("/officers/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM officers WHERE id = $1 RETURNING id", [
-      req.params.id,
-    ]);
+    const result = await pool.query("SELECT id FROM officers WHERE id = ?", [req.params.id]);
+    if (result.rows.length > 0) {
+      await pool.query("DELETE FROM officers WHERE id = ?", [req.params.id]);
+    }
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Officer not found" });
     }
@@ -491,12 +640,13 @@ router.get("/events", async (req, res) => {
     const conditions = [];
 
     if (search) {
-      conditions.push(`(name ILIKE $${++paramCount} OR club ILIKE $${paramCount})`);
-      params.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      conditions.push(`(LOWER(name) LIKE ? OR LOWER(club) LIKE ?)`);
+      params.push(searchLower, searchLower);
     }
 
     if (status) {
-      conditions.push(`status = $${++paramCount}`);
+      conditions.push(`status = ?`);
       params.push(status);
     }
 
@@ -504,7 +654,7 @@ router.get("/events", async (req, res) => {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += ` ORDER BY date DESC LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    query += ` ORDER BY date DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
@@ -512,16 +662,16 @@ router.get("/events", async (req, res) => {
     // Build count query with same conditions
     let countQuery = "SELECT COUNT(*) FROM events";
     const countParams = [];
-    let countParamCount = 0;
     const countConditions = [];
     
     if (search) {
-      countConditions.push(`(name ILIKE $${++countParamCount} OR club ILIKE $${countParamCount})`);
-      countParams.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      countConditions.push(`(LOWER(name) LIKE ? OR LOWER(club) LIKE ?)`);
+      countParams.push(searchLower, searchLower);
     }
     
     if (status) {
-      countConditions.push(`status = $${++countParamCount}`);
+      countConditions.push(`status = ?`);
       countParams.push(status);
     }
     
@@ -551,7 +701,7 @@ router.get("/events", async (req, res) => {
 // Get single event
 router.get("/events/:id", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM events WHERE id = $1", [req.params.id]);
+    const result = await pool.query("SELECT * FROM events WHERE id = ?", [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Event not found" });
     }
@@ -564,13 +714,16 @@ router.get("/events/:id", async (req, res) => {
 });
 
 // Create event
-router.post("/events", requireAdmin, async (req, res) => {
+router.post("/events", requireAdmin, writeLimiter, async (req, res) => {
   try {
     const { name, club, date, location, description, status } = req.body;
-    const result = await pool.query(
-      "INSERT INTO events (name, club, date, location, description, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *",
+    await pool.query(
+      "INSERT INTO events (name, club, date, location, description, status, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())",
       [name, club, date, location, description, status]
     );
+    // MySQL doesn't support RETURNING, so fetch the inserted record
+    const inserted = await pool.query("SELECT * FROM events WHERE id = LAST_INSERT_ID()");
+    const result = { rows: inserted.rows };
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Error creating event:", error);
@@ -579,13 +732,15 @@ router.post("/events", requireAdmin, async (req, res) => {
 });
 
 // Update event
-router.put("/events/:id", requireAdmin, async (req, res) => {
+router.put("/events/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
     const { name, club, date, location, description, status } = req.body;
-    const result = await pool.query(
-      "UPDATE events SET name=$1, club=$2, date=$3, location=$4, description=$5, status=$6 WHERE id=$7 RETURNING *",
+    await pool.query(
+      "UPDATE events SET name=?, club=?, date=?, location=?, description=?, status=? WHERE id=?",
       [name, club, date, location, description, status, req.params.id]
     );
+    // MySQL doesn't support RETURNING, so fetch the updated record
+    const result = await pool.query("SELECT * FROM events WHERE id = ?", [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Event not found" });
     }
@@ -597,11 +752,12 @@ router.put("/events/:id", requireAdmin, async (req, res) => {
 });
 
 // Delete event
-router.delete("/events/:id", requireAdmin, async (req, res) => {
+router.delete("/events/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM events WHERE id = $1 RETURNING id", [
-      req.params.id,
-    ]);
+    const result = await pool.query("SELECT id FROM events WHERE id = ?", [req.params.id]);
+    if (result.rows.length > 0) {
+      await pool.query("DELETE FROM events WHERE id = ?", [req.params.id]);
+    }
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Event not found" });
     }
@@ -629,12 +785,13 @@ router.get("/requirements", async (req, res) => {
     const conditions = [];
 
     if (search) {
-      conditions.push(`r.requirement ILIKE $${++paramCount}`);
-      params.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      conditions.push(`LOWER(r.requirement) LIKE ?`);
+      params.push(searchLower);
     }
 
     if (status) {
-      conditions.push(`r.status = $${++paramCount}`);
+      conditions.push(`r.status = ?`);
       params.push(status);
     }
 
@@ -642,7 +799,8 @@ router.get("/requirements", async (req, res) => {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += ` ORDER BY r.due_date DESC NULLS LAST, r.created_at DESC LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    // MySQL doesn't support NULLS LAST, so use ISNULL to put NULLs at end
+    query += ` ORDER BY ISNULL(r.due_date), r.due_date DESC, r.created_at DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
@@ -650,16 +808,16 @@ router.get("/requirements", async (req, res) => {
     // Build count query with same conditions
     let countQuery = "SELECT COUNT(*) FROM requirements r";
     const countParams = [];
-    let countParamCount = 0;
     const countConditions = [];
     
     if (search) {
-      countConditions.push(`r.requirement ILIKE $${++countParamCount}`);
-      countParams.push(`%${search}%`);
+      const searchLower = `%${search.toLowerCase()}%`;
+      countConditions.push(`LOWER(r.requirement) LIKE ?`);
+      countParams.push(searchLower);
     }
     
     if (status) {
-      countConditions.push(`r.status = $${++countParamCount}`);
+      countConditions.push(`r.status = ?`);
       countParams.push(status);
     }
     
@@ -690,7 +848,7 @@ router.get("/requirements", async (req, res) => {
 router.get("/requirements/:id", async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT r.*, c.name AS club_name FROM requirements r LEFT JOIN clubs c ON r.club_id = c.id WHERE r.id = $1",
+      "SELECT r.*, c.name AS club_name FROM requirements r LEFT JOIN clubs c ON r.club_id = c.id WHERE r.id = ?",
       [req.params.id]
     );
     if (result.rows.length === 0) {
@@ -705,13 +863,16 @@ router.get("/requirements/:id", async (req, res) => {
 });
 
 // Create requirement
-router.post("/requirements", requireAdmin, async (req, res) => {
+router.post("/requirements", requireAdmin, writeLimiter, async (req, res) => {
   try {
     const { requirement, club_id, due_date, status } = req.body;
-    const result = await pool.query(
-      "INSERT INTO requirements (requirement, club_id, due_date, status, created_at) VALUES ($1, $2, $3, $4, NOW()) RETURNING *",
+    await pool.query(
+      "INSERT INTO requirements (requirement, club_id, due_date, status, created_at) VALUES (?, ?, ?, ?, NOW())",
       [requirement, club_id, due_date, status]
     );
+    // MySQL doesn't support RETURNING, so fetch the inserted record
+    const inserted = await pool.query("SELECT * FROM requirements WHERE id = LAST_INSERT_ID()");
+    const result = { rows: inserted.rows };
     res.status(201).json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error("Error creating requirement:", error);
@@ -720,13 +881,15 @@ router.post("/requirements", requireAdmin, async (req, res) => {
 });
 
 // Update requirement
-router.put("/requirements/:id", requireAdmin, async (req, res) => {
+router.put("/requirements/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
     const { requirement, club_id, due_date, status } = req.body;
-    const result = await pool.query(
-      "UPDATE requirements SET requirement=$1, club_id=$2, due_date=$3, status=$4 WHERE id=$5 RETURNING *",
+    await pool.query(
+      "UPDATE requirements SET requirement=?, club_id=?, due_date=?, status=? WHERE id=?",
       [requirement, club_id, due_date, status, req.params.id]
     );
+    // MySQL doesn't support RETURNING, so fetch the updated record
+    const result = await pool.query("SELECT * FROM requirements WHERE id = ?", [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Requirement not found" });
     }
@@ -738,11 +901,12 @@ router.put("/requirements/:id", requireAdmin, async (req, res) => {
 });
 
 // Delete requirement
-router.delete("/requirements/:id", requireAdmin, async (req, res) => {
+router.delete("/requirements/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM requirements WHERE id = $1 RETURNING id", [
-      req.params.id,
-    ]);
+    const result = await pool.query("SELECT id FROM requirements WHERE id = ?", [req.params.id]);
+    if (result.rows.length > 0) {
+      await pool.query("DELETE FROM requirements WHERE id = ?", [req.params.id]);
+    }
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Requirement not found" });
     }
@@ -763,22 +927,22 @@ router.get("/messages", requireAdmin, async (req, res) => {
     const { page = 1, limit = 50, read } = req.query;
     const offset = (page - 1) * limit;
 
-    let query = 'SELECT id, "from", subject, content, created_at, read FROM messages';
+    let query = 'SELECT id, sender_name AS `from`, subject, content, created_at, `read` FROM messages';
     let params = [];
     let paramCount = 0;
 
     if (read !== undefined) {
-      query += ` WHERE read = $${++paramCount}`;
+      query += ` WHERE \`read\` = ?`;
       params.push(read === "true");
     }
 
-    query += ` ORDER BY created_at DESC LIMIT $${++paramCount} OFFSET $${++paramCount}`;
+    query += ` ORDER BY created_at DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
     const countResult = await pool.query(
       read !== undefined
-        ? `SELECT COUNT(*) FROM messages WHERE read = $1`
+        ? `SELECT COUNT(*) FROM messages WHERE \`read\` = ?`
         : "SELECT COUNT(*) FROM messages",
       read !== undefined ? [read === "true"] : []
     );
@@ -803,12 +967,12 @@ router.get("/messages", requireAdmin, async (req, res) => {
 // Get single message
 router.get("/messages/:id", requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM messages WHERE id = $1', [req.params.id]);
+    const result = await pool.query('SELECT * FROM messages WHERE id = ?', [req.params.id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Message not found" });
     }
     // Mark as read
-    await pool.query("UPDATE messages SET read = true WHERE id = $1", [req.params.id]);
+    await pool.query("UPDATE messages SET `read` = true WHERE id = ?", [req.params.id]);
     setCacheHeaders(res, 0);
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
@@ -818,11 +982,12 @@ router.get("/messages/:id", requireAdmin, async (req, res) => {
 });
 
 // Delete message
-router.delete("/messages/:id", requireAdmin, async (req, res) => {
+router.delete("/messages/:id", requireAdmin, writeLimiter, async (req, res) => {
   try {
-    const result = await pool.query("DELETE FROM messages WHERE id = $1 RETURNING id", [
-      req.params.id,
-    ]);
+    const result = await pool.query("SELECT id FROM messages WHERE id = ?", [req.params.id]);
+    if (result.rows.length > 0) {
+      await pool.query("DELETE FROM messages WHERE id = ?", [req.params.id]);
+    }
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, error: "Message not found" });
     }

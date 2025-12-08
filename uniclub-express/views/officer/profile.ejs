@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title><%= title || 'Officer Profile' %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: { 800:'#6a0c0c', 900:'#5b0a0a' } }
+        }
+      }
+    }
+  </script>
+  <style>
+    @keyframes fade-up {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-fade-up {
+      opacity: 0;
+      animation: fade-up 0.45s ease forwards;
+    }
+    .card-surface:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 40px rgba(10, 12, 20, 0.08);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
+  <div class="min-h-screen">
+    <% if (typeof updated !== 'undefined' && updated) { %>
+      <div class="max-w-6xl mx-auto px-4 pt-6">
+        <div class="rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-800 px-4 py-3 text-sm font-semibold flex items-center gap-2 animate-fade-up">
+          <i data-lucide="check-circle" class="w-4 h-4"></i>
+          Session details refreshed successfully.
+        </div>
+      </div>
+    <% } %>
+    <%
+      var totalFields = 4;
+      var have = 0;
+      if (officer && officer.photo_url) have++;
+      if (officer && officer.email) have++;
+      if (officer && officer.username) have++;
+      if (officer && officer.bio) have++;
+      var pct = Math.round((have / totalFields) * 100);
+      var missingFields = [];
+      if (!(officer && officer.photo_url)) missingFields.push('Photo');
+      if (!(officer && officer.email)) missingFields.push('Email');
+      if (!(officer && officer.username)) missingFields.push('Username');
+      if (!(officer && officer.bio)) missingFields.push('Bio');
+      var clubDescription = club && club.description ? club.description : '';
+      var clubHasDescription = clubDescription.length > 0;
+      var clubTruncated = clubDescription.length > 200 ? clubDescription.slice(0, 200) + '...' : clubDescription;
+      var clubNeedsMore = clubDescription.length > 200;
+      var clubProgramList = [];
+      var clubProgramRaw = club && club.program ? club.program : null;
+      if (Array.isArray(clubProgramRaw)) {
+        clubProgramList = clubProgramRaw.filter(Boolean).map(function(entry) {
+          return typeof entry === 'string' ? entry.trim() : entry;
+        }).filter(Boolean);
+      } else if (typeof clubProgramRaw === 'string') {
+        var trimmedProgram = clubProgramRaw.trim();
+        if (trimmedProgram.startsWith('[') && trimmedProgram.endsWith(']')) {
+          try {
+            var parsedPrograms = JSON.parse(trimmedProgram);
+            if (Array.isArray(parsedPrograms)) {
+              clubProgramList = parsedPrograms.filter(Boolean).map(function(entry) {
+                return typeof entry === 'string' ? entry.trim() : entry;
+              }).filter(Boolean);
+            }
+          } catch (jsonErr) {
+            // fall through to manual parsing
+          }
+        }
+        if (!clubProgramList.length && trimmedProgram.startsWith('{') && trimmedProgram.endsWith('}')) {
+          clubProgramList = trimmedProgram
+            .slice(1, -1)
+            .split(',')
+            .map(function(entry) {
+              return entry.replace(/^"|"$/g, '').trim();
+            })
+            .filter(Boolean);
+        } else if (!clubProgramList.length && trimmedProgram.includes(',')) {
+          clubProgramList = trimmedProgram.split(',').map(function(entry) {
+            return entry.trim();
+          }).filter(Boolean);
+        } else if (!clubProgramList.length && trimmedProgram) {
+          clubProgramList = [trimmedProgram];
+        }
+      } else if (clubProgramRaw) {
+        clubProgramList = [String(clubProgramRaw)];
+      }
+    %>
+      <!-- Glassmorphic header -->
+      <div class="relative">
+        <div class="absolute inset-0 h-40 w-full bg-gradient-to-r from-primary-900/35 via-primary-800/25 to-amber-600/25"></div>
+        <div class="relative h-40 w-full bg-[url('https://www.toptal.com/designers/subtlepatterns/uploads/moroccan-flower-dark.png')] bg-[length:320px] opacity-[0.08]"></div>
+        <div class="max-w-6xl mx-auto px-4">
+          <div class="-mt-16">
+            <div class="bg-white/70 backdrop-blur-xl border border-white/60 rounded-2xl p-5 md:p-7 shadow-xl animate-fade-up" style="animation-delay: 40ms;">
+              <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                <div class="flex items-start md:items-center gap-4">
+                  <% if (officer && officer.photo_url) { %>
+                    <img src="<%= officer.photo_url %>" alt="Profile" class="w-24 h-24 md:w-28 md:h-28 rounded-3xl ring-4 ring-white/70 shadow-xl object-cover">
+                  <% } else { %>
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-3xl ring-4 ring-white/70 shadow-xl bg-gradient-to-br from-primary-900 via-primary-800 to-amber-500 flex items-center justify-center text-xl font-semibold text-white uppercase">UC</div>
+                  <% } %>
+                  <div>
+                    <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight"><%= officer && officer.name ? officer.name : 'Officer' %></h1>
+                    <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                      <span class="font-medium text-gray-700"><%= officer && officer.role ? officer.role : 'Club Officer' %></span>
+                      <% if (club) { %>
+                        <span class="text-gray-400">·</span>
+                        <a href="<%= club && club.id ? `/clubs/${club.id}` : '/officer' %>" class="inline-flex items-center gap-1.5 rounded-full bg-primary-900/10 px-2.5 py-1 text-xs font-semibold text-primary-900 ring-1 ring-primary-900/20 hover:bg-primary-900/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/50 transition" aria-label="View club details">
+                          <i data-lucide="shield" class="w-3.5 h-3.5" aria-hidden="true"></i>
+                          <span><%= club.name %></span>
+                        </a>
+                      <% } %>
+                    </div>
+                    <div class="mt-4 md:mt-5 flex flex-wrap items-center gap-4 md:gap-6">
+                      <div class="relative flex items-center gap-3 group">
+                        <div class="w-40 md:w-48 h-2 rounded-full bg-white/60 overflow-hidden">
+                          <div class="progress-bar h-2 rounded-full bg-gradient-to-r from-emerald-500 via-emerald-400 to-amber-400 transition-all duration-700" style="width:0%;" data-progress-target="<%= pct %>"></div>
+                        </div>
+                        <span class="text-xs font-semibold text-gray-800"><%= pct %>% complete</span>
+                        <% if (missingFields.length) { %>
+                          <button type="button" class="relative inline-flex items-center justify-center text-gray-500 hover:text-primary-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/30 rounded-full" aria-label="Missing profile fields" data-tooltip>
+                            <i data-lucide="info" class="w-4 h-4" aria-hidden="true"></i>
+                            <span class="pointer-events-none absolute left-1/2 -translate-x-1/2 -translate-y-full mb-2 whitespace-nowrap rounded-md bg-gray-900/90 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 shadow-lg">
+                              Missing: <%= missingFields.join(', ') %>
+                            </span>
+                          </button>
+                        <% } %>
+                      </div>
+                      <% if (missingFields.length) { %>
+                        <span class="text-xs text-gray-600">Complete your profile to help members connect.</span>
+                      <% } else { %>
+                        <span class="text-xs font-semibold text-emerald-600">All key details added. Great job!</span>
+                      <% } %>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex flex-wrap items-center justify-end gap-3">
+                  <button type="button" id="profileFormToggle" class="inline-flex items-center gap-2 rounded-lg bg-primary-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary-900/20 transition hover:bg-primary-800 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/40">
+                    <i data-lucide="settings" class="w-4 h-4" aria-hidden="true"></i>
+                    Customize your profile
+                  </button>
+                  <a href="/officer" class="inline-flex items-center gap-2 rounded-lg border border-primary-900/20 px-4 py-2 text-sm font-semibold text-primary-900 transition hover:bg-primary-900/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/30">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4" aria-hidden="true"></i>
+                    Dashboard
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+    </div>
+  </div>
+
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <section aria-label="Key officer facts" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-md transition card-surface animate-fade-up" style="animation-delay: 80ms;">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Role</p>
+            <p class="mt-1 text-lg font-bold text-gray-900 break-words"><%= officer && officer.role ? officer.role : '—' %></p>
+          </div>
+          <button type="button" class="rounded-full bg-emerald-500/10 p-2 text-emerald-600 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/40 transition" aria-label="Edit role">
+            <i data-lucide="user-cog" class="w-4 h-4" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-md transition card-surface animate-fade-up" style="animation-delay: 120ms;">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Program</p>
+            <p class="mt-1 text-lg font-bold text-gray-900 break-words"><%= officer && officer.program ? officer.program : '—' %></p>
+          </div>
+          <button type="button" class="rounded-full bg-blue-500/10 p-2 text-blue-500 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/40 transition" aria-label="Edit program">
+            <i data-lucide="book-open" class="w-4 h-4" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-md transition card-surface animate-fade-up" style="animation-delay: 160ms;">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Department</p>
+            <p class="mt-1 text-lg font-bold text-gray-900 break-words"><%= officer && officer.department ? officer.department : '—' %></p>
+          </div>
+          <button type="button" class="rounded-full bg-amber-500/10 p-2 text-amber-600 hover:text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 transition" aria-label="Edit department">
+            <i data-lucide="building" class="w-4 h-4" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
+      <section class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-md flex flex-col animate-fade-up card-surface" style="animation-delay: 200ms;">
+        <div class="p-5 md:p-6 border-b flex items-center justify-between">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <i data-lucide="info" class="w-5 h-5 text-primary-900" aria-hidden="true"></i>
+              About
+            </h2>
+            <p class="mt-1 text-xs text-gray-500">Share a snapshot of who you are.</p>
+          </div>
+        </div>
+        <div class="p-5 md:p-6 text-sm leading-6 text-gray-700 flex-1">
+          <% if (officer && officer.bio) { %>
+            <p class="text-[15px] text-gray-700 leading-7"><%= officer.bio %></p>
+          <% } else { %>
+            <p class="text-[15px] text-gray-600 leading-7">
+              Your profile is looking good. Add your email and bio to help members connect with you using the “Customize your profile” button.
+            </p>
+          <% } %>
+        </div>
+      </section>
+
+      <aside class="bg-white rounded-2xl border border-gray-100 shadow-md flex flex-col animate-fade-up card-surface" style="animation-delay: 240ms;">
+        <div class="p-5 md:p-6 border-b flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <i data-lucide="phone" class="w-5 h-5 text-primary-900" aria-hidden="true"></i>
+            Contact & Actions
+          </h2>
+        </div>
+        <div class="p-5 md:p-6 text-sm text-gray-700 space-y-4 flex-1">
+          <div class="flex items-start gap-3">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary-900/10 text-primary-900">
+              <i data-lucide="mail" class="w-4 h-4" aria-hidden="true"></i>
+            </span>
+            <div>
+              <p class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Email</p>
+              <p class="mt-0.5 break-words text-sm"><%= officer && officer.email ? officer.email : 'Not provided' %></p>
+            </div>
+          </div>
+          <div class="flex items-start gap-3">
+            <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-500/10 text-blue-600">
+              <i data-lucide="facebook" class="w-4 h-4" aria-hidden="true"></i>
+            </span>
+            <div>
+              <p class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Facebook</p>
+              <p class="mt-0.5 break-words text-sm"><%= officer && officer.facebook ? officer.facebook : 'Not provided' %></p>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <div id="profileModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+      <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" data-close-profile-modal></div>
+      <div class="relative min-h-screen w-full flex items-center justify-center px-4 py-8">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-2xl w-full max-w-3xl">
+          <div class="flex items-center justify-between gap-3 p-5 border-b">
+            <div>
+              <h2 id="profileModalTitle" class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <i data-lucide="settings-2" class="w-5 h-5 text-primary-900" aria-hidden="true"></i>
+                Customize your profile
+              </h2>
+              <p class="mt-1 text-xs text-gray-500">Changes here update your officer profile.</p>
+            </div>
+            <button type="button" class="rounded-full p-2 text-gray-500 hover:text-primary-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/30" aria-label="Close modal" data-close-profile-modal>
+              <i data-lucide="x" class="w-5 h-5" aria-hidden="true"></i>
+            </button>
+          </div>
+          <form action="/officer/profile" method="POST" class="p-5 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div>
+              <label class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Role</label>
+              <input type="text" name="role" value="<%= officer && officer.role ? officer.role : '' %>" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-900/30" placeholder="Club President">
+            </div>
+            <div>
+              <label class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Email</label>
+              <input type="email" name="email" value="<%= officer && officer.email ? officer.email : '' %>" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-900/30" placeholder="you@umindanao.edu.ph">
+            </div>
+            <div>
+              <label class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Facebook link</label>
+              <input type="text" name="facebook" value="<%= officer && officer.facebook ? officer.facebook : '' %>" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-900/30" placeholder="https://facebook.com/you">
+            </div>
+            <div class="md:col-span-2">
+              <label class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Bio</label>
+              <textarea name="bio" rows="4" class="mt-1 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-900/30" placeholder="Tell members about yourself"><%= officer && officer.bio ? officer.bio : '' %></textarea>
+            </div>
+            <div class="md:col-span-2 flex flex-wrap items-center gap-3">
+              <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-primary-900 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-primary-900/20 transition hover:bg-primary-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/40">
+                <i data-lucide="save" class="w-4 h-4" aria-hidden="true"></i>
+                Save profile
+              </button>
+              <p class="text-xs text-gray-500">Your updates stay even after you log out.</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <section aria-label="Club information" class="bg-white rounded-2xl border border-gray-100 shadow-md animate-fade-up card-surface" style="animation-delay: 280ms;">
+      <div class="p-5 md:p-6 border-b flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <i data-lucide="building" class="w-5 h-5 text-primary-900" aria-hidden="true"></i>
+            Club
+          </h2>
+          <p class="mt-1 text-xs text-gray-500">Learn more about the organization you represent.</p>
+        </div>
+      </div>
+      <div class="p-5 md:p-6 text-sm text-gray-700 space-y-4">
+        <% if (club) { %>
+          <div>
+            <p class="text-base font-semibold text-gray-900"><%= club.name %></p>
+            <p class="mt-1 text-[15px] leading-7 text-gray-600" id="clubDescriptionText"><%= clubHasDescription ? clubTruncated : 'No description provided.' %></p>
+            <% if (clubNeedsMore) { %>
+              <button type="button" id="toggleClubDescription" class="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-primary-900 hover:text-primary-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/30 rounded" aria-expanded="false">
+                <span class="toggle-text">Read more</span>
+                <i data-lucide="chevron-down" class="w-4 h-4" aria-hidden="true"></i>
+              </button>
+            <% } %>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="flex items-start gap-2 rounded-xl border border-gray-200/60 bg-white/80 px-3 py-3">
+              <span class="mt-0.5 text-primary-900">
+                <i data-lucide="user" class="w-4 h-4" aria-hidden="true"></i>
+              </span>
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Adviser</p>
+                <p class="text-sm font-medium text-gray-900"><%= club.adviser || '—' %></p>
+              </div>
+            </div>
+            <div class="flex items-start gap-2 rounded-xl border border-gray-200/60 bg-white/80 px-3 py-3">
+              <span class="mt-0.5 text-amber-600">
+                <i data-lucide="layers" class="w-4 h-4" aria-hidden="true"></i>
+              </span>
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Category</p>
+                <p class="text-sm font-medium text-gray-900"><%= club.category || '—' %></p>
+              </div>
+            </div>
+            <div class="flex items-start gap-2 rounded-xl border border-gray-200/60 bg-white/80 px-3 py-3">
+              <span class="mt-0.5 text-primary-900">
+                <i data-lucide="building" class="w-4 h-4" aria-hidden="true"></i>
+              </span>
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Department</p>
+                <p class="text-sm font-medium text-gray-900"><%= club.department || '—' %></p>
+              </div>
+            </div>
+            <div class="flex items-start gap-2 rounded-xl border border-gray-200/60 bg-white/80 px-3 py-3">
+              <span class="mt-0.5 text-emerald-600">
+                <i data-lucide="book" class="w-4 h-4" aria-hidden="true"></i>
+              </span>
+              <div>
+                <p class="text-[11px] font-semibold uppercase tracking-wide text-gray-500">Program</p>
+                <% if (clubProgramList && clubProgramList.length) { %>
+                  <% clubProgramList.forEach(function(program, idx) { %>
+                    <p class="text-sm font-medium text-gray-900 <%= idx ? 'mt-1' : '' %>"><%= program %></p>
+                  <% }); %>
+                <% } else { %>
+                  <p class="text-sm font-medium text-gray-400">—</p>
+                <% } %>
+              </div>
+            </div>
+          </div>
+        <% } else { %>
+          <p class="text-sm text-gray-600">No club information available.</p>
+        <% } %>
+      </div>
+    </section>
+    </main>
+  </div>
+
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLucideIcons();
+
+      const progressBars = document.querySelectorAll('.progress-bar');
+      progressBars.forEach((bar) => {
+        const target = Number(bar.dataset.progressTarget || 0);
+        bar.style.width = '0%';
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            const clamped = Math.min(Math.max(target, 0), 100);
+            bar.style.width = clamped + '%';
+          });
+        });
+      });
+
+      const animatedCards = document.querySelectorAll('.animate-fade-up');
+      animatedCards.forEach((card, index) => {
+        if (!card.style.animationDelay) {
+          card.style.animationDelay = `${index * 60}ms`;
+        }
+      });
+
+      const toggleClubDescription = document.getElementById('toggleClubDescription');
+      const clubDescriptionText = document.getElementById('clubDescriptionText');
+      if (toggleClubDescription && clubDescriptionText) {
+        const fullText = <%- JSON.stringify(clubDescription) %>;
+        const shortText = <%- JSON.stringify(clubTruncated) %>;
+        let expanded = false;
+
+        clubDescriptionText.textContent = shortText || 'No description provided.';
+
+        toggleClubDescription.addEventListener('click', () => {
+          expanded = !expanded;
+          clubDescriptionText.textContent = expanded ? fullText : shortText;
+          toggleClubDescription.setAttribute('aria-expanded', expanded.toString());
+
+          const icon = toggleClubDescription.querySelector('i');
+          if (icon) {
+            icon.style.transform = expanded ? 'rotate(180deg)' : 'rotate(0deg)';
+          }
+
+          const label = toggleClubDescription.querySelector('.toggle-text');
+          if (label) {
+            label.textContent = expanded ? 'Show less' : 'Read more';
+          }
+        });
+      }
+      const profileModal = document.getElementById('profileModal');
+      const modalOpenBtn = document.getElementById('profileFormToggle');
+      const modalCloseEls = document.querySelectorAll('[data-close-profile-modal]');
+
+      const setBodyScroll = (disable) => {
+        if (disable) {
+          document.body.classList.add('overflow-hidden');
+        } else {
+          document.body.classList.remove('overflow-hidden');
+        }
+      };
+
+      const toggleModal = (show) => {
+        if (!profileModal) return;
+        if (show) {
+          profileModal.classList.remove('hidden');
+          modalOpenBtn?.setAttribute('aria-expanded', 'true');
+          setBodyScroll(true);
+          renderLucideIcons();
+        } else {
+          profileModal.classList.add('hidden');
+          modalOpenBtn?.setAttribute('aria-expanded', 'false');
+          setBodyScroll(false);
+        }
+      };
+
+      modalOpenBtn?.addEventListener('click', () => toggleModal(true));
+      modalCloseEls.forEach((el) =>
+        el.addEventListener('click', () => toggleModal(false))
+      );
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !profileModal?.classList.contains('hidden')) {
+          toggleModal(false);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
+

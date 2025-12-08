@@ -1,0 +1,3855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title>UniClub — University of Mindanao</title>
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+  
+  <!-- CRITICAL ANTI-FLICKER: Block rendering until theme is set -->
+  <script>
+    // This script MUST run synchronously - blocks all rendering
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      
+      // Set theme attribute immediately for CSS to use
+      html.setAttribute('data-theme', theme);
+      
+      // Apply theme class immediately
+      if (theme === 'light') {
+        html.classList.add('light-mode');
+      } else {
+        html.classList.remove('light-mode');
+      }
+      
+      // Set background colors inline with !important - overrides all CSS
+      if (theme === 'light') {
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+      } else {
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+      }
+    })();
+  </script>
+  
+  <!-- Blocking inline CSS that uses theme attribute -->
+  <style>
+    /* Set background based on data-theme attribute - prevents dark flash */
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f8fafc !important;
+    }
+    html[data-theme="dark"],
+    html:not([data-theme]) body {
+      background-color: #0a0f1a !important;
+    }
+    
+    /* Ensure smooth transitions when data-theme changes */
+    html[data-theme] body,
+    html[data-theme] {
+      transition: background-color 0.3s ease !important;
+    }
+    /* Hide body until it's ready */
+    body:not([data-theme-ready]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+    body[data-theme-ready] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.1s ease;
+    }
+  </style>
+
+  <!-- Apply theme to body once it exists -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      
+      function applyThemeToBody() {
+        if (!document.body) return;
+        
+        if (theme === 'light') {
+          document.body.classList.add('light-mode');
+          document.body.style.setProperty('background-color', '#f8fafc', 'important');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.style.setProperty('background-color', '#0a0f1a', 'important');
+        }
+        
+        // Mark body as ready
+        document.body.setAttribute('data-theme-ready', 'true');
+      }
+      
+      // Try immediately
+      if (document.body) {
+        applyThemeToBody();
+      } else {
+        // Watch for body creation
+        const observer = new MutationObserver(function(mutations) {
+          if (document.body) {
+            applyThemeToBody();
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        
+        // Fallback on DOMContentLoaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyThemeToBody);
+        }
+      }
+    })();
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: #0a0f1a;
+      overflow-x: hidden;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    /* Smooth transitions for theme switching - applied globally but can be overridden */
+    body,
+    body * {
+      transition-property: background-color, border-color, color, box-shadow;
+      transition-duration: 0.3s;
+      transition-timing-function: ease;
+    }
+
+    /* Remove transitions from elements that shouldn't animate */
+    body script,
+    body style,
+    body [style*="transition"],
+    body .no-transition {
+      transition: none !important;
+    }
+
+    /* Subtle Color Tint Overlay - Matching Stat Card Colors */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        /* CLUBS JOINED: Deep Red (#C62828) → Red-Orange (#EF6C00) */
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        /* EVENTS ATTENDED: Red-Orange (#E53935) → Vibrant Orange (#EF6C00) */
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        /* POINTS EARNED: Vibrant Orange (#EF6C00) → Amber (#FFA726) */
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    body > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Light mode tint - matched to dark mode intensity and stat card colors */
+    body.light-mode::before {
+      background: 
+        /* CLUBS JOINED: Deep Red (#C62828) → Red-Orange (#EF6C00) */
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        /* EVENTS ATTENDED: Red-Orange (#E53935) → Vibrant Orange (#EF6C00) */
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        /* POINTS EARNED: Vibrant Orange (#EF6C00) → Amber (#FFA726) */
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      opacity: 1;
+      z-index: 0;
+    }
+
+    /* Light Mode Styles */
+    body.light-mode {
+      background: #f8fafc !important;
+      color: #1e293b;
+    }
+
+    /* Ensure main content section transitions smoothly */
+    body.light-mode #main-content,
+    body.light-mode section {
+      background: transparent !important;
+    }
+
+    /* Fix any white/grey backgrounds that might flash during theme switch */
+    body.light-mode .bg-white,
+    body.light-mode [class*="bg-white"],
+    body.light-mode [class*="bg-gray"],
+    body.light-mode [class*="bg-grey"] {
+      background-color: transparent !important;
+    }
+
+    /* Ensure cards and containers transition smoothly */
+    body.light-mode .card,
+    body.light-mode .card-inner,
+    body.light-mode .stat-card,
+    body.light-mode .section-container {
+      transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+    }
+
+    body.light-mode .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-white\/80,
+    body.light-mode .text-white\/70,
+    body.light-mode .text-white\/60 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .card,
+    body.light-mode .section-container {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .card-inner {
+      background: rgba(248, 250, 252, 0.8);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    body.light-mode .card:hover,
+    body.light-mode .card-inner:hover {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode #navbar {
+      background: rgba(255, 255, 255, 1) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    body.light-mode #navbar.scrolled {
+      background: rgba(255, 255, 255, 1) !important;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .nav-link {
+      color: #475569;
+    }
+
+    body.light-mode .nav-link:hover,
+    body.light-mode .nav-link.active {
+      color: #1e293b;
+    }
+
+    body.light-mode .profile-dropdown {
+      background: rgba(255, 255, 255, 0.98);
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Logout Button - Light Mode */
+    body.light-mode a[href="/student/logout"] {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode a[href="/student/logout"]:hover {
+      background: rgba(220, 38, 38, 0.1);
+    }
+
+    body.light-mode a[href="/student/logout"] .w-9 {
+      background: rgba(220, 38, 38, 0.1);
+      border-color: rgba(220, 38, 38, 0.2);
+    }
+
+    body.light-mode a[href="/student/logout"] i {
+      color: #dc2626;
+    }
+
+    body.light-mode a[href="/student/logout"] p {
+      color: #dc2626;
+    }
+
+    /* Theme Toggle Button - Light Mode */
+    body.light-mode #themeToggle {
+      color: #1e293b;
+    }
+
+    body.light-mode #themeToggle:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    body.light-mode #themeToggle .w-9 {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode #themeIcon {
+      color: #475569;
+    }
+
+    body.light-mode #themeLabel {
+      color: #1e293b;
+    }
+
+    body.light-mode #themeDescription {
+      color: #64748b;
+    }
+
+    body.light-mode #themeSwitch {
+      background: #C62828;
+    }
+
+    body.light-mode #themeSwitchThumb {
+      background: white;
+      transform: translateX(16px);
+    }
+
+    body.light-mode .stat-card {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .stat-card:hover {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .btn-primary {
+      background: #C62828;
+      color: white;
+    }
+
+    body.light-mode .btn-primary:hover {
+      background: #B71C1C;
+    }
+
+    body.light-mode .btn-secondary {
+      background: rgba(0, 0, 0, 0.05);
+      color: #1e293b;
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    /* Theme Toggle Switch - Light Mode */
+    body.light-mode #themeSwitch {
+      background: #C62828;
+    }
+
+    body.light-mode #themeSwitchThumb {
+      transform: translateX(16px);
+      background: white;
+    }
+
+    body.light-mode #themeIcon {
+      color: #f59e0b;
+    }
+
+    body.light-mode h1,
+    body.light-mode .section-header,
+    body.light-mode .card-title {
+      color: #1e293b;
+    }
+
+    body.light-mode .text-secondary,
+    body.light-mode .text-tertiary {
+      color: #64748b;
+    }
+
+    body.light-mode .badge-success {
+      background: rgba(34, 197, 94, 0.15);
+      color: #059669;
+      border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    body.light-mode .badge-info {
+      background: rgba(59, 130, 246, 0.15);
+      color: #2563eb;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    body.light-mode .badge-warning {
+      background: rgba(251, 191, 36, 0.15);
+      color: #d97706;
+      border-color: rgba(251, 191, 36, 0.3);
+    }
+
+    body.light-mode .badge-neutral {
+      background: rgba(0, 0, 0, 0.08);
+      color: #475569;
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .stat-card {
+      color: #1e293b;
+    }
+
+    body.light-mode .stat-value {
+      background: linear-gradient(135deg, #C62828, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Light Mode Stat Value Color Variants */
+    body.light-mode .stat-card.clubs .stat-value {
+      background: linear-gradient(135deg, #C62828, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    body.light-mode .stat-card.events .stat-value {
+      background: linear-gradient(135deg, #E53935, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    body.light-mode .stat-card.points .stat-value {
+      background: linear-gradient(135deg, #EF6C00, #FFA726);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    body.light-mode .stat-label {
+      color: #64748b;
+    }
+
+    body.light-mode .stat-level {
+      color: #475569 !important;
+    }
+
+    body.light-mode .trend-badge.neutral {
+      color: #64748b !important;
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .trend-badge.up {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(74, 222, 128, 0.15));
+      color: #059669;
+      border-color: rgba(34, 197, 94, 0.4);
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+    }
+
+    /* Light mode progress bar */
+    body.light-mode .points-progress-bar {
+      background: linear-gradient(to right, #9333ea, #f97316, #eab308) !important;
+      opacity: 1 !important;
+    }
+
+    body.light-mode .points-progress-bar::after {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    }
+
+    body.light-mode .h-2.bg-white\/10 {
+      background: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .stat-card.points .h-2.bg-white\/10 {
+      background: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* Light mode progress bar labels */
+    body.light-mode .stat-card .text-white\/70,
+    body.light-mode .stat-card .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .stat-card.points .text-white\/70,
+    body.light-mode .stat-card.points .text-white\/60,
+    body.light-mode .stat-card.points .text-white\/90 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .stat-level {
+      color: #64748b !important;
+    }
+
+    body.light-mode .stat-card.points .stat-level[style*="color"] {
+      color: #64748b !important;
+    }
+
+    /* Progress bar container in light mode */
+    body.light-mode .stat-card.points .h-2.bg-white\/10 {
+      background: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Light mode empty state boxes */
+    body.light-mode .empty-state-box {
+      background: rgba(59, 130, 246, 0.08) !important;
+      border-color: rgba(59, 130, 246, 0.2) !important;
+    }
+
+    body.light-mode .empty-state-box .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .empty-state-box .text-white\/70 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .empty-state-box .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    /* Light mode stat action buttons */
+    body.light-mode .stat-action.font-semibold {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.3);
+      color: #2563eb;
+    }
+
+    body.light-mode .stat-action.font-semibold:hover {
+      background: rgba(59, 130, 246, 0.25);
+      border-color: rgba(59, 130, 246, 0.5);
+      color: #1d4ed8;
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+    }
+
+    body.light-mode .progress-bar {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .progress-bar-fill {
+      background: linear-gradient(90deg, #2563eb, #3b82f6);
+    }
+
+    body.light-mode .notification-badge {
+      background: linear-gradient(135deg, #C62828, #E53935);
+      border-color: rgba(255, 255, 255, 0.9);
+    }
+
+    body.light-mode footer {
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode footer .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .club-card::before {
+      opacity: 0.8;
+    }
+
+    body.light-mode .club-card:hover {
+      background: linear-gradient(135deg, rgba(var(--club-color-rgb, 158, 158, 158), 0.08) 0%, rgba(255, 255, 255, 1) 10%);
+    }
+
+    /* Ensure club card title is always dark in light mode, even on hover */
+    body.light-mode .club-card .card-title,
+    body.light-mode .club-card:hover .card-title {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card[data-category="academic"] .card-title,
+    body.light-mode .club-card[data-category="academic"]:hover .card-title,
+    body.light-mode .club-card[data-category="Academic"] .card-title,
+    body.light-mode .club-card[data-category="Academic"]:hover .card-title {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card[data-category="tech"] .card-title,
+    body.light-mode .club-card[data-category="tech"]:hover .card-title,
+    body.light-mode .club-card[data-category="Technology"] .card-title,
+    body.light-mode .club-card[data-category="Technology"]:hover .card-title {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card[data-category="sports"] .card-title,
+    body.light-mode .club-card[data-category="sports"]:hover .card-title,
+    body.light-mode .club-card[data-category="Sports"] .card-title,
+    body.light-mode .club-card[data-category="Sports"]:hover .card-title {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card[data-category="social"] .card-title,
+    body.light-mode .club-card[data-category="social"]:hover .card-title,
+    body.light-mode .club-card[data-category="Social"] .card-title,
+    body.light-mode .club-card[data-category="Social"]:hover .card-title {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .badge-popular {
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.25), rgba(255, 213, 79, 0.2));
+      color: #d97706;
+      border-color: rgba(255, 193, 7, 0.4);
+    }
+
+    body.light-mode .badge-active {
+      background: linear-gradient(135deg, rgba(76, 175, 80, 0.25), rgba(102, 187, 106, 0.2));
+      color: #059669;
+      border-color: rgba(76, 175, 80, 0.4);
+    }
+
+    body.light-mode .badge-academic {
+      background: linear-gradient(135deg, rgba(33, 150, 243, 0.25), rgba(66, 165, 245, 0.2));
+      color: #2563eb;
+      border-color: rgba(33, 150, 243, 0.4);
+    }
+
+    body.light-mode .quick-action {
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .achievements-empty {
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, rgba(255, 152, 0, 0.08) 100%);
+      border: 2px dashed rgba(255, 193, 7, 0.4);
+    }
+
+    body.light-mode .achievements-empty .text-white\/90 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .achievements-empty .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .achievements-empty .text-white\/40 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode .achievements-empty i {
+      color: #cbd5e1 !important;
+    }
+
+    /* Fix "Your first achievement is waiting!" text and all card-inner text */
+    body.light-mode .card-inner .text-white\/90,
+    body.light-mode .achievements-empty .text-white\/90 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .card-inner .text-white\/80,
+    body.light-mode .achievements-empty .text-white\/80 {
+      color: #334155 !important;
+    }
+
+    body.light-mode .card-inner .text-white\/60,
+    body.light-mode .achievements-empty .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    /* Fix progress bar background in light mode */
+    body.light-mode .stat-card.points .h-2.bg-white\/10 {
+      background: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* Ensure club card title stays visible in light mode on hover */
+    body.light-mode .club-card .card-title {
+      color: #1e293b !important;
+    }
+
+    /* 3-Step Elevation System */
+    /* Level 1: Page background = darkest */
+    /* Level 2: Section containers = +6-8% lighter */
+    .section-container {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    /* Level 3: Inner cards = +10-12% lighter than background */
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .card-inner {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .card-inner:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-inner:active {
+      transform: translateY(0);
+    }
+
+    /* Typography Hierarchy - Perfect Scale */
+    h1 {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 800;
+      font-size: 3.75rem; /* 60px - Extra large for main greeting */
+      line-height: 1.1;
+      color: #ffffff;
+      letter-spacing: -0.03em;
+    }
+
+    @media (max-width: 640px) {
+      h1 {
+        font-size: 2rem; /* 32px on mobile */
+      }
+    }
+
+    /* Section Headers - 24-30px, bold */
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 1.875rem; /* 30px */
+      line-height: 1.25;
+      color: #ffffff;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.01em;
+    }
+
+    /* Card Titles - 18-20px, semi-bold */
+    .card-title {
+      font-family: 'Inter', sans-serif;
+      font-weight: 600;
+      font-size: 1.25rem; /* 20px */
+      line-height: 1.4;
+      color: #ffffff;
+    }
+
+    /* Body Text - 16px, normal */
+    .body-text {
+      font-size: 1rem; /* 16px */
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    /* Small Text - 14px, medium */
+    .small-text {
+      font-size: 0.875rem; /* 14px */
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* Tiny Labels - 12px, uppercase, bold, spaced */
+    .tiny-label {
+      font-size: 0.75rem; /* 12px */
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      line-height: 1.4;
+    }
+
+    /* Metadata - Improved contrast for WCAG AA */
+    .text-meta {
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.85);
+      line-height: 1.5;
+    }
+
+    .text-secondary {
+      font-size: 0.875rem;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.8);
+      line-height: 1.5;
+    }
+
+    .text-tertiary {
+      font-size: 0.8125rem;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.75);
+      line-height: 1.4;
+    }
+
+    /* ===== GLASS EFFECT ===== */
+    .glass {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Card Base - Increased Contrast */
+    .card {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 24px;
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    /* Inner Card - Less Rounding */
+    .card-inner {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      transition: all 0.2s ease;
+    }
+
+    .card-inner:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .glass-dark {
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+    }
+
+    .glass-light {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* ===== GRADIENTS ===== */
+    .gradient-brand {
+      background: linear-gradient(135deg, #C62828 0%, #E53935 100%);
+    }
+
+    .gradient-accent-blue {
+      background: linear-gradient(135deg, #1976D2 0%, #42A5F5 100%);
+    }
+
+    .gradient-accent-purple {
+      background: linear-gradient(135deg, #7B1FA2 0%, #BA68C8 100%);
+    }
+
+    .gradient-accent-green {
+      background: linear-gradient(135deg, #00796B 0%, #26A69A 100%);
+    }
+
+    .gradient-accent-orange {
+      background: linear-gradient(135deg, #E65100 0%, #FF9800 100%);
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes fadeInRight {
+      from {
+        opacity: 0;
+        transform: translateX(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(198, 40, 40, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 40px rgba(198, 40, 40, 0.6);
+      }
+    }
+
+    @keyframes achievement-unlock {
+      0% {
+        transform: scale(0.8);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    @keyframes bounce-in {
+      0% {
+        transform: translateY(-10px);
+        opacity: 0;
+      }
+      60% {
+        transform: translateY(2px);
+      }
+      100% {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slide-in-right {
+      from {
+        transform: translateX(-10px);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    @keyframes badgeFadeInBounce {
+      0% {
+        opacity: 0;
+        transform: scale(0.8) translateY(-5px);
+      }
+      50% {
+        transform: scale(1.1) translateY(2px);
+      }
+      100% {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+      }
+    }
+
+    @keyframes slideInFromLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes countUp {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-down {
+      animation: fadeInDown 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-left {
+      animation: fadeInLeft 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-right {
+      animation: fadeInRight 0.8s ease-out forwards;
+    }
+
+    .animate-slide-up {
+      animation: slideUp 0.6s ease-out forwards;
+    }
+
+    .pulse-glow {
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    .float-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .fade-in-on-scroll {
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    .fade-in-on-scroll.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ===== HOVER EFFECTS ===== */
+    .hover-lift {
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .hover-lift:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+
+    .hover-scale {
+      transition: all 0.3s ease;
+    }
+
+    .hover-scale:hover {
+      transform: scale(1.05);
+    }
+
+    .hover-border-gradient:hover {
+      border-image: linear-gradient(135deg, #C62828, #E53935) 1;
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn-primary {
+      background: #C62828;
+      color: white;
+      font-weight: 600;
+      padding: 12px 24px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9375rem;
+    }
+
+    .btn-primary:hover {
+      background: #B71C1C;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-weight: 500;
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      font-size: 0.9375rem;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 500;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: baseline;
+    }
+
+    .btn-link:hover {
+      color: rgba(255, 255, 255, 1);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    /* View all link - aligned with section header */
+    .section-header-link {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    /* Cards now defined in elevation system above */
+
+    /* ===== NAVBAR ===== */
+    #navbar {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+      transition: all 0.3s ease;
+    }
+
+    #navbar.scrolled {
+      background: rgba(15, 23, 42, 0.9);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .nav-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      position: relative;
+      padding: 8px 0;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C62828;
+      transition: width 0.2s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .nav-link.active::after {
+      width: 100%;
+      background: #C62828;
+    }
+
+    /* Navbar spacing */
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* ===== BADGES ===== - Secondary, smaller, unified */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.6875rem;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    /* Semantic Color System - WCAG AA Compliant */
+    .badge-success {
+      background: rgba(34, 197, 94, 0.2);
+      color: #6ee7b7;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .badge-info {
+      background: rgba(59, 130, 246, 0.2);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .badge-warning {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fcd34d;
+      border: 1px solid rgba(251, 191, 36, 0.3);
+    }
+
+    .badge-neutral {
+      background: rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .badge-new {
+      background: rgba(198, 40, 40, 0.25);
+      color: #ff6b6b;
+      border: 1px solid rgba(198, 40, 40, 0.35);
+      font-weight: 600;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #C62828, #E53935);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #E53935, #FF6B6B);
+    }
+
+    /* ===== MOBILE MENU ===== */
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      top: 70px;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(32px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+      z-index: 40;
+    }
+
+    .mobile-menu.active {
+      max-height: 500px;
+      display: block;
+    }
+
+    .mobile-menu-content {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ===== STAT CARD - Actionable & Informative with Color Tints ===== */
+    .stat-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-left: 4px solid transparent;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Stat Card Color Variants */
+    .stat-card.clubs {
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.15) 0%, rgba(239, 108, 0, 0.05) 100%);
+      border-left-color: #C62828;
+    }
+
+    .stat-card.events {
+      background: linear-gradient(135deg, rgba(229, 57, 53, 0.15) 0%, rgba(239, 108, 0, 0.05) 100%);
+      border-left-color: #E53935;
+    }
+
+    .stat-card.points {
+      background: linear-gradient(135deg, rgba(239, 108, 0, 0.15) 0%, rgba(255, 167, 38, 0.05) 100%);
+      border-left-color: #EF6C00;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .stat-card.clubs:hover {
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.25) 0%, rgba(239, 108, 0, 0.12) 100%);
+      border-left-width: 6px;
+    }
+
+    .stat-card.events:hover {
+      background: linear-gradient(135deg, rgba(229, 57, 53, 0.25) 0%, rgba(239, 108, 0, 0.12) 100%);
+      border-left-width: 6px;
+    }
+
+    .stat-card.points:hover {
+      background: linear-gradient(135deg, rgba(239, 108, 0, 0.25) 0%, rgba(255, 167, 38, 0.12) 100%);
+      border-left-width: 6px;
+    }
+
+    .stat-card:active {
+      transform: translateY(-2px);
+    }
+
+    .stat-value {
+      font-size: 60px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #C62828, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin-bottom: 8px;
+      letter-spacing: -0.03em;
+    }
+
+    /* Stat Value Color Variants */
+    .stat-card.clubs .stat-value {
+      background: linear-gradient(135deg, #C62828, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card.events .stat-value {
+      background: linear-gradient(135deg, #E53935, #EF6C00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .stat-card.points .stat-value {
+      background: linear-gradient(135deg, #EF6C00, #FFA726);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Level Indicator for Points */
+    .stat-level {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Trend Badge */
+    .trend-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      margin-left: 8px;
+      opacity: 0;
+      transform: scale(0.8);
+      animation: badgeFadeInBounce 0.6s ease-out forwards;
+    }
+
+    .trend-badge.up {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.35), rgba(74, 222, 128, 0.25));
+      color: #4ade80;
+      border: 1.5px solid rgba(34, 197, 94, 0.5);
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .trend-badge.neutral {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .trend-badge.down {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.85);
+      margin-top: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-description {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    .stat-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.8);
+      margin-top: 8px;
+      font-weight: 500;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+
+    .stat-card:hover .stat-action {
+      color: rgba(255, 255, 255, 1);
+      transform: translateX(2px);
+    }
+
+    /* Enhanced hover states for empty state buttons */
+    .stat-action.font-semibold {
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: rgba(59, 130, 246, 0.1);
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .stat-action.font-semibold:hover {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: rgba(59, 130, 246, 0.4);
+      transform: translateY(-2px) translateX(4px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .stat-action.font-semibold:hover .stat-action-arrow {
+      transform: translateX(4px);
+    }
+
+    .stat-action-arrow {
+      display: inline-block;
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Empty state box slide-in animation */
+    .empty-state-box {
+      opacity: 0;
+      transform: translateX(-20px);
+      animation: slideInFromLeft 0.6s ease-out forwards;
+    }
+
+    /* Points progress bar */
+    .points-progress-bar {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .points-progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shimmer-progress 2s infinite;
+    }
+
+    /* ===== SPACING SECTION ===== */
+    .spacing-section {
+      padding: 32px 0;
+    }
+
+    /* ===== ACCESSIBILITY ===== */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    .focus\:not-sr-only:focus {
+      position: static;
+      width: auto;
+      height: auto;
+      padding: inherit;
+      margin: inherit;
+      overflow: visible;
+      clip: auto;
+      white-space: normal;
+    }
+
+    /* Enhanced focus states */
+    *:focus-visible {
+      outline: 2px solid rgba(198, 40, 40, 0.6);
+      outline-offset: 2px;
+    }
+
+    /* ===== ACCESSIBILITY ===== */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border-width: 0;
+    }
+
+    .focus\:not-sr-only:focus {
+      position: static;
+      width: auto;
+      height: auto;
+      padding: 0.5rem 1rem;
+      margin: 0;
+      overflow: visible;
+      clip: auto;
+      white-space: normal;
+      z-index: 100;
+    }
+
+    /* Enhanced focus states for better visibility - Accessibility */
+    a:focus-visible,
+    button:focus-visible,
+    .stat-card:focus-visible,
+    .club-card:focus-visible,
+    .quick-action:focus-visible {
+      outline: 3px solid rgba(59, 130, 246, 0.8);
+      outline-offset: 3px;
+      border-radius: 4px;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    }
+
+    /* Ensure all interactive elements are keyboard accessible */
+    .stat-card:focus,
+    .club-card:focus,
+    .quick-action:focus {
+      outline: none;
+    }
+
+    /* Loading Skeleton Styles */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.1) 75%);
+      background-size: 200% 100%;
+      animation: skeleton-loading 1.5s ease-in-out infinite;
+      border-radius: 8px;
+    }
+
+    @keyframes skeleton-loading {
+      0% {
+        background-position: 200% 0;
+      }
+      100% {
+        background-position: -200% 0;
+      }
+    }
+
+    .skeleton-text {
+      height: 16px;
+      margin-bottom: 8px;
+    }
+
+    .skeleton-title {
+      height: 24px;
+      width: 60%;
+      margin-bottom: 12px;
+    }
+
+    .skeleton-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+    }
+
+    .skeleton-card {
+      padding: 20px;
+      border-radius: 12px;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    /* Tablet-specific tokens */
+    @media (min-width: 768px) and (max-width: 1023px) {
+      /* Container max-width for tablet */
+      .max-w-7xl {
+        max-width: 960px;
+      }
+
+      /* Section padding for tablet */
+      .spacing-section {
+        padding: 24px 0;
+      }
+
+      /* Card gap for tablet */
+      .card-gap-tablet {
+        gap: 16px;
+      }
+
+      /* Hero adjustments for tablet */
+      .hero-tablet {
+        padding-top: 24px;
+        padding-bottom: 20px;
+      }
+
+      h1 {
+        font-size: 2.5rem;
+      }
+
+      /* Stats cards - shorter and wider on tablet */
+      .stat-card {
+        padding: 16px 20px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .stat-card > div:first-child {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        flex: 1;
+      }
+
+      .stat-value {
+        font-size: 28px;
+        margin: 0;
+        line-height: 1;
+      }
+
+      .stat-label {
+        margin-top: 4px;
+        text-align: left;
+        font-size: 0.75rem;
+      }
+
+      .stat-card .text-tertiary {
+        display: block;
+        margin-top: 0;
+        text-align: right;
+        font-size: 0.6875rem;
+        white-space: nowrap;
+      }
+
+      /* Quick Actions - 2 column grid on tablet */
+      .quick-actions-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .quick-actions-container .card-inner {
+        margin: 0;
+      }
+
+      /* Activity + Achievements side-by-side on tablet - handled by Tailwind md:grid-cols-2 */
+
+      /* Footer adjustments for tablet */
+      footer {
+        padding-top: 32px;
+        padding-bottom: 32px;
+      }
+
+      footer .grid {
+        gap: 24px;
+      }
+
+      /* Button height reduction on tablet */
+      .btn-primary,
+      .btn-secondary {
+        padding: 10px 20px;
+        font-size: 0.875rem;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .card {
+        padding: 16px;
+      }
+
+      .card-inner {
+        padding: 12px;
+      }
+
+      h1 {
+        font-size: 1.875rem;
+      }
+
+      .section-header {
+        font-size: 1.25rem;
+      }
+
+      .stat-value {
+        font-size: 32px;
+      }
+
+      .stat-label {
+        font-size: 10px;
+      }
+
+      /* Stack stat cards on mobile */
+      .grid.grid-cols-3 {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      /* Enhanced stat cards for mobile */
+      .stat-card {
+        padding: 20px;
+      }
+
+      .stat-value {
+        font-size: 40px;
+      }
+
+      .trend-badge {
+        font-size: 10px;
+        padding: 3px 8px;
+      }
+
+      .trend-badge.up {
+        font-size: 10px;
+        padding: 3px 8px;
+      }
+
+      /* Progress bar mobile adjustments */
+      .points-progress-bar {
+        height: 6px;
+      }
+
+      /* Empty state boxes mobile */
+      .empty-state-box {
+        padding: 12px;
+      }
+
+      .stat-action.font-semibold {
+        padding: 8px 14px;
+        font-size: 12px;
+      }
+
+      /* Quick Actions below hero on mobile */
+      .lg\:col-span-1 {
+        order: 2;
+      }
+
+      .lg\:col-span-2 {
+        order: 1;
+      }
+
+      /* Ensure touch targets are at least 44px */
+      .stat-card,
+      .club-card,
+      .quick-action,
+      .btn-primary,
+      .btn-secondary {
+        min-height: 44px;
+        padding: 12px 16px;
+      }
+
+      .hidden-mobile {
+        display: none !important;
+      }
+
+      /* Line clamping for mobile */
+      .line-clamp-1 {
+        display: -webkit-box;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* Touch targets */
+      .btn-icon {
+        min-width: 44px;
+        min-height: 44px;
+      }
+
+      /* Nav spacing on mobile */
+      .nav-actions {
+        gap: 8px;
+      }
+    }
+
+    /* ===== ACHIEVEMENT BADGE ===== */
+    .achievement-item {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .achievement-item.earned {
+      animation: achievement-unlock 0.6s ease-out;
+    }
+
+    .achievement-item.earned::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(45deg, transparent 30%, rgba(34, 197, 94, 0.3), transparent 70%);
+      animation: shimmer 3s infinite;
+      pointer-events: none;
+    }
+
+    .achievement-item:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Activity icon block - standardized 40-48px */
+    .activity-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .activity-icon i {
+      font-size: 0.875rem;
+    }
+
+    /* ===== PROGRESS BAR ===== - Neutral color */
+    .progress-bar {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      border-radius: 2px;
+      transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shimmer-progress 2s infinite;
+    }
+
+    @keyframes shimmer-progress {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .progress-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      margin-top: 6px;
+    }
+
+    /* ===== NOTIFICATION ===== */
+    .notification-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: linear-gradient(135deg, #C62828, #E53935);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px solid rgba(15, 23, 42, 0.8);
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    /* ===== INPUT FIELDS ===== */
+    .input-field {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+
+    .input-field:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 107, 107, 0.5);
+      box-shadow: 0 0 20px rgba(198, 40, 40, 0.2);
+    }
+
+    .input-field::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* ===== DROPDOWNS ===== */
+    .dropdown-menu {
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      position: absolute;
+      min-width: 200px;
+      z-index: 50;
+    }
+
+    .dropdown-item {
+      padding: 12px 16px;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(198, 40, 40, 0.1);
+      color: #FF6B6B;
+      padding-left: 20px;
+    }
+
+    /* ===== PROFILE PILL ===== */
+    .profile-pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .profile-pill:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .profile-pill[aria-expanded="true"] {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+    }
+
+    .profile-pill[aria-expanded="true"] .profile-caret {
+      transform: rotate(180deg);
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    /* ===== PROFILE DROPDOWN ===== */
+    .profile-dropdown {
+      background: rgba(30, 35, 45, 0.96);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      width: 256px;
+    }
+
+    /* Match dropdown width to trigger button - align right edges */
+    #profileMenu {
+      right: 0;
+    }
+
+    /* ===== CLUB CARD CATEGORY COLOR CODING ===== */
+    .club-card {
+      position: relative;
+      border-left: 4px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .club-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--club-color, #9E9E9E);
+      opacity: 0.6;
+      transition: all 0.3s ease;
+      border-radius: 8px 0 0 8px;
+    }
+
+    .club-card:hover::before {
+      width: 6px;
+      opacity: 1;
+    }
+
+    /* Category-based colors */
+    .club-card[data-category="academic"],
+    .club-card[data-category="Academic"] {
+      --club-color: #2196F3;
+      border-left-color: #2196F3;
+    }
+
+    .club-card[data-category="arts"],
+    .club-card[data-category="Arts"] {
+      --club-color: #E91E63;
+      border-left-color: #E91E63;
+    }
+
+    .club-card[data-category="sports"],
+    .club-card[data-category="Sports"] {
+      --club-color: #4CAF50;
+      border-left-color: #4CAF50;
+    }
+
+    .club-card[data-category="tech"],
+    .club-card[data-category="Technology"],
+    .club-card[data-category="Technical"] {
+      --club-color: #9C27B0;
+      border-left-color: #9C27B0;
+    }
+
+    .club-card[data-category="social"],
+    .club-card[data-category="Social"] {
+      --club-color: #FF9800;
+      border-left-color: #FF9800;
+    }
+
+    .club-card:hover {
+      background: linear-gradient(135deg, rgba(var(--club-color-rgb, 158, 158, 158), 0.08) 0%, rgba(255, 255, 255, 0.12) 10%);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+
+    .club-card:hover .card-title {
+      color: var(--club-color, #ffffff);
+    }
+
+    .club-card[data-category="academic"]:hover .card-title,
+    .club-card[data-category="Academic"]:hover .card-title {
+      color: #2196F3;
+    }
+
+    .club-card[data-category="tech"]:hover .card-title,
+    .club-card[data-category="Technology"]:hover .card-title {
+      color: #9C27B0;
+    }
+
+    /* Enhanced Badge Styles */
+    .badge-popular {
+      background: linear-gradient(135deg, rgba(255, 193, 7, 0.2), rgba(255, 213, 79, 0.15));
+      color: #FFC107;
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      font-weight: 600;
+    }
+
+    .badge-active {
+      background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(102, 187, 106, 0.15));
+      color: #4ade80;
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      font-weight: 600;
+    }
+
+    .badge-academic {
+      background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(66, 165, 245, 0.15));
+      color: #93c5fd;
+      border: 1px solid rgba(33, 150, 243, 0.3);
+      font-weight: 600;
+    }
+
+    /* Visual Hierarchy for Recommended Clubs */
+    .club-card.featured {
+      border-left-width: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .club-card.featured:hover {
+      background: rgba(255, 255, 255, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .club-card.highlight {
+      border-left-width: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Activity Item Color Coding */
+    .activity-item.type-join {
+      border-left-color: #4CAF50;
+      background: linear-gradient(90deg, rgba(76, 175, 80, 0.08) 0%, rgba(255, 255, 255, 0.05) 10%);
+    }
+
+    .activity-item.type-event {
+      border-left-color: #2196F3;
+      background: linear-gradient(90deg, rgba(33, 150, 243, 0.08) 0%, rgba(255, 255, 255, 0.05) 10%);
+    }
+
+    .activity-item.type-achievement {
+      border-left-color: #FFC107;
+      background: linear-gradient(90deg, rgba(255, 193, 7, 0.08) 0%, rgba(255, 255, 255, 0.05) 10%);
+    }
+
+    .activity-item.type-application {
+      border-left-color: #9C27B0;
+      background: linear-gradient(90deg, rgba(156, 39, 176, 0.08) 0%, rgba(255, 255, 255, 0.05) 10%);
+    }
+
+    body.light-mode .activity-item.type-join {
+      background: linear-gradient(90deg, rgba(76, 175, 80, 0.1) 0%, rgba(255, 255, 255, 1) 10%);
+      border-left-color: #4CAF50;
+    }
+
+    body.light-mode .activity-item.type-event {
+      background: linear-gradient(90deg, rgba(33, 150, 243, 0.1) 0%, rgba(255, 255, 255, 1) 10%);
+      border-left-color: #2196F3;
+    }
+
+    body.light-mode .activity-item.type-achievement {
+      background: linear-gradient(90deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 255, 255, 1) 10%);
+      border-left-color: #FFC107;
+    }
+
+    body.light-mode .activity-item.type-application {
+      background: linear-gradient(90deg, rgba(156, 39, 176, 0.1) 0%, rgba(255, 255, 255, 1) 10%);
+      border-left-color: #9C27B0;
+    }
+
+    /* ===== COMPREHENSIVE LIGHT MODE FIXES ===== */
+    
+    /* Icons - Ensure visibility */
+    body.light-mode i,
+    body.light-mode .fas,
+    body.light-mode .far,
+    body.light-mode .fa {
+      color: inherit;
+    }
+
+    body.light-mode .btn-icon {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .btn-icon:hover {
+      background: rgba(0, 0, 0, 0.08);
+      color: #1e293b;
+    }
+
+
+    body.light-mode .stat-description {
+      color: #64748b;
+    }
+
+    body.light-mode .stat-action {
+      color: #475569;
+    }
+
+    body.light-mode .stat-card:hover .stat-action {
+      color: #1e293b;
+    }
+
+    /* Quick Actions - Fix text and icons */
+    body.light-mode .quick-action {
+      color: #1e293b;
+    }
+
+    body.light-mode .quick-action .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .quick-action i {
+      color: inherit;
+    }
+
+    body.light-mode .quick-action.applications {
+      background: linear-gradient(135deg, rgba(244, 67, 54, 0.15) 0%, rgba(244, 67, 54, 0.08) 100%);
+      border-color: rgba(244, 67, 54, 0.3);
+    }
+
+    body.light-mode .quick-action.applications:hover {
+      background: linear-gradient(135deg, rgba(244, 67, 54, 0.2) 0%, rgba(244, 67, 54, 0.12) 100%);
+    }
+
+    body.light-mode .quick-action.messages {
+      background: linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(33, 150, 243, 0.08) 100%);
+      border-color: rgba(33, 150, 243, 0.3);
+    }
+
+    body.light-mode .quick-action.messages:hover {
+      background: linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(33, 150, 243, 0.12) 100%);
+    }
+
+    body.light-mode .quick-action.events {
+      background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.08) 100%);
+      border-color: rgba(255, 152, 0, 0.3);
+    }
+
+    body.light-mode .quick-action.events:hover {
+      background: linear-gradient(135deg, rgba(255, 152, 0, 0.2) 0%, rgba(255, 152, 0, 0.12) 100%);
+    }
+
+    /* Profile Dropdown - Fix all text */
+    body.light-mode .profile-dropdown .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/65,
+    body.light-mode .profile-dropdown .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .profile-dropdown i {
+      color: #475569;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Activity Icons */
+    body.light-mode .activity-icon {
+      color: inherit;
+    }
+
+    body.light-mode .activity-icon.bg-gradient-brand {
+      background: linear-gradient(135deg, #C62828, #E53935);
+      color: white;
+    }
+
+    body.light-mode .activity-icon.bg-blue-500\/30 {
+      background: rgba(59, 130, 246, 0.2);
+      color: #2563eb;
+    }
+
+    body.light-mode .activity-icon.bg-purple-500\/30 {
+      background: rgba(156, 39, 176, 0.2);
+      color: #7c3aed;
+    }
+
+    body.light-mode .activity-icon.bg-green-500\/30 {
+      background: rgba(34, 197, 94, 0.2);
+      color: #059669;
+    }
+
+    body.light-mode .activity-icon.bg-yellow-500\/30 {
+      background: rgba(234, 179, 8, 0.2);
+      color: #d97706;
+    }
+
+    body.light-mode .activity-icon.bg-orange-500\/30 {
+      background: rgba(249, 115, 22, 0.2);
+      color: #ea580c;
+    }
+
+    /* Achievement Icons */
+    body.light-mode .achievement-item .text-xl {
+      opacity: 1;
+      filter: none;
+    }
+
+    body.light-mode .achievement-item.earned {
+      border-color: rgba(34, 197, 94, 0.4);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    body.light-mode .achievement-item:not(.earned) {
+      opacity: 0.7;
+    }
+
+    body.light-mode .achievement-item:not(.earned) .text-xl {
+      opacity: 0.6;
+    }
+
+    /* Club Cards - Fix all text */
+    body.light-mode .club-card .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card .text-white\/90 {
+      color: #334155 !important;
+    }
+
+    body.light-mode .club-card .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .club-card svg {
+      color: #64748b;
+    }
+
+    body.light-mode .club-card:hover svg {
+      color: #1e293b;
+    }
+
+    /* Hero Section */
+    body.light-mode .bg-gradient-to-r {
+      background: linear-gradient(to right, #C62828, #E53935);
+    }
+
+    body.light-mode .text-transparent.bg-gradient-to-r {
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Links and Buttons */
+    body.light-mode .btn-link {
+      color: #2563eb;
+    }
+
+    body.light-mode .btn-link:hover {
+      color: #1d4ed8;
+    }
+
+    /* Empty States */
+    body.light-mode .text-white\/30,
+    body.light-mode .text-white\/20 {
+      color: #cbd5e1 !important;
+    }
+
+    body.light-mode .text-white\/70 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .text-white\/80 {
+      color: #334155 !important;
+    }
+
+    /* Progress Labels */
+    body.light-mode .progress-label {
+      color: #1e293b;
+    }
+
+    body.light-mode .progress-label .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    /* Stat Card Borders in Light Mode */
+    body.light-mode .stat-card.clubs {
+      border-left-color: #C62828;
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.1) 0%, rgba(239, 108, 0, 0.05) 100%);
+    }
+
+    body.light-mode .stat-card.events {
+      border-left-color: #E53935;
+      background: linear-gradient(135deg, rgba(229, 57, 53, 0.1) 0%, rgba(239, 108, 0, 0.05) 100%);
+    }
+
+    body.light-mode .stat-card.points {
+      border-left-color: #EF6C00;
+      background: linear-gradient(135deg, rgba(239, 108, 0, 0.1) 0%, rgba(255, 167, 38, 0.05) 100%);
+    }
+
+    /* Notification Badge Text */
+    body.light-mode .notification-badge {
+      color: white;
+    }
+
+    /* Profile Picture Border */
+    body.light-mode .ring-white\/20 {
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Mobile Menu */
+    body.light-mode .mobile-menu {
+      background: rgba(255, 255, 255, 0.98);
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .mobile-menu .nav-link {
+      color: #475569;
+    }
+
+    body.light-mode .mobile-menu .nav-link:hover {
+      color: #1e293b;
+    }
+
+    /* Onboarding Checklist */
+    body.light-mode .bg-gradient-to-r.from-red-500\/15 {
+      background: linear-gradient(to right, rgba(239, 68, 68, 0.15), rgba(251, 146, 60, 0.1));
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    body.light-mode .bg-gradient-to-r.from-red-500\/15 .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .bg-gradient-to-r.from-red-500\/15 .text-white\/70 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .bg-gradient-to-r.from-red-500\/15 .text-white\/85 {
+      color: #334155 !important;
+    }
+
+    body.light-mode .bg-gradient-to-r.from-red-500\/15 i {
+      color: #dc2626;
+    }
+
+    /* Gamification Modal */
+    body.light-mode #gamificationModal .dark\:bg-\[#1e293b\] {
+      background: #ffffff;
+    }
+
+    body.light-mode #gamificationModal .dark\:text-white {
+      color: #1e293b;
+    }
+
+    body.light-mode #gamificationModal .dark\:text-gray-300 {
+      color: #475569;
+    }
+
+    body.light-mode #gamificationModal .dark\:border-gray-700 {
+      border-color: #e2e8f0;
+    }
+
+    body.light-mode #gamificationModal .dark\:text-gray-400 {
+      color: #64748b;
+    }
+
+    /* Gradient Background Icons */
+    body.light-mode .bg-gradient-accent-blue,
+    body.light-mode .bg-gradient-accent-purple,
+    body.light-mode .bg-gradient-accent-green,
+    body.light-mode .bg-gradient-accent-orange,
+    body.light-mode .bg-gradient-brand {
+      color: white;
+    }
+
+    body.light-mode .bg-gradient-accent-blue i,
+    body.light-mode .bg-gradient-accent-purple i,
+    body.light-mode .bg-gradient-accent-green i,
+    body.light-mode .bg-gradient-accent-orange i,
+    body.light-mode .bg-gradient-brand i {
+      color: white;
+    }
+
+    /* Icon Backgrounds in Light Mode */
+    body.light-mode .bg-red-500\/20,
+    body.light-mode .bg-blue-500\/20,
+    body.light-mode .bg-orange-500\/20,
+    body.light-mode .bg-green-500\/20,
+    body.light-mode .bg-purple-500\/20 {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    body.light-mode .bg-red-500\/25 {
+      background: rgba(239, 68, 68, 0.15);
+    }
+
+    body.light-mode .bg-blue-500\/25 {
+      background: rgba(59, 130, 246, 0.15);
+    }
+
+    body.light-mode .bg-orange-500\/25 {
+      background: rgba(249, 115, 22, 0.15);
+    }
+
+    body.light-mode .text-red-400 {
+      color: #dc2626;
+    }
+
+    body.light-mode .text-blue-400 {
+      color: #2563eb;
+    }
+
+    body.light-mode .text-orange-400 {
+      color: #ea580c;
+    }
+
+    body.light-mode .text-green-400 {
+      color: #059669;
+    }
+
+    body.light-mode .text-purple-400 {
+      color: #7c3aed;
+    }
+
+    /* Chevron Icons */
+    body.light-mode .fa-chevron-right {
+      color: #64748b;
+    }
+
+    body.light-mode .group:hover .fa-chevron-right {
+      color: #1e293b;
+    }
+
+    /* Profile Caret */
+    body.light-mode .profile-caret {
+      color: #64748b;
+    }
+
+    /* Border Colors */
+    body.light-mode .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .border-white\/15,
+    body.light-mode .border-white\/20 {
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    /* Background Gradients for Hero */
+    body.light-mode .bg-red-900\/20 {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    body.light-mode .bg-blue-900\/20 {
+      background: rgba(59, 130, 246, 0.1);
+    }
+
+    /* Welcome Text */
+    body.light-mode .text-transparent.bg-gradient-to-r.from-red-400 {
+      background: linear-gradient(to right, #dc2626, #ea580c);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Stat Card Hover States */
+    body.light-mode .stat-card.clubs:hover {
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.15) 0%, rgba(239, 108, 0, 0.08) 100%);
+    }
+
+    body.light-mode .stat-card.events:hover {
+      background: linear-gradient(135deg, rgba(229, 57, 53, 0.15) 0%, rgba(239, 108, 0, 0.08) 100%);
+    }
+
+    body.light-mode .stat-card.points:hover {
+      background: linear-gradient(135deg, rgba(239, 108, 0, 0.15) 0%, rgba(255, 167, 38, 0.08) 100%);
+    }
+
+    /* Check and Lock Icons */
+    body.light-mode .fa-check-circle {
+      color: #059669;
+    }
+
+    body.light-mode .fa-lock {
+      color: #64748b;
+    }
+
+    /* Achievement Progress */
+    body.light-mode .achievement-item .progress-bar {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Logo Text */
+    body.light-mode .text-white\/80 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .font-semibold.text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .font-bold.text-white {
+      color: #1e293b !important;
+    }
+
+    /* Mobile-specific spacing improvements */
+    @media (max-width: 640px) {
+      .spacing-section {
+        padding: 24px 0;
+      }
+
+      .section-header {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .card {
+        padding: 16px;
+      }
+
+      /* Ensure proper spacing between sections */
+      section {
+        margin-bottom: 32px;
+      }
+
+      /* Hero section mobile adjustments */
+      #main-content {
+        padding-top: 16px;
+        padding-bottom: 24px;
+      }
+
+      h1 {
+        margin-bottom: 12px;
+      }
+    }
+
+    /* ===== PROFILE BUTTON/PILL - Light Mode Fixes ===== */
+    body.light-mode .profile-pill {
+      background: rgba(0, 0, 0, 0.03);
+      border: 1px solid rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .profile-pill:hover {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .profile-pill[aria-expanded="true"] {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.2);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .profile-pill .text-white\/85 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-pill .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-pill .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Profile Picture Container */
+    body.light-mode .profile-pill .ring-white\/20 {
+      border-color: rgba(0, 0, 0, 0.15);
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .profile-pill .bg-white\/10 {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    body.light-mode .profile-pill .text-white\/70 {
+      color: #475569 !important;
+    }
+
+    /* Profile Dropdown Items */
+    body.light-mode .profile-dropdown .bg-white\/10 {
+      background: rgba(0, 0, 0, 0.05);
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .profile-dropdown .border-white\/10,
+    body.light-mode .profile-dropdown .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-red-500\/15:hover {
+      background: rgba(239, 68, 68, 0.1) !important;
+    }
+
+    /* Profile Summary Section */
+    body.light-mode .profile-dropdown .border-white\/15 {
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Profile Name and Details */
+    body.light-mode .profile-dropdown .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/65 {
+      color: #64748b !important;
+    }
+
+    /* Profile Icon Backgrounds */
+    body.light-mode .profile-dropdown .bg-red-500\/15 {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+
+    body.light-mode .profile-dropdown .text-red-400 {
+      color: #dc2626;
+    }
+
+    body.light-mode .profile-dropdown .border-red-500\/20 {
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    /* Profile Divider */
+    body.light-mode .profile-dropdown .h-px.bg-white\/10,
+    body.light-mode .profile-dropdown .h-px.bg-white\/15,
+    body.light-mode .profile-dropdown .h-px.bg-white\/20 {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Profile Caret Icon */
+    body.light-mode .profile-pill .profile-caret {
+      color: #64748b;
+    }
+
+    body.light-mode .profile-pill[aria-expanded="true"] .profile-caret {
+      color: #1e293b;
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: "#C62828",
+            brandLight: "#E53935",
+            dark: "#0f172a",
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="min-h-screen">
+  <!-- Skip to main content for accessibility -->
+  <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-red-600 focus:text-white focus:rounded-lg focus:font-semibold focus:shadow-lg">
+    Skip to main content
+  </a>
+  <!-- Shared Student Navigation -->
+  <%- include('../layouts/studentNav', { 
+    currentPath: '/student/dashboard',
+    student: typeof student !== 'undefined' ? student : (typeof user !== 'undefined' ? user : {}),
+    announcements: typeof announcements !== 'undefined' ? announcements : [],
+    csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : ''
+  }) %>
+
+  <!-- ===== HERO SECTION ===== -->
+  <section id="main-content" class="pt-20 pb-6 sm:pt-16 sm:pb-8 md:pt-12 md:pb-6 px-4 sm:px-6 lg:px-8 relative overflow-hidden" aria-label="Dashboard overview">
+    <!-- Background Elements -->
+    <div class="absolute -top-40 -right-40 w-80 h-80 bg-red-900/20 rounded-full blur-3xl opacity-50 -z-10"></div>
+    <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-blue-900/20 rounded-full blur-3xl opacity-50 -z-10"></div>
+
+    <div class="max-w-7xl mx-auto">
+      <div class="grid lg:grid-cols-3 gap-6 lg:gap-8 items-start">
+        <!-- Left Content - Main Welcome -->
+        <div class="lg:col-span-2 space-y-4 sm:space-y-5 animate-fade-in-left">
+          <div>
+            <p class="text-xs sm:text-sm font-semibold text-transparent bg-gradient-to-r from-red-400 to-orange-400 bg-clip-text mb-2 sm:mb-3">
+              ✨ Welcome Back
+            </p>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight">
+              Hi, <%= user ? (user.first_name || 'Student') : 'Student' %><span class="hidden sm:inline"> 👋</span>
+            </h1>
+          </div>
+
+          <p class="text-sm sm:text-base text-white/70 leading-relaxed max-w-md">
+            <% if (studentStats && studentStats.clubsJoined === 0) { %>
+              Get started by exploring clubs and joining communities that match your interests.
+            <% } else { %>
+              Find clubs, track events, and stay involved.
+            <% } %>
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-3 pt-4 sm:pt-6">
+            <a href="/student/discover" class="btn-primary group w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-semibold rounded-lg shadow-lg shadow-red-500/25 hover:shadow-xl hover:shadow-red-500/30 transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-[#0a0f1a]" aria-label="Explore and discover clubs">
+              <span class="flex items-center justify-center gap-2">
+                Explore Clubs
+                <i class="fas fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+              </span>
+            </a>
+            <a href="/student/events" class="text-center sm:text-left text-white/80 hover:text-white text-sm font-medium transition-colors flex items-center justify-center sm:justify-start gap-2 focus:outline-none focus:ring-2 focus:ring-white/50 rounded px-2 py-1" aria-label="View upcoming events">
+              <i class="fas fa-calendar text-xs"></i>
+              View Events
+            </a>
+          </div>
+
+          <!-- Quick Stats - Actionable & Informative with Color Tints, Trends, and Levels -->
+          <div class="grid grid-cols-3 gap-3 sm:gap-4 pt-4 sm:pt-5">
+            <a href="<%= studentStats && studentStats.clubsJoined > 0 ? '/student/my-clubs' : '/student/discover' %>" class="stat-card clubs" role="button" tabindex="0" aria-label="<%= studentStats ? studentStats.clubsJoined || 0 : 0 %> <%= studentStats && studentStats.clubsJoined === 1 ? 'club joined' : 'clubs joined' %>. <%= studentStats && studentStats.clubsJoined > 0 ? 'View your clubs' : 'Discover clubs' %>" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href=this.href}">
+              <div class="flex items-baseline gap-2">
+                <div class="stat-value" aria-hidden="true"><%= studentStats ? studentStats.clubsJoined || 0 : 0 %></div>
+                <% if (studentStats && studentStats.clubsJoined > 0) { %>
+                  <span class="trend-badge up" aria-label="Increased"><i class="fas fa-arrow-up text-[8px]" aria-hidden="true"></i> <%= studentStats.clubsJoined %></span>
+                <% } %>
+              </div>
+              <div class="stat-label tiny-label">Clubs Joined</div>
+              <% if (studentStats && studentStats.clubsJoined === 0) { %>
+                <div class="stat-description small-text mt-2">You're in 0 clubs — most students join 2-3</div>
+                <div class="stat-action">Join now →</div>
+              <% } else { %>
+                <div class="stat-description small-text mt-2">Active memberships</div>
+                <div class="stat-action">Manage →</div>
+              <% } %>
+            </a>
+            <a href="/student/events" class="stat-card events" role="button" tabindex="0" aria-label="<%= studentStats ? studentStats.eventsAttended || 0 : 0 %> <%= studentStats && studentStats.eventsAttended === 1 ? 'event attended' : 'events attended' %>. View events" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href=this.href}">
+              <div class="flex items-baseline gap-2">
+                <div class="stat-value" aria-hidden="true"><%= studentStats ? studentStats.eventsAttended || 0 : 0 %></div>
+                <% if (studentStats && studentStats.eventsAttended === 0) { %>
+                  <span class="trend-badge neutral text-white/90" aria-label="No events yet" style="color: rgba(255, 255, 255, 0.9);">No events yet</span>
+                <% } else { %>
+                  <span class="trend-badge up" aria-label="Increased"><i class="fas fa-arrow-up text-[8px]" aria-hidden="true"></i> <%= studentStats.eventsAttended %></span>
+                <% } %>
+              </div>
+              <div class="stat-label tiny-label">Events Attended</div>
+              <% if (studentStats && studentStats.eventsAttended === 0) { %>
+                <div class="empty-state-box mt-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <div class="flex items-start gap-2">
+                    <i class="fas fa-calendar text-blue-400 text-sm mt-0.5"></i>
+                    <div class="flex-1">
+                      <p class="text-xs font-semibold text-white mb-1">No events yet — let's fix that!</p>
+                      <p class="text-xs text-white/70 mb-2">Join a club to see upcoming events, or browse all events happening this week</p>
+                      <div class="stat-action font-semibold">Browse events <span class="stat-action-arrow">→</span></div>
+                    </div>
+                  </div>
+                </div>
+              <% } else { %>
+                <div class="stat-description small-text mt-2">Total participation</div>
+                <div class="stat-action">View all →</div>
+              <% } %>
+            </a>
+            <button onclick="showGamificationInfo()" class="stat-card points text-left w-full" role="button" tabindex="0" aria-label="<%= studentStats ? studentStats.points || 0 : 0 %> points earned. Level <%= Math.floor((studentStats ? studentStats.points || 0 : 0) / 100) + 1 %>. Learn about points and gamification" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showGamificationInfo()}">
+              <div class="flex items-baseline gap-2">
+                <div class="stat-value" aria-hidden="true"><%= studentStats ? studentStats.points || 0 : 0 %></div>
+                <% 
+                  const points = studentStats ? studentStats.points || 0 : 0;
+                  const level = Math.floor(points / 100) + 1;
+                  const pointsToNext = 100 - (points % 100);
+                %>
+                <% if (points > 0) { %>
+                  <span class="trend-badge up" aria-label="Increased this week"><i class="fas fa-arrow-up text-[8px]" aria-hidden="true"></i> This week</span>
+                <% } %>
+              </div>
+              <div class="stat-label tiny-label">Points Earned</div>
+              <div class="stat-level mt-1 text-white/90" aria-label="Level <%= level %>, <%= points % 100 %> out of <%= 100 %> points to reach Level <%= level + 1 %>" style="color: rgba(255, 255, 255, 0.9);">Level <%= level %> • <%= points % 100 %>/<%= 100 %> to Level <%= level + 1 %></div>
+              <% if (points > 0) { %>
+                <% const progressPercent = points % 100; %>
+                <div class="mt-3">
+                  <div class="flex items-center justify-between mb-1.5">
+                    <span class="text-[10px] font-semibold text-white/70">Progress to Level <%= level + 1 %></span>
+                    <span class="text-[10px] font-semibold text-white/70"><%= progressPercent %>%</span>
+                  </div>
+                  <div class="h-2 bg-white/10 rounded-full overflow-hidden relative">
+                    <div class="points-progress-bar h-full bg-gradient-to-r from-purple-500 via-orange-500 to-yellow-400 rounded-full transition-all duration-1000 ease-out" style="--progress-width: <%= progressPercent %>%; width: var(--progress-width);" data-points="<%= progressPercent %>"></div>
+                  </div>
+                  <div class="flex items-center justify-between mt-1">
+                    <span class="text-[9px] text-white/60">0</span>
+                    <span class="text-[9px] text-white/60">100</span>
+                  </div>
+                </div>
+              <% } %>
+              <% if (studentStats && studentStats.points === 0) { %>
+                <div class="empty-state-box mt-3 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                  <div class="flex items-start gap-2">
+                    <i class="fas fa-star text-purple-400 text-sm mt-0.5"></i>
+                    <div class="flex-1">
+                      <p class="text-xs font-semibold text-white mb-1">Start earning points today!</p>
+                      <div class="space-y-1 text-xs text-white/70 mb-2">
+                        <p>• Attend events: +10 pts</p>
+                        <p>• Join clubs: +5 pts</p>
+                        <p>• Volunteer: +20 pts</p>
+                      </div>
+                      <div class="mt-2">
+                        <div class="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                          <div class="h-full bg-purple-500/50 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <p class="text-[10px] text-white/60 mt-1">0/100 to Level 1</p>
+                      </div>
+                      <div class="stat-action font-semibold mt-2">Learn more <span class="stat-action-arrow">→</span></div>
+                    </div>
+                  </div>
+                </div>
+              <% } else { %>
+                <div class="stat-description small-text mt-2">Keep it up!</div>
+                <div class="stat-action">View achievements →</div>
+              <% } %>
+            </button>
+          </div>
+          
+          <!-- Onboarding Checklist for New Users -->
+          <% if (studentStats && studentStats.clubsJoined === 0) { %>
+            <div class="mt-6 p-5 rounded-xl bg-gradient-to-r from-red-500/15 to-orange-500/10 border border-red-500/30 shadow-lg">
+              <div class="flex items-start gap-4">
+                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500/30 to-orange-500/20 flex items-center justify-center flex-shrink-0 border border-red-500/30">
+                  <i class="fas fa-rocket text-red-400 text-lg"></i>
+                </div>
+                <div class="flex-1">
+                  <h4 class="font-bold text-white text-lg mb-2">Welcome! Let's Get You Started</h4>
+                  <p class="text-sm text-white/85 mb-4 leading-relaxed">Complete these steps to unlock your full UniClub experience:</p>
+                  <div class="space-y-2.5 mb-4">
+                    <div class="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10">
+                      <div class="w-6 h-6 rounded-full bg-red-500/20 border-2 border-red-500/40 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-circle text-[8px] text-red-400"></i>
+                      </div>
+                      <div class="flex-1">
+                        <p class="text-sm font-semibold text-white">Join Your First Club</p>
+                        <p class="text-xs text-white/70">Explore clubs that match your interests</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10 opacity-60">
+                      <div class="w-6 h-6 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-lock text-[8px] text-white/40"></i>
+                      </div>
+                      <div class="flex-1">
+                        <p class="text-sm font-semibold text-white/70">Attend Your First Event</p>
+                        <p class="text-xs text-white/50">Unlocks after joining a club</p>
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 border border-white/10 opacity-60">
+                      <div class="w-6 h-6 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-lock text-[8px] text-white/40"></i>
+                      </div>
+                      <div class="flex-1">
+                        <p class="text-sm font-semibold text-white/70">Earn Your First Achievement</p>
+                        <p class="text-xs text-white/50">Unlocks after joining a club</p>
+                      </div>
+                    </div>
+                  </div>
+                  <a href="/student/discover" class="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white text-sm font-bold rounded-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500/50 shadow-lg shadow-red-500/25" aria-label="Explore clubs to get started">
+                    Explore Clubs
+                    <i class="fas fa-arrow-right text-xs"></i>
+                  </a>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </div>
+
+        <!-- Right Sidebar - Quick Actions (Compact) -->
+        <div class="lg:col-span-1 animate-fade-in-right mt-6 lg:mt-0">
+          <div class="card bg-white/8 border-white/10">
+            <h3 class="card-title mb-4 text-base">Quick Actions</h3>
+
+            <div class="space-y-2">
+              <!-- Primary Action -->
+              <a href="/student/applications" class="block p-3.5 rounded-lg transition-all group focus:outline-none focus:ring-2 focus:ring-red-500/50 transform hover:scale-[1.02] active:scale-[0.98] hover:translate-x-1 quick-action applications" style="background: linear-gradient(135deg, rgba(244, 67, 54, 0.12) 0%, rgba(244, 67, 54, 0.06) 100%); border: 1px solid rgba(244, 67, 54, 0.25);" aria-label="View my applications">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-red-500/25 flex items-center justify-center text-red-400 flex-shrink-0 group-hover:bg-red-500/35 transition-colors">
+                    <i class="fas fa-file-alt text-sm group-hover:scale-110 transition-transform"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-bold text-white group-hover:text-red-100 transition-colors">My Applications</span>
+                    </div>
+                  </div>
+                  <i class="fas fa-chevron-right text-xs text-white/40 group-hover:text-red-400 group-hover:translate-x-1 transition-all"></i>
+                </div>
+              </a>
+
+              <!-- Messages -->
+              <a href="/student/messages" class="block p-3.5 rounded-lg transition-all group focus:outline-none focus:ring-2 focus:ring-white/30 transform hover:scale-[1.02] active:scale-[0.98] hover:translate-x-1 quick-action messages" style="background: linear-gradient(135deg, rgba(33, 150, 243, 0.12) 0%, rgba(33, 150, 243, 0.06) 100%); border: 1px solid rgba(33, 150, 243, 0.25);" aria-label="View messages">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-blue-500/25 flex items-center justify-center text-blue-400 flex-shrink-0 relative group-hover:bg-blue-500/35 transition-colors">
+                    <i class="fas fa-message text-sm group-hover:scale-110 transition-transform"></i>
+                    <% if (typeof unreadMessagesCount !== 'undefined' && unreadMessagesCount > 0) { %>
+                      <span class="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-red-500 to-red-600 rounded-full text-[10px] flex items-center justify-center text-white font-bold border-2 border-[#0a0f1a] animate-pulse-glow shadow-lg"><%= unreadMessagesCount > 9 ? '9+' : unreadMessagesCount %></span>
+                    <% } %>
+                  </div>
+                  <span class="text-sm font-semibold text-white flex-1 group-hover:text-blue-100 transition-colors">Messages</span>
+                  <i class="fas fa-chevron-right text-xs text-white/40 group-hover:text-blue-400 group-hover:translate-x-1 transition-all"></i>
+                </div>
+              </a>
+
+              <!-- Events -->
+              <a href="/student/events" class="block p-3.5 rounded-lg transition-all group focus:outline-none focus:ring-2 focus:ring-white/30 transform hover:scale-[1.02] active:scale-[0.98] hover:translate-x-1 quick-action events" style="background: linear-gradient(135deg, rgba(255, 152, 0, 0.12) 0%, rgba(255, 152, 0, 0.06) 100%); border: 1px solid rgba(255, 152, 0, 0.25);" aria-label="View upcoming events">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-lg bg-orange-500/25 flex items-center justify-center text-orange-400 flex-shrink-0 group-hover:bg-orange-500/35 transition-colors">
+                    <i class="fas fa-calendar-days text-sm group-hover:scale-110 transition-transform"></i>
+                  </div>
+                  <span class="text-sm font-semibold text-white flex-1 group-hover:text-orange-100 transition-colors">Events</span>
+                  <i class="fas fa-chevron-right text-xs text-white/40 group-hover:text-orange-400 group-hover:translate-x-1 transition-all"></i>
+                </div>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ACTIVITY & ACHIEVEMENTS ===== -->
+  <section class="px-4 sm:px-6 lg:px-8 py-6 relative">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+        <!-- Activity Feed -->
+        <div class="md:col-span-1 lg:col-span-2 fade-in-on-scroll">
+          <div class="card bg-white/8 border-white/10">
+            <div class="flex items-baseline justify-between mb-4">
+              <h2 class="section-header text-lg">Recent Activity</h2>
+            </div>
+
+            <div class="space-y-2">
+              <% if (recentActivity && recentActivity.length > 0) { %>
+                <% recentActivity.slice(0, 5).forEach((activity, index) => { 
+                  const isHidden = index >= 2 ? 'hidden sm:block' : '';
+                  
+                  // More diverse activity types
+                  const activityType = activity.type || activity.activity_type || '';
+                  let iconClass = 'fa-check';
+                  let iconBgClass = 'bg-blue-500/30 text-blue-300';
+                  let badgeClass = 'badge-info';
+                  let badgeText = 'Activity';
+                  let activityClass = '';
+                  
+                  if (activityType.toLowerCase().includes('join') || activityType.toLowerCase().includes('member')) {
+                    iconClass = 'fa-user-plus';
+                    iconBgClass = 'bg-green-500/30 text-green-300';
+                    badgeClass = 'badge-success';
+                    badgeText = 'Joined';
+                    activityClass = 'type-join';
+                  } else if (activityType.toLowerCase().includes('event') || activityType.toLowerCase().includes('attend')) {
+                    iconClass = 'fa-calendar-check';
+                    iconBgClass = 'bg-blue-500/30 text-blue-300';
+                    badgeClass = 'badge-info';
+                    badgeText = 'Event';
+                    activityClass = 'type-event';
+                  } else if (activityType.toLowerCase().includes('achievement') || activityType.toLowerCase().includes('badge')) {
+                    iconClass = 'fa-trophy';
+                    iconBgClass = 'bg-yellow-500/30 text-yellow-300';
+                    badgeClass = 'badge-warning';
+                    badgeText = 'Achievement';
+                    activityClass = 'type-achievement';
+                  } else if (activityType.toLowerCase().includes('application') || activityType.toLowerCase().includes('apply')) {
+                    iconClass = 'fa-file-alt';
+                    iconBgClass = 'bg-purple-500/30 text-purple-300';
+                    badgeClass = 'badge-neutral';
+                    badgeText = 'Application';
+                    activityClass = 'type-application';
+                  } else {
+                    // Default fallback
+                    iconClass = index % 4 === 0 ? 'fa-plus' : (index % 4 === 1 ? 'fa-check' : (index % 4 === 2 ? 'fa-star' : 'fa-bell'));
+                    iconBgClass = index % 4 === 0 ? 'bg-gradient-brand text-white' : (index % 4 === 1 ? 'bg-blue-500/30 text-blue-300' : (index % 4 === 2 ? 'bg-purple-500/30 text-purple-300' : 'bg-orange-500/30 text-orange-300'));
+                    badgeClass = index % 3 === 0 ? 'badge-success' : (index % 3 === 1 ? 'badge-info' : 'badge-warning');
+                    badgeText = index % 3 === 0 ? 'New' : (index % 3 === 1 ? 'Active' : 'Update');
+                  }
+                  
+                  // Format date
+                  let timeAgo = '';
+                  if (activity.created_at) {
+                    const activityDate = new Date(activity.created_at);
+                    const now = new Date();
+                    const diffMs = now - activityDate;
+                    const diffMins = Math.floor(diffMs / 60000);
+                    const diffHours = Math.floor(diffMs / 3600000);
+                    const diffDays = Math.floor(diffMs / 86400000);
+                    
+                    if (diffMins < 60) {
+                      timeAgo = `${diffMins}m ago`;
+                    } else if (diffHours < 24) {
+                      timeAgo = `${diffHours}h ago`;
+                    } else if (diffDays < 7) {
+                      timeAgo = `${diffDays}d ago`;
+                    } else {
+                      timeAgo = activityDate.toLocaleDateString();
+                    }
+                  }
+                %>
+                <div class="card-inner activity-item <%= activityClass %> <%= isHidden %> bg-white/5 hover:bg-white/8 transition-all rounded-lg p-3 border-l-4 border-transparent" role="article" aria-label="Activity: <%= activity.title || activity.name || 'a club' %>">
+                  <div class="flex items-start gap-3">
+                    <div class="activity-icon <%= iconBgClass %> w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" aria-hidden="true">
+                      <i class="fas <%= iconClass %> text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-start justify-between gap-2 mb-1">
+                        <p class="card-title text-sm font-bold"><%= activity.title || activity.name || 'a club' %></p>
+                        <span class="badge <%= badgeClass === 'badge-success' ? 'badge-new' : badgeClass %> text-xs px-2 py-0.5 font-semibold"><%= badgeText %></span>
+                      </div>
+                      <p class="text-secondary text-xs font-medium">
+                        <%= activity.description ? activity.description.substring(0, 60) + (activity.description.length > 60 ? '...' : '') : 'New club membership' %>
+                        <% if (timeAgo) { %>
+                          <span class="text-tertiary font-normal">· <%= timeAgo %></span>
+                        <% } %>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <% }); %>
+              <% } else { %>
+                <div class="card-inner py-8 text-center">
+                  <i class="fas fa-history text-4xl text-white/20 mb-3"></i>
+                  <p class="text-white/80 text-sm font-medium mb-1">No recent activity</p>
+                  <p class="text-white/50 text-xs mb-4">Your activity will appear here when you join clubs or attend events</p>
+                  <a href="/student/discover" class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-lg transition-all border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30" aria-label="Explore clubs to start activity">
+                    Get Started
+                    <i class="fas fa-arrow-right text-xs"></i>
+                  </a>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Achievements - Dynamic -->
+        <div class="md:col-span-1 fade-in-on-scroll">
+          <div class="card bg-white/8 border-white/10">
+            <h2 class="section-header text-lg mb-4">Achievements</h2>
+
+            <div class="space-y-2">
+              <% if (achievements && achievements.length > 0) { %>
+                <% achievements.forEach((achievement, index) => { 
+                  const isHidden = index >= 2 ? 'hidden sm:block' : '';
+                %>
+                  <% if (achievement.earned) { %>
+                    <div class="card-inner border border-green-500/30 bg-green-500/15 py-2.5 <%= isHidden %> achievement-item earned hover:border-green-500/40 hover:bg-green-500/20">
+                      <div class="flex items-start gap-2.5">
+                        <div class="text-xl transform hover:scale-110 transition-transform"><%= achievement.icon %></div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2 mb-0.5">
+                            <p class="card-title text-sm font-bold"><%= achievement.title %></p>
+                            <i class="fas fa-check-circle text-green-400 text-sm animate-bounce-in"></i>
+                          </div>
+                          <p class="text-secondary text-xs font-medium"><%= achievement.description %></p>
+                        </div>
+                      </div>
+                    </div>
+                  <% } else { %>
+                    <div class="card-inner py-2.5 opacity-75 <%= isHidden %> achievement-item hover:opacity-90 hover:bg-white/8 transition-all">
+                      <div class="flex items-start gap-2.5">
+                        <div class="text-xl opacity-60"><%= achievement.icon %></div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-center gap-2 mb-1">
+                            <p class="card-title text-sm font-semibold"><%= achievement.title %></p>
+                            <% if (achievement.progress === 0) { %>
+                              <i class="fas fa-lock text-white/50 text-xs"></i>
+                            <% } %>
+                          </div>
+                          <p class="text-secondary text-xs font-medium"><%= achievement.description %></p>
+                          <% if (achievement.current !== undefined && achievement.target !== undefined) { %>
+                            <% const progressValue = Math.min(Math.max(achievement.progress || 0, 0), 100); %>
+                            <div class="mt-2">
+                              <div class="progress-bar">
+                                <div class="progress-bar-fill" style="--progress-width: <%= progressValue %>%; width: var(--progress-width);"></div>
+                              </div>
+                              <p class="progress-label text-xs mt-1.5">
+                                <%= achievement.current %>/<%= achievement.target %> 
+                                <% if (achievement.progress > 0 && achievement.progress < 100) { %>
+                                  <span class="text-white/60">(<%= Math.round(achievement.progress) %>% complete)</span>
+                                <% } %>
+                              </p>
+                            </div>
+                          <% } %>
+                        </div>
+                      </div>
+                    </div>
+                  <% } %>
+                <% }); %>
+              <% } else { %>
+                <!-- Perfect Empty State for Achievements -->
+                <div class="card-inner py-6 text-center achievements-empty">
+                  <i class="fas fa-trophy text-4xl text-white/40 mb-3"></i>
+                  <p class="text-white/90 text-sm font-semibold mb-1">Your first achievement is waiting!</p>
+                  <p class="text-white/60 text-xs mb-4">Start engaging with clubs and events to unlock achievements</p>
+                  
+                  <!-- Locked Achievement Previews -->
+                  <div class="space-y-2 mt-4">
+                    <div class="flex items-center gap-2 justify-center opacity-60">
+                      <span class="text-lg">🔒</span>
+                      <span class="text-xs text-white/60">Join 3 clubs</span>
+                    </div>
+                    <div class="flex items-center gap-2 justify-center opacity-60">
+                      <span class="text-lg">🔒</span>
+                      <span class="text-xs text-white/60">Attend 5 events</span>
+                    </div>
+                    <div class="flex items-center gap-2 justify-center opacity-60">
+                      <span class="text-lg">🔒</span>
+                      <span class="text-xs text-white/60">Earn 100 points</span>
+                    </div>
+                  </div>
+                  
+                  <a href="/student/discover" class="inline-flex items-center gap-2 mt-4 px-4 py-2 bg-white/10 hover:bg-white/15 text-white text-sm font-medium rounded-lg transition-all border border-white/10 focus:outline-none focus:ring-2 focus:ring-white/30">
+                    See all achievements →
+                  </a>
+                </div>
+              <% } %>
+              
+              <!-- Show preview of additional locked achievements if user has some -->
+              <% if (achievements && achievements.length > 0 && achievements.filter(a => !a.earned).length > achievements.filter(a => a.earned).length) { %>
+                <div class="mt-3 pt-3 border-t border-white/10">
+                  <p class="text-xs text-white/50 mb-2 text-center">Locked Achievements</p>
+                  <div class="space-y-1.5">
+                    <% achievements.filter(a => !a.earned).slice(0, 2).forEach((achievement, index) => { %>
+                      <div class="card-inner py-1.5 opacity-40 hover:opacity-60 transition-opacity">
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm opacity-50"><%= achievement.icon %></span>
+                          <p class="text-xs text-white/60 flex-1"><%= achievement.title %></p>
+                          <i class="fas fa-lock text-[10px] text-white/40"></i>
+                        </div>
+                      </div>
+                    <% }); %>
+                  </div>
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Gamification Info Modal -->
+  <div id="gamificationModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] hidden items-center justify-center p-4" aria-hidden="true" aria-labelledby="gamificationModalTitle">
+    <div class="bg-white dark:bg-[#1e293b] rounded-xl max-w-md w-full p-6 shadow-2xl transform transition-all" role="dialog" aria-modal="true">
+      <div class="flex items-center justify-between mb-4">
+        <h3 id="gamificationModalTitle" class="text-xl font-bold text-gray-900 dark:text-white">Points & Gamification</h3>
+        <button onclick="closeGamificationModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" aria-label="Close modal">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      <div class="space-y-4 text-gray-700 dark:text-gray-300">
+        <div>
+          <h4 class="font-semibold text-gray-900 dark:text-white mb-2">How to Earn Points</h4>
+          <ul class="space-y-2 text-sm">
+            <li class="flex items-start gap-2">
+              <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+              <span><strong>Join a Club:</strong> +10 points</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+              <span><strong>Attend an Event:</strong> +5 points per event</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+              <span><strong>Become an Officer:</strong> +25 points</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="fas fa-check-circle text-green-500 mt-0.5"></i>
+              <span><strong>Complete Achievements:</strong> +15 points each</span>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Benefits</h4>
+          <ul class="space-y-2 text-sm">
+            <li class="flex items-start gap-2">
+              <i class="fas fa-star text-yellow-500 mt-0.5"></i>
+              <span>Unlock exclusive achievements and badges</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="fas fa-star text-yellow-500 mt-0.5"></i>
+              <span>Track your engagement and participation</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="fas fa-star text-yellow-500 mt-0.5"></i>
+              <span>Showcase your involvement in clubs and events</span>
+            </li>
+          </ul>
+        </div>
+        <div class="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <p class="text-xs text-gray-500 dark:text-gray-400">Keep engaging with clubs and events to earn more points and unlock achievements!</p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end">
+        <button onclick="closeGamificationModal()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-semibold transition-colors">
+          Got it!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== CLUBS SECTION ===== -->
+  <section class="px-4 sm:px-6 lg:px-8 py-6">
+    <div class="max-w-7xl mx-auto">
+      <!-- Section Header -->
+      <div class="mb-6">
+        <h2 class="section-header text-lg fade-in-on-scroll">Your Clubs & Recommendations</h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Your Active Clubs -->
+        <div class="card bg-white/8 border-white/10 fade-in-on-scroll">
+          <h3 class="card-title mb-4 text-base">Your Active Clubs</h3>
+
+          <div class="space-y-2">
+            <% if (myClubs && myClubs.length > 0) { %>
+              <% myClubs.slice(0, 3).forEach((club, index) => { 
+                const gradientClasses = ['bg-gradient-accent-purple', 'bg-gradient-accent-green', 'bg-gradient-accent-orange'];
+                const iconClasses = ['fa-laptop-code', 'fa-theater-masks', 'fa-code'];
+                const gradientClass = gradientClasses[index % gradientClasses.length];
+                const iconClass = iconClasses[index % iconClasses.length];
+                const isHidden = index >= 2 ? 'hidden sm:block' : '';
+              %>
+              <div class="card-inner group py-3 sm:py-4 <%= isHidden %> hover:border-white/20">
+                <a href="/student/clubs/<%= club.id %>" class="flex items-start gap-2 sm:gap-3 focus:outline-none focus:ring-2 focus:ring-white/30 rounded-lg" aria-label="View <%= club.name %> club">
+                  <% if (club.photo) { %>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <img src="<%= club.photo %>" alt="<%= club.name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                      <div class="hidden w-full h-full <%= gradientClass %> items-center justify-center text-white">
+                        <i class="fas <%= iconClass %> text-sm sm:text-base"></i>
+                      </div>
+                    </div>
+                  <% } else { %>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg <%= gradientClass %> flex items-center justify-center text-white flex-shrink-0">
+                      <i class="fas <%= iconClass %> text-sm sm:text-base"></i>
+                    </div>
+                  <% } %>
+                  <div class="flex-1 min-w-0">
+                    <p class="card-title line-clamp-1"><%= club.name %></p>
+                    <p class="text-secondary text-sm mt-0.5 hidden sm:block line-clamp-1"><%= club.description ? club.description.substring(0, 50) + '...' : 'Active club' %></p>
+                    <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs">
+                      <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i><%= club.officer_count || 0 %></span>
+                      <span class="text-tertiary">·</span>
+                      <span class="flex items-center gap-1"><i class="fas fa-calendar text-[10px]"></i><%= club.event_count || 0 %> events</span>
+                    </div>
+                  </div>
+                  <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </a>
+              </div>
+              <% }); %>
+            <% } else { %>
+              <div class="card-inner py-6 text-center">
+                <i class="fas fa-users text-3xl text-white/30 mb-3"></i>
+                <p class="text-white/70 text-sm mb-2">You haven't joined any clubs yet</p>
+                <a href="/student/discover" class="btn-link text-sm">Explore clubs →</a>
+              </div>
+            <% } %>
+          </div>
+
+          <a href="<%= myClubs && myClubs.length > 0 ? '/student/my-clubs' : '/student/discover' %>" class="block mt-4 text-center py-2 text-sm text-white/70 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/30 rounded" aria-label="<%= myClubs && myClubs.length > 0 ? 'Manage my clubs' : 'Discover clubs' %>">
+            <%= myClubs && myClubs.length > 0 ? 'Manage my clubs →' : 'Discover clubs →' %>
+          </a>
+        </div>
+
+        <!-- Recommended Clubs -->
+        <div class="card bg-white/8 border-white/10 fade-in-on-scroll">
+          <h3 class="card-title mb-4 text-base">Recommended For You</h3>
+
+          <div class="space-y-2">
+            <% if (featuredClubs && featuredClubs.length > 0) { %>
+              <% featuredClubs.slice(0, 3).forEach((club, index) => { 
+                const gradientClasses = ['bg-gradient-accent-blue', 'bg-gradient-brand', 'bg-gradient-accent-green'];
+                const iconClasses = ['fa-robot', 'fa-gamepad', 'fa-brain'];
+                const gradientClass = gradientClasses[index % gradientClasses.length];
+                const iconClass = iconClasses[index % iconClasses.length];
+                const isHidden = index >= 2 ? 'hidden sm:block' : '';
+                
+                // Visual hierarchy: first club gets highlight, others get featured
+                const cardClass = index === 0 ? 'highlight' : (index === 1 ? 'featured' : '');
+                
+                // Determine category for color coding
+                const clubCategory = (club.category || '').toLowerCase();
+                const isAcademic = clubCategory.includes('academic') || clubCategory.includes('education') || club.department === 'Academic';
+                
+                // Badge logic with academic tag
+                let badgeText = '';
+                let badgeClass = '';
+                if (index === 0) {
+                  badgeText = 'Popular';
+                  badgeClass = 'badge-popular';
+                } else if (index === 1) {
+                  badgeText = 'Active';
+                  badgeClass = 'badge-active';
+                }
+                if (isAcademic && index === 0) {
+                  badgeText = 'Academic';
+                  badgeClass = 'badge-academic';
+                }
+              %>
+              <div class="card-inner club-card group py-2.5 sm:py-3 <%= isHidden %> <%= cardClass %> bg-white/5 hover:bg-white/10 hover:border-white/20 transition-all rounded-lg" role="article" data-category="<%= club.category || 'general' %>">
+                <a href="/student/club/<%= club.id %>" class="flex items-start gap-2 sm:gap-3 focus:outline-none focus:ring-2 focus:ring-white/30 rounded-lg" aria-label="View <%= club.name %> club details">
+                  <% if (club.photo) { %>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0" aria-hidden="true">
+                      <img src="<%= club.photo %>" alt="" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                      <div class="hidden w-full h-full <%= gradientClass %> items-center justify-center text-white">
+                        <i class="fas <%= iconClass %> text-sm sm:text-base"></i>
+                      </div>
+                    </div>
+                  <% } else { %>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg <%= gradientClass %> flex items-center justify-center text-white flex-shrink-0" aria-hidden="true">
+                      <i class="fas <%= iconClass %> text-sm sm:text-base"></i>
+                    </div>
+                  <% } %>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-1.5 sm:gap-2 mb-0.5 flex-wrap">
+                      <p class="card-title line-clamp-1 text-sm <%= index === 0 ? 'font-bold' : 'font-semibold' %>"><%= club.name %></p>
+                      <% if (badgeText) { %>
+                        <span class="badge <%= badgeClass %> text-xs px-1.5 py-0.5"><%= badgeText %></span>
+                      <% } %>
+                      <% if (isAcademic && !badgeText) { %>
+                        <span class="badge badge-academic text-xs px-1.5 py-0.5">Academic</span>
+                      <% } %>
+                    </div>
+                    <p class="text-secondary text-xs line-clamp-1 hidden sm:block"><%= club.description ? club.description.substring(0, 50) + '...' : 'Active student organization' %></p>
+                    <div class="space-y-2 mt-2">
+                      <!-- Member Count with Social Proof - Dynamic -->
+                      <% 
+                        // Use display_member_count first, then member_count, then officer_count as fallback
+                        const memberCount = club.display_member_count || club.member_count || club.officer_count || 0;
+                        const eventCount = club.display_event_count || club.event_count || 0;
+                        const memberNames = club.member_names || [];
+                        const firstMemberName = club.first_member_name || (memberNames.length > 0 ? memberNames[0] : null);
+                        const otherCount = Math.max(memberCount - (firstMemberName ? 1 : 0), 0);
+                      %>
+                      <% if (memberCount > 0 && firstMemberName) { %>
+                        <div class="flex items-center gap-2">
+                          <!-- Member Avatars -->
+                          <div class="flex -space-x-2">
+                            <% 
+                              const avatarCount = Math.min(3, Math.max(memberNames.length, memberCount));
+                              for (let i = 0; i < avatarCount; i++) { 
+                                const memberName = memberNames[i];
+                                const initial = memberName ? memberName.charAt(0).toUpperCase() : String.fromCharCode(65 + (i % 26));
+                            %>
+                              <div class="w-6 h-6 rounded-full bg-gradient-to-br <%= ['from-blue-400 to-blue-600', 'from-purple-400 to-purple-600', 'from-pink-400 to-pink-600'][i % 3] %> border-2 border-[#0a0f1a] flex items-center justify-center text-[10px] font-bold text-white" title="<%= memberName || 'Member ' + (i + 1) %>">
+                                <%= initial %>
+                              </div>
+                            <% } %>
+                          </div>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-white/90">
+                              <span class="font-semibold"><%= firstMemberName %></span>
+                              <% if (otherCount > 0) { %>
+                                <span class="text-white/70"> and <%= otherCount %> <%= otherCount === 1 ? 'other' : 'others' %></span>
+                              <% } %>
+                              <span class="text-white/70"> are members</span>
+                            </p>
+                          </div>
+                        </div>
+                        <!-- Event count only when member names are shown -->
+                        <div class="flex items-center gap-1.5 sm:gap-2 text-tertiary text-xs flex-wrap mt-2">
+                          <span class="flex items-center gap-1 font-semibold <%= eventCount > 0 ? 'text-white/90' : 'text-white/60' %>">
+                            <i class="fas fa-calendar text-[10px]" aria-hidden="true"></i>
+                            <% if (eventCount > 0) { %>
+                              <span><%= eventCount %> <%= eventCount === 1 ? 'upcoming event' : 'upcoming events' %></span>
+                            <% } else { %>
+                              <span>No events yet</span>
+                            <% } %>
+                          </span>
+                        </div>
+                      <% } else { %>
+                        <!-- Stats Row - Show when member names are not available -->
+                        <div class="flex items-center gap-1.5 sm:gap-2 text-tertiary text-xs flex-wrap mt-2">
+                          <span class="flex items-center gap-1 font-semibold <%= memberCount > 0 ? 'text-white/90' : 'text-white/60' %>">
+                            <i class="fas fa-users text-[10px]" aria-hidden="true"></i>
+                            <% if (memberCount > 0) { %>
+                              <span><%= memberCount %> <%= memberCount === 1 ? 'member' : 'members' %></span>
+                            <% } else { %>
+                              <span>No members yet</span>
+                            <% } %>
+                          </span>
+                          <span class="text-tertiary" aria-hidden="true">·</span>
+                          <span class="flex items-center gap-1 font-semibold <%= eventCount > 0 ? 'text-white/90' : 'text-white/60' %>">
+                            <i class="fas fa-calendar text-[10px]" aria-hidden="true"></i>
+                            <% if (eventCount > 0) { %>
+                              <span><%= eventCount %> <%= eventCount === 1 ? 'upcoming event' : 'upcoming events' %></span>
+                            <% } else { %>
+                              <span>No events yet</span>
+                            <% } %>
+                          </span>
+                        </div>
+                      <% } %>
+                      
+                      <!-- Next Event -->
+                      <% if (club.next_event_name || club.next_event_date) { %>
+                        <div class="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/10 mt-2">
+                          <i class="fas fa-calendar-check text-[10px] text-blue-400"></i>
+                          <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-white/90">Next event:</p>
+                            <p class="text-xs text-white/70 truncate">
+                              <%= club.next_event_name || 'Upcoming Event' %>
+                              <% if (club.next_event_date) { %>
+                                <% 
+                                  const eventDate = new Date(club.next_event_date);
+                                  const formattedDate = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                  const formattedTime = ''; // Time column removed from events table
+                                %>
+                                • <%= formattedDate %><%= formattedTime ? ', ' + formattedTime : '' %>
+                              <% } %>
+                            </p>
+                          </div>
+                        </div>
+                      <% } %>
+                    </div>
+                  </div>
+                  <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </a>
+              </div>
+              <% }); %>
+            <% } else if (clubs && clubs.length > 0) { %>
+              <% clubs.slice(0, 3).forEach((club, index) => { 
+                const gradientClasses = ['bg-gradient-accent-blue', 'bg-gradient-brand', 'bg-gradient-accent-green'];
+                const iconClasses = ['fa-robot', 'fa-gamepad', 'fa-brain'];
+                const gradientClass = gradientClasses[index % gradientClasses.length];
+                const iconClass = iconClasses[index % iconClasses.length];
+                const isHidden = index >= 2 ? 'hidden sm:block' : '';
+              %>
+              <div class="card-inner group py-3 sm:py-4 <%= isHidden %> hover:border-white/20">
+                <a href="/student/club/<%= club.id %>" class="flex items-start gap-2 sm:gap-3 focus:outline-none focus:ring-2 focus:ring-white/30 rounded-lg" aria-label="View <%= club.name %> club">
+                  <% if (club.photo) { %>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <img src="<%= club.photo %>" alt="<%= club.name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                      <div class="hidden w-full h-full <%= gradientClass %> items-center justify-center text-white">
+                        <i class="fas <%= iconClass %> text-sm sm:text-base"></i>
+                      </div>
+                    </div>
+                  <% } else { %>
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-lg <%= gradientClass %> flex items-center justify-center text-white flex-shrink-0">
+                      <i class="fas <%= iconClass %> text-sm sm:text-base"></i>
+                    </div>
+                  <% } %>
+                  <div class="flex-1 min-w-0">
+                    <p class="card-title line-clamp-1"><%= club.name %></p>
+                    <p class="text-secondary text-sm line-clamp-1 hidden sm:block"><%= club.description ? club.description.substring(0, 60) + '...' : 'Active student organization' %></p>
+                    <div class="flex items-center gap-1.5 sm:gap-2 mt-1.5 sm:mt-2 text-tertiary text-xs flex-wrap">
+                      <span class="flex items-center gap-1"><i class="fas fa-users text-[10px]"></i><%= club.officer_count || 0 %></span>
+                      <span class="text-tertiary">·</span>
+                      <span class="flex items-center gap-1"><i class="fas fa-calendar text-[10px]"></i><%= club.event_count || 0 %> events</span>
+                      <% if (club.category) { %>
+                        <span class="text-tertiary hidden sm:inline">·</span>
+                        <span class="flex items-center gap-1 hidden sm:inline"><i class="fas fa-tag text-[10px]"></i><%= club.category %></span>
+                      <% } %>
+                    </div>
+                  </div>
+                  <svg class="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path>
+                  </svg>
+                </a>
+              </div>
+              <% }); %>
+            <% } else { %>
+              <div class="card-inner py-6 text-center">
+                <i class="fas fa-search text-3xl text-white/30 mb-3"></i>
+                <p class="text-white/70 text-sm mb-2">No clubs available</p>
+                <a href="/student/discover" class="btn-link text-sm">Browse all clubs →</a>
+              </div>
+            <% } %>
+          </div>
+
+          <a href="/student/discover" class="block mt-4 text-center py-2 text-sm text-white/70 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-white/30 rounded" aria-label="Browse recommended clubs">
+            Browse recommendations →
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FOOTER (Minimal) ===== -->
+  <footer class="border-t border-white/10 py-6 px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <img src="/img/logo.png" alt="UM Logo" class="w-6 h-6 object-contain">
+          <p class="text-white font-semibold text-sm">UniClub</p>
+        </div>
+        <p class="text-xs text-white/50">© 2024 University of Mindanao</p>
+        <div class="flex gap-4 text-xs text-white/50">
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Privacy</a>
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+
+    // ===== SCROLL ANIMATIONS ===== 
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    document.querySelectorAll('.fade-in-on-scroll').forEach(el => {
+      observer.observe(el);
+    });
+
+    // ===== STAGGER ANIMATION ===== 
+    document.querySelectorAll('[style*="animation-delay"]').forEach((el, index) => {
+      if (!el.style.animationDelay) {
+        el.style.animationDelay = `${index * 0.1}s`;
+      }
+    });
+
+    // ===== SMOOTH SCROLL ===== 
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
+    // ===== LOADING STATES =====
+    function showSkeletonLoaders() {
+      // This would be called before data loads
+      // For now, we'll use CSS to handle initial load states
+    }
+
+    function hideSkeletonLoaders() {
+      // Remove skeleton classes when data is loaded
+      document.querySelectorAll('.skeleton').forEach(el => {
+        el.classList.remove('skeleton');
+      });
+    }
+
+    // ===== STAGGERED CONTENT APPEARANCE =====
+    function animateContentOnLoad() {
+      const sections = [
+        { selector: '#main-content', delay: 0 },
+        { selector: '.stat-card', delay: 100 },
+        { selector: '.fade-in-on-scroll', delay: 200 }
+      ];
+
+      sections.forEach(({ selector, delay }) => {
+        setTimeout(() => {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach((el, index) => {
+            setTimeout(() => {
+              el.style.opacity = '0';
+              el.style.transform = 'translateY(20px)';
+              el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+              
+              requestAnimationFrame(() => {
+                el.style.opacity = '1';
+                el.style.transform = 'translateY(0)';
+              });
+            }, index * 50);
+          });
+        }, delay);
+      });
+    }
+
+    // ===== COUNT-UP ANIMATION =====
+    function animateCountUp(element, targetValue, duration = 1500) {
+      const startValue = 0;
+      const startTime = performance.now();
+      
+      function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing function for smooth animation
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        const currentValue = Math.floor(startValue + (targetValue - startValue) * easeOutQuart);
+        
+        element.textContent = currentValue;
+        
+        if (progress < 1) {
+          requestAnimationFrame(update);
+        } else {
+          element.textContent = targetValue;
+        }
+      }
+      
+      requestAnimationFrame(update);
+    }
+
+    // ===== BADGE ANIMATION DELAYS =====
+    function animateBadges() {
+      document.querySelectorAll('.trend-badge').forEach((badge, index) => {
+        badge.style.animationDelay = `${0.3 + index * 0.1}s`;
+      });
+    }
+
+    // ===== PAGE LOAD ANIMATION ===== 
+    window.addEventListener('load', () => {
+      document.body.style.opacity = '0';
+      document.body.style.transition = 'opacity 0.6s ease-in';
+      setTimeout(() => {
+        document.body.style.opacity = '1';
+        animateContentOnLoad();
+        
+        // Animate stat values count-up
+        document.querySelectorAll('.stat-value').forEach((statValue, index) => {
+          const targetValue = parseInt(statValue.textContent.trim());
+          if (!isNaN(targetValue) && targetValue > 0) {
+            setTimeout(() => {
+              animateCountUp(statValue, targetValue, 1500);
+            }, 200 + index * 100);
+          }
+        });
+        
+        // Animate progress bar
+        document.querySelectorAll('.points-progress-bar').forEach((progressBar, index) => {
+          const targetWidth = progressBar.getAttribute('data-points') || progressBar.style.width;
+          if (targetWidth) {
+            const widthValue = parseInt(targetWidth);
+            if (!isNaN(widthValue)) {
+              progressBar.style.width = '0%';
+              setTimeout(() => {
+                progressBar.style.transition = 'width 1.5s ease-out';
+                progressBar.style.width = widthValue + '%';
+              }, 400 + index * 100);
+            }
+          }
+        });
+        
+        // Animate badges with delays
+        animateBadges();
+      }, 100);
+    });
+
+    // ===== ACHIEVEMENT UNLOCK ANIMATION =====
+    document.querySelectorAll('.achievement-item.earned').forEach((item, index) => {
+      item.style.animationDelay = `${index * 0.1}s`;
+    });
+
+    // ===== STAT CARD INTERACTIVE FEEDBACK =====
+    document.querySelectorAll('.stat-card').forEach(card => {
+      card.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-4px) scale(1.02)';
+      });
+      card.addEventListener('mouseleave', function() {
+        this.style.transform = 'translateY(0) scale(1)';
+      });
+    });
+
+    // ===== SMOOTH SCROLL FOR STAT CARDS =====
+    document.querySelectorAll('.stat-card[href]').forEach(card => {
+      card.addEventListener('click', function(e) {
+        // Add ripple effect
+        const ripple = document.createElement('span');
+        ripple.style.position = 'absolute';
+        ripple.style.borderRadius = '50%';
+        ripple.style.background = 'rgba(255, 255, 255, 0.3)';
+        ripple.style.transform = 'scale(0)';
+        ripple.style.animation = 'ripple 0.6s ease-out';
+        ripple.style.left = e.offsetX + 'px';
+        ripple.style.top = e.offsetY + 'px';
+        ripple.style.width = ripple.style.height = '20px';
+        this.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+      });
+    });
+
+    // Add ripple animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes ripple {
+        to {
+          transform: scale(4);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+
+    // ===== GAMIFICATION MODAL =====
+    function showGamificationInfo() {
+      const modal = document.getElementById('gamificationModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.setAttribute('aria-hidden', 'false');
+        // Focus trap
+        const firstButton = modal.querySelector('button');
+        if (firstButton) firstButton.focus();
+      }
+    }
+
+    function closeGamificationModal() {
+      const modal = document.getElementById('gamificationModal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    // Close modal on backdrop click
+    document.getElementById('gamificationModal')?.addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeGamificationModal();
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('gamificationModal');
+        if (modal && !modal.classList.contains('hidden')) {
+          closeGamificationModal();
+        }
+      }
+    });
+
+    // Theme toggle functionality is handled by the shared navbar component (studentNav.ejs)
+  </script>
+</body>
+</html>
+
+

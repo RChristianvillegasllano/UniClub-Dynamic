@@ -1,0 +1,3623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <title>Discover Clubs — UniClub</title>
+  <%
+    // Ensure announcements is always defined
+    if (typeof announcements === 'undefined') {
+      announcements = [];
+    }
+  %>
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+
+  <!-- CRITICAL ANTI-FLICKER: Block rendering until theme is set -->
+  <script>
+    // This script MUST run synchronously - blocks all rendering
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      const html = document.documentElement;
+      
+      // Set theme attribute immediately for CSS to use
+      html.setAttribute('data-theme', theme);
+      
+      // Apply theme class immediately
+      if (theme === 'light') {
+        html.classList.add('light-mode');
+      } else {
+        html.classList.remove('light-mode');
+      }
+      
+      // Set background colors inline with !important - overrides all CSS
+      if (theme === 'light') {
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+      } else {
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+      }
+    })();
+  </script>
+  
+  <!-- Blocking inline CSS that uses theme attribute -->
+  <style>
+    /* Set background based on data-theme attribute - prevents dark flash */
+    html[data-theme="light"],
+    html[data-theme="light"] body {
+      background-color: #f8fafc !important;
+    }
+    html[data-theme="dark"],
+    html:not([data-theme]) body {
+      background-color: #0a0f1a !important;
+    }
+    /* Hide body until it's ready */
+    body:not([data-theme-ready]) {
+      opacity: 0;
+      visibility: hidden;
+    }
+    body[data-theme-ready] {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.1s ease;
+    }
+  </style>
+
+  <!-- Apply theme to body once it exists -->
+  <script>
+    (function() {
+      const theme = localStorage.getItem('theme') || 'light';
+      
+      function applyThemeToBody() {
+        if (!document.body) return;
+        
+        if (theme === 'light') {
+          document.body.classList.add('light-mode');
+          document.body.style.setProperty('background-color', '#f8fafc', 'important');
+        } else {
+          document.body.classList.remove('light-mode');
+          document.body.style.setProperty('background-color', '#0a0f1a', 'important');
+        }
+        
+        // Mark body as ready
+        document.body.setAttribute('data-theme-ready', 'true');
+      }
+      
+      // Try immediately
+      if (document.body) {
+        applyThemeToBody();
+      } else {
+        // Watch for body creation
+        const observer = new MutationObserver(function(mutations) {
+          if (document.body) {
+            applyThemeToBody();
+            observer.disconnect();
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        
+        // Fallback on DOMContentLoaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyThemeToBody);
+        }
+      }
+    })();
+  </script>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    * {
+      scroll-behavior: smooth;
+    }
+
+    body { 
+      background:#0a0f1a; 
+      font-family: 'Inter', system-ui, sans-serif;
+      color: white;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      position: relative;
+    }
+
+    /* Override body background based on theme attribute - prevents dark flash */
+    html[data-theme="light"] body {
+      background: #f8fafc !important;
+      color: #1e293b;
+    }
+
+    html[data-theme="dark"] body,
+    html:not([data-theme]) body {
+      background: #0a0f1a !important;
+      color: white;
+    }
+
+    /* Subtle Color Tint Overlay - Matching Stat Card Colors */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        /* CLUBS JOINED: Deep Red (#C62828) → Red-Orange (#EF6C00) */
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        /* EVENTS ATTENDED: Red-Orange (#E53935) → Vibrant Orange (#EF6C00) */
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        /* POINTS EARNED: Vibrant Orange (#EF6C00) → Amber (#FFA726) */
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    body > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Light mode tint - matched to dark mode intensity and stat card colors */
+    body.light-mode::before {
+      background: 
+        /* CLUBS JOINED: Deep Red (#C62828) → Red-Orange (#EF6C00) */
+        radial-gradient(circle at 20% 30%, rgba(198, 40, 40, 0.03) 0%, rgba(239, 108, 0, 0.015) 50%, transparent 70%),
+        /* EVENTS ATTENDED: Red-Orange (#E53935) → Vibrant Orange (#EF6C00) */
+        radial-gradient(circle at 80% 70%, rgba(229, 57, 53, 0.025) 0%, rgba(239, 108, 0, 0.01) 50%, transparent 70%),
+        /* POINTS EARNED: Vibrant Orange (#EF6C00) → Amber (#FFA726) */
+        radial-gradient(circle at 50% 50%, rgba(239, 108, 0, 0.015) 0%, rgba(255, 167, 38, 0.008) 50%, transparent 70%);
+      opacity: 1;
+      z-index: 0;
+    }
+
+    /* Light Mode Styles */
+    body.light-mode {
+      background: #f8fafc;
+      color: #1e293b;
+    }
+
+    body.light-mode .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-white\/80,
+    body.light-mode .text-white\/70,
+    body.light-mode .text-white\/60 {
+      color: #475569 !important;
+    }
+
+    body.light-mode footer {
+      border-top-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-mode footer .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .nav-link {
+      color: #475569;
+    }
+
+    body.light-mode .nav-link:hover,
+    body.light-mode .nav-link.active {
+      color: #1e293b;
+    }
+
+    body.light-mode #navbar {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode #navbar[style*="background"] {
+      background: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    body.light-mode .card,
+    body.light-mode .club-card,
+    body.light-mode .category-card,
+    body.light-mode .featured-club-card {
+      background: rgba(255, 255, 255, 0.9);
+      border-color: rgba(0, 0, 0, 0.1);
+      color: #1e293b;
+    }
+
+    body.light-mode .card:hover,
+    body.light-mode .club-card:hover {
+      background: rgba(255, 255, 255, 1);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    body.light-mode .hero-section {
+      background: linear-gradient(to bottom right, rgba(239, 68, 68, 0.9), rgba(251, 146, 60, 0.85)) !important;
+    }
+
+    /* Hero Section Elements - Light Mode */
+    body.light-mode .bg-gradient-to-br.from-red-600\/10 {
+      background: linear-gradient(to bottom right, rgba(239, 68, 68, 0.15), rgba(251, 146, 60, 0.12)) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Discover Your Community Hero Section - Light Mode */
+    body.light-mode .hero-discover-section {
+      background: linear-gradient(to bottom right, rgba(239, 68, 68, 0.08), rgba(168, 85, 247, 0.06), rgba(59, 130, 246, 0.08)) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Hero Section Background Pattern - Light Mode */
+    body.light-mode .hero-discover-section > div[class*="absolute"] > div[class*="bg-red"] {
+      background: rgba(239, 68, 68, 0.08) !important;
+    }
+
+    body.light-mode .hero-discover-section > div[class*="absolute"] > div[class*="bg-blue"] {
+      background: rgba(59, 130, 246, 0.08) !important;
+    }
+
+    /* Hero Section Text - Light Mode - Target by structure */
+    body.light-mode .hero-discover-section h2 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .hero-discover-section > div > div > p {
+      color: #475569 !important;
+    }
+
+    body.light-mode .hero-discover-section > div > div > p > span {
+      color: #1e293b !important;
+    }
+
+    /* Fix gradient text in light mode */
+    body.light-mode .hero-discover-section h1 {
+      background: linear-gradient(to right, #1e293b, #334155, #475569) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+      color: transparent !important;
+    }
+
+    /* Ensure h1 is visible in light mode - override any black overlays */
+    body.light-mode .hero-discover-section h1.bg-gradient-to-r {
+      background: linear-gradient(to right, #1e293b, #334155, #475569) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+      color: transparent !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+    }
+
+    body.light-mode h1,
+    body.light-mode h2,
+    body.light-mode h3 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .bg-gradient-to-r.from-white {
+      background: linear-gradient(to right, #1e293b, #334155, #475569) !important;
+    }
+
+    /* Search Bar - Light Mode */
+    body.light-mode .bg-white\/10 {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .bg-white\/10 input {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .bg-white\/10 input::placeholder {
+      color: #64748b !important;
+    }
+
+    body.light-mode .bg-white\/10 i {
+      color: #64748b !important;
+    }
+
+    body.light-mode .focus-within\:bg-white\/15:focus-within {
+      background: rgba(255, 255, 255, 0.95) !important;
+    }
+
+    /* Category Chips - Light Mode */
+    body.light-mode .category-chip-hero {
+      background: rgba(255, 255, 255, 0.95) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .category-chip-hero:hover {
+      background: rgba(255, 255, 255, 1) !important;
+      border-color: rgba(0, 0, 0, 0.2) !important;
+    }
+
+    body.light-mode .category-chip-hero.active {
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.2), rgba(156, 39, 176, 0.2)) !important;
+      border-color: rgba(198, 40, 40, 0.4) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .category-count {
+      background: rgba(0, 0, 0, 0.1) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .category-chip {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .category-chip:hover {
+      background: rgba(255, 255, 255, 1) !important;
+      border-color: rgba(0, 0, 0, 0.2) !important;
+    }
+
+    body.light-mode .category-chip.active {
+      background: rgba(99, 102, 241, 0.15) !important;
+      border-color: rgba(99, 102, 241, 0.3) !important;
+      color: #4f46e5 !important;
+    }
+
+    /* Badges - Light Mode */
+    body.light-mode .badge-tech {
+      background: rgba(59, 130, 246, 0.15) !important;
+      color: #2563eb !important;
+      border-color: rgba(59, 130, 246, 0.3) !important;
+    }
+
+    body.light-mode .badge-arts {
+      background: rgba(168, 85, 247, 0.15) !important;
+      color: #7c3aed !important;
+      border-color: rgba(168, 85, 247, 0.3) !important;
+    }
+
+    body.light-mode .badge-sports {
+      background: rgba(34, 197, 94, 0.15) !important;
+      color: #059669 !important;
+      border-color: rgba(34, 197, 94, 0.3) !important;
+    }
+
+    body.light-mode .badge-volunteer {
+      background: rgba(251, 146, 60, 0.15) !important;
+      color: #d97706 !important;
+      border-color: rgba(251, 146, 60, 0.3) !important;
+    }
+
+    body.light-mode .badge-academic {
+      background: rgba(251, 191, 36, 0.15) !important;
+      color: #d97706 !important;
+      border-color: rgba(251, 191, 36, 0.3) !important;
+    }
+
+    body.light-mode .badge-civic {
+      background: rgba(34, 197, 94, 0.15) !important;
+      color: #059669 !important;
+      border-color: rgba(34, 197, 94, 0.3) !important;
+    }
+
+    body.light-mode .badge-religious {
+      background: rgba(168, 85, 247, 0.15) !important;
+      color: #7c3aed !important;
+      border-color: rgba(168, 85, 247, 0.3) !important;
+    }
+
+    /* Buttons - Light Mode */
+    body.light-mode .join-btn {
+      background: #C62828 !important;
+      color: white !important;
+    }
+
+    body.light-mode .join-btn:hover {
+      background: #B71C1C !important;
+    }
+
+    body.light-mode .join-btn.joined {
+      background: rgba(34, 197, 94, 0.15) !important;
+      color: #059669 !important;
+      border-color: rgba(34, 197, 94, 0.3) !important;
+    }
+
+    body.light-mode .view-details-btn {
+      color: #475569 !important;
+    }
+
+    body.light-mode .view-details-btn:hover {
+      color: #1e293b !important;
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Category Cards - Light Mode */
+    body.light-mode .category-card {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .category-card h3 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .category-card p {
+      color: #475569 !important;
+    }
+
+    body.light-mode .category-card li {
+      color: #64748b !important;
+    }
+
+    body.light-mode .category-card a {
+      color: inherit !important;
+    }
+
+    /* Featured Club Cards - Light Mode */
+    body.light-mode .featured-club-card {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .featured-club-card h3 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .featured-club-card p {
+      color: #475569 !important;
+    }
+
+    /* Profile Dropdown - Light Mode */
+    body.light-mode .profile-dropdown {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/65,
+    body.light-mode .profile-dropdown .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .profile-dropdown .text-white\/70 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .profile-dropdown .bg-white\/10 {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-white\/20 {
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .profile-dropdown .ring-white\/20 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-red-500\/15:hover {
+      background: rgba(220, 38, 38, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .text-red-400 {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode .profile-dropdown .text-red-400:hover {
+      color: #b91c1c !important;
+    }
+
+    body.light-mode .profile-dropdown .h-px.bg-white\/15 {
+      background: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-dropdown .h-px.bg-white\/10 {
+      background: rgba(0, 0, 0, 0.08) !important;
+    }
+
+    body.light-mode .profile-dropdown .h-px.bg-white\/20 {
+      background: rgba(0, 0, 0, 0.12) !important;
+    }
+
+    body.light-mode .profile-dropdown i {
+      color: #475569 !important;
+    }
+
+    body.light-mode .profile-dropdown .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .profile-dropdown .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Mobile Menu - Light Mode */
+    body.light-mode .mobile-menu {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-bottom-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .mobile-menu .nav-link {
+      color: #475569 !important;
+    }
+
+    body.light-mode .mobile-menu .nav-link:hover {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .mobile-menu hr {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Button Icons - Light Mode */
+    body.light-mode .btn-icon {
+      background: rgba(0, 0, 0, 0.05) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .btn-icon:hover {
+      background: rgba(0, 0, 0, 0.08) !important;
+      color: #1e293b !important;
+    }
+
+    /* Active Filters - Light Mode */
+    body.light-mode #activeFilters {
+      color: #475569 !important;
+    }
+
+    body.light-mode #activeFilters .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode #clearAllFilters {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode #clearAllFilters:hover {
+      color: #b91c1c !important;
+    }
+
+    /* Club Logo - Light Mode */
+    body.light-mode .club-logo {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .recommended-logo {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Text Colors - Light Mode */
+    body.light-mode .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .text-white\/45 {
+      color: #94a3b8 !important;
+    }
+
+    body.light-mode .text-white\/40 {
+      color: #cbd5e1 !important;
+    }
+
+    body.light-mode .text-white\/30 {
+      color: #e2e8f0 !important;
+    }
+
+    body.light-mode .text-white\/20 {
+      color: #f1f5f9 !important;
+    }
+
+    body.light-mode .text-white\/65 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .text-white\/45 {
+      color: #94a3b8 !important;
+    }
+
+    /* Navbar Logo Text - Light Mode */
+    body.light-mode #navbar .text-white\/80 {
+      color: #64748b !important;
+    }
+
+    body.light-mode #navbar .text-white {
+      color: #1e293b !important;
+    }
+
+    /* Notification Menu Header - Light Mode */
+    body.light-mode #notificationMenu .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode #notificationMenu .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode #notificationMenu .border-white\/5 {
+      border-color: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode #notificationMenu .hover\:bg-white\/5:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode #notificationMenu .bg-red-500\/20 {
+      background: rgba(220, 38, 38, 0.1) !important;
+    }
+
+    body.light-mode #notificationMenu .text-red-400 {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode #notificationMenu .text-red-400:hover {
+      color: #b91c1c !important;
+    }
+
+    body.light-mode #notificationMenu .text-red-300 {
+      color: #dc2626 !important;
+    }
+
+    /* Notification Badge - Light Mode */
+    body.light-mode .notification-badge {
+      border-color: rgba(255, 255, 255, 0.8) !important;
+    }
+
+    /* Hero Section Text - Light Mode */
+    body.light-mode .bg-gradient-to-r.from-white.via-white\/90.to-white\/70 {
+      background: linear-gradient(to right, #1e293b, #334155, #475569) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+      color: transparent !important;
+    }
+
+    /* Specific fix for Discover Your Community h1 in hero section */
+    body.light-mode .hero-discover-section h1.bg-gradient-to-r.from-white {
+      background: linear-gradient(to right, #1e293b, #334155, #475569) !important;
+      -webkit-background-clip: text !important;
+      -webkit-text-fill-color: transparent !important;
+      background-clip: text !important;
+      color: transparent !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      position: relative !important;
+      z-index: 10 !important;
+    }
+
+    body.light-mode .text-white\/90 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .text-white\/70 {
+      color: #475569 !important;
+    }
+
+    /* Featured Club Card Elements - Light Mode */
+    body.light-mode .featured-club-card .text-white\/75 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .featured-club-card .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .featured-club-card .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .featured-club-card .bg-white\/5 {
+      background: rgba(0, 0, 0, 0.03) !important;
+    }
+
+    body.light-mode .featured-club-card .hover\:bg-white\/10:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    /* Club Card Text - Light Mode */
+    body.light-mode .club-card .text-white\/85 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card .text-white\/75 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .club-card .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .club-card .text-white\/40 {
+      color: #cbd5e1 !important;
+    }
+
+    /* Category Card Links - Light Mode */
+    body.light-mode .category-card a {
+      color: inherit !important;
+    }
+
+    body.light-mode .category-card .text-white\/70 {
+      color: #64748b !important;
+    }
+
+    /* Invitation Cards - Light Mode */
+    body.light-mode .invitation-card {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode .invitation-card .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .invitation-card .text-white\/70 {
+      color: #475569 !important;
+    }
+
+    /* CTA Sections - Light Mode */
+    body.light-mode .bg-gradient-to-br.from-red-600\/10 {
+      background: linear-gradient(to bottom right, rgba(239, 68, 68, 0.1), rgba(251, 146, 60, 0.08)) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .bg-gradient-to-br.from-red-600\/10 .text-white\/80 {
+      color: #1e293b !important;
+    }
+
+    /* Empty States - Light Mode */
+    body.light-mode .text-white\/20 {
+      color: #e2e8f0 !important;
+    }
+
+    body.light-mode .text-white\/60 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .text-white\/50 {
+      color: #94a3b8 !important;
+    }
+
+    /* Footer - Light Mode */
+    body.light-mode footer .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode footer .text-white\/50 {
+      color: #64748b !important;
+    }
+
+    body.light-mode footer .hover\:text-white\/70:hover {
+      color: #475569 !important;
+    }
+
+    body.light-mode footer .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* Borders - Light Mode */
+    body.light-mode .border-white\/10 {
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .border-white\/15 {
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .border-white\/20 {
+      border-color: rgba(0, 0, 0, 0.2) !important;
+    }
+
+    /* Backgrounds - Light Mode */
+    body.light-mode .bg-white\/5 {
+      background: rgba(0, 0, 0, 0.03) !important;
+    }
+
+    body.light-mode .bg-white\/8 {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode .bg-white\/10 {
+      background: rgba(0, 0, 0, 0.06) !important;
+    }
+
+    /* Icons - Light Mode */
+    body.light-mode i,
+    body.light-mode .fas,
+    body.light-mode .far {
+      color: inherit;
+    }
+
+    body.light-mode .text-red-400 {
+      color: #dc2626 !important;
+    }
+
+    body.light-mode .text-yellow-400 {
+      color: #d97706 !important;
+    }
+
+    body.light-mode .text-green-400 {
+      color: #059669 !important;
+    }
+
+    body.light-mode .text-blue-400 {
+      color: #2563eb !important;
+    }
+
+    body.light-mode .text-purple-400 {
+      color: #7c3aed !important;
+    }
+
+    body.light-mode .text-amber-400 {
+      color: #d97706 !important;
+    }
+
+    /* Search Suggestions - Light Mode */
+    body.light-mode #searchSuggestions {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+      color: #1e293b !important;
+    }
+
+    /* Scrollbar - Light Mode */
+    body.light-mode ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05) !important;
+    }
+
+    body.light-mode ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #C62828, #E53935) !important;
+    }
+
+    /* Main Content Background - Light Mode */
+    body.light-mode main {
+      background: #f8fafc !important;
+      color: #1e293b !important;
+    }
+
+    body.light-mode main.bg-\[#0a0f1a\] {
+      background: #f8fafc !important;
+    }
+
+    /* Profile Pill - Light Mode */
+    body.light-mode .profile-pill {
+      background: rgba(0, 0, 0, 0.03) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .profile-pill:hover {
+      background: rgba(0, 0, 0, 0.05) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    body.light-mode .profile-pill .text-white\/85 {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .profile-caret {
+      color: #64748b !important;
+    }
+
+    /* Notification Menu - Light Mode */
+    body.light-mode #notificationMenu {
+      background: rgba(255, 255, 255, 0.98) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, #C62828, #E53935);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(180deg, #E53935, #FF6B6B);
+    }
+
+    .nav-link {
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      font-size: 0.9375rem;
+      transition: all 0.2s ease;
+      position: relative;
+      padding: 8px 0;
+      text-decoration: none;
+    }
+
+    .nav-link:hover {
+      color: #ffffff;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: #C62828;
+      transition: width 0.2s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    .nav-link.active {
+      color: #ffffff;
+      font-weight: 700;
+    }
+
+    .nav-link.active::after {
+      width: 100%;
+      background: #C62828;
+    }
+
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: translateY(-2px);
+    }
+
+    /* Club Card Styles */
+    /* Browse Cards - Larger */
+    .club-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 18px;
+      transition: all 0.3s ease;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      cursor: pointer;
+    }
+
+    @media (min-width: 640px) {
+      .club-card {
+        border-radius: 16px;
+        padding: 24px;
+      }
+    }
+
+    .club-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Light mode club card hover */
+    body.light-mode .club-card:hover {
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+    }
+
+    .club-card:focus-within {
+      outline: 2px solid rgba(198, 40, 40, 0.5);
+      outline-offset: 2px;
+    }
+
+    .club-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.25));
+      border: 2px solid rgba(99, 102, 241, 0.25);
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    @media (min-width: 640px) {
+      .club-logo {
+        width: 56px;
+        height: 56px;
+      }
+    }
+
+    /* Recommended Cards - Neutral Highlight */
+    .recommended-card {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(139, 92, 246, 0.05));
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 12px;
+      padding: 16px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+    }
+
+    @media (min-width: 640px) {
+      .recommended-card {
+        border-radius: 16px;
+        padding: 20px;
+      }
+    }
+
+    .recommended-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, rgba(251, 191, 36, 0.8), rgba(251, 146, 60, 0.6));
+    }
+
+    .recommended-card:hover {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.08));
+      border-color: rgba(99, 102, 241, 0.35);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(99, 102, 241, 0.2);
+    }
+
+    .recommended-card:focus-within {
+      outline: 2px solid rgba(99, 102, 241, 0.5);
+      outline-offset: 2px;
+    }
+
+    .recommended-badge {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+      border-radius: 12px;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: 600;
+      color: #a5b4fc;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .recommended-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.3), rgba(168, 85, 247, 0.25));
+      border: 2px solid rgba(99, 102, 241, 0.3);
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+
+    @media (min-width: 640px) {
+      .recommended-logo {
+        width: 56px;
+        height: 56px;
+      }
+    }
+
+    .recommended-hint {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 4px;
+    }
+
+    .badge-tech { 
+      background: rgba(59,130,246,.15); 
+      color:#93c5fd; 
+      border: 1px solid rgba(59,130,246,.2);
+    }
+    
+    .badge-arts { 
+      background: rgba(168,85,247,.15); 
+      color:#d8b4fe; 
+      border: 1px solid rgba(168,85,247,.2);
+    }
+    
+    .badge-sports { 
+      background: rgba(34,197,94,.15); 
+      color:#86efac; 
+      border: 1px solid rgba(34,197,94,.2);
+    }
+    
+    .badge-volunteer { 
+      background: rgba(251,146,60,.15); 
+      color:#fdba74; 
+      border: 1px solid rgba(251,146,60,.2);
+    }
+
+    .badge-academic {
+      background: rgba(251,191,36,.2);
+      color:#fde047;
+      border: 1px solid rgba(251,191,36,.3);
+      font-size: 11px;
+      padding: 4px 10px;
+      font-weight: 500;
+    }
+
+    .badge-civic {
+      background: rgba(34,197,94,.2);
+      color:#86efac;
+      border: 1px solid rgba(34,197,94,.3);
+      font-size: 11px;
+      padding: 4px 10px;
+      font-weight: 500;
+    }
+
+    .badge-religious {
+      background: rgba(168,85,247,.2);
+      color:#d8b4fe;
+      border: 1px solid rgba(168,85,247,.3);
+      font-size: 11px;
+      padding: 4px 10px;
+      font-weight: 500;
+    }
+
+    .category-chip {
+      padding: 6px 12px;
+      border-radius: 18px;
+      font-size: 13px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: rgba(255, 255, 255, 0.9);
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    @media (min-width: 640px) {
+      .category-chip {
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+      }
+    }
+
+    .category-chip:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .category-chip:focus {
+      outline: 2px solid rgba(198, 40, 40, 0.5);
+      outline-offset: 2px;
+    }
+
+    .category-chip.active {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: rgba(99, 102, 241, 0.4);
+      color: #a5b4fc;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.2);
+    }
+
+    .category-chip.active::before {
+      content: '✓ ';
+      margin-right: 4px;
+    }
+
+    /* Hero Category Chips */
+    .category-chip-hero {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.12);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+    }
+
+    @media (min-width: 640px) {
+      .category-chip-hero {
+        padding: 12px 20px;
+        font-size: 15px;
+      }
+    }
+
+    .category-chip-hero:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .category-chip-hero.active {
+      background: linear-gradient(135deg, rgba(198, 40, 40, 0.3), rgba(156, 39, 176, 0.3));
+      border-color: rgba(198, 40, 40, 0.6);
+      color: white;
+      font-weight: 700;
+      box-shadow: 0 4px 16px rgba(198, 40, 40, 0.4);
+    }
+
+    .category-count {
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 4px;
+    }
+
+    .category-chip-hero.active .category-count {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Details button as secondary CTA */
+    .view-details-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      padding: 8px 12px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    .view-details-btn:hover {
+      color: rgba(255, 255, 255, 1);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .view-details-btn:focus {
+      outline: 2px solid rgba(198, 40, 40, 0.5);
+      outline-offset: 2px;
+    }
+
+    .view-details-btn::after {
+      content: '→';
+      font-size: 14px;
+      transition: transform 0.2s ease;
+    }
+
+    .view-details-btn:hover::after {
+      transform: translateX(3px);
+    }
+
+    /* Join button - full width */
+    .join-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      background: #C62828;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .join-btn:hover {
+      background: #E53935;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(198, 40, 40, 0.4);
+    }
+
+    .join-btn:focus {
+      outline: 2px solid rgba(255, 255, 255, 0.5);
+      outline-offset: 2px;
+    }
+
+    .join-btn:active {
+      transform: translateY(0);
+    }
+
+    .join-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Joined state */
+    .join-btn.joined {
+      background: rgba(34, 197, 94, 0.2);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      cursor: default;
+    }
+
+    .join-btn.joined:hover {
+      background: rgba(34, 197, 94, 0.25);
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* Loading skeleton */
+    .skeleton-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 24px;
+      height: 280px;
+      animation: shimmer 1.5s infinite;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.08) 50%, rgba(255, 255, 255, 0.05) 100%);
+      background-size: 200% 100%;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    /* Description clamp with fade */
+    .club-description {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .club-description::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 30%;
+      height: 1.5em;
+      background: linear-gradient(to right, transparent, rgba(10, 15, 26, 0.95));
+    }
+
+    /* Light mode description fade */
+    body.light-mode .club-description::after {
+      background: linear-gradient(to right, transparent, rgba(248, 250, 252, 0.95));
+    }
+
+    /* Member avatar borders - theme aware */
+    .member-avatar-border {
+      border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+
+    body.light-mode .member-avatar-border {
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+    /* Fix any black text or backgrounds in club cards */
+    body.light-mode .club-card,
+    body.light-mode .featured-club-card {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card .text-white,
+    body.light-mode .featured-club-card .text-white {
+      color: #1e293b !important;
+    }
+
+    body.light-mode .club-card .text-white\/90,
+    body.light-mode .featured-club-card .text-white\/90 {
+      color: #334155 !important;
+    }
+
+    body.light-mode .club-card .text-white\/75,
+    body.light-mode .featured-club-card .text-white\/75 {
+      color: #475569 !important;
+    }
+
+    body.light-mode .club-card .text-white\/70,
+    body.light-mode .featured-club-card .text-white\/70 {
+      color: #64748b !important;
+    }
+
+    body.light-mode .club-card .text-white\/60,
+    body.light-mode .featured-club-card .text-white\/60 {
+      color: #94a3b8 !important;
+    }
+
+    /* Fix club card backgrounds in light mode */
+    body.light-mode .club-card {
+      background: rgba(255, 255, 255, 0.9) !important;
+      border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    body.light-mode .club-card:hover {
+      background: rgba(255, 255, 255, 1) !important;
+      border-color: rgba(0, 0, 0, 0.15) !important;
+    }
+
+
+    /* ===== PROFILE DROPDOWN ===== */
+    .profile-dropdown {
+      background: rgba(30, 35, 45, 0.96);
+      backdrop-filter: blur(32px);
+      -webkit-backdrop-filter: blur(32px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      width: 256px;
+    }
+
+    /* Match dropdown width to trigger button - align right edges */
+    #profileMenu {
+      right: 0;
+    }
+
+    .profile-pill {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .profile-caret {
+      transition: transform 0.2s ease;
+    }
+
+    #profileBtn[aria-expanded="true"] .profile-caret {
+      transform: rotate(180deg);
+    }
+
+    /* Dropdown Styling */
+    select {
+      color: white;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    select option {
+      background-color: #0a0f1a;
+      color: white;
+      padding: 8px;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.2);
+      background-color: rgba(255, 255, 255, 0.08);
+    }
+
+    /* General Modal Styles (used by pendingModal) */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 400px;
+      width: 90%;
+      backdrop-filter: blur(32px);
+    }
+
+    /* ===== TERMS MODAL STYLES ===== */
+    .terms-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      animation: fadeIn 300ms ease-out;
+    }
+
+    .terms-modal-overlay.active {
+      display: flex;
+    }
+
+    .terms-modal-container {
+      position: relative;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+      width: 90%;
+      max-width: 600px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      animation: slideUpScale 300ms ease-out;
+    }
+
+    .terms-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      padding: 24px;
+      border-bottom: 2px solid #f1f5f9;
+      gap: 12px;
+    }
+
+    .terms-modal-body {
+      padding: 32px;
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+      scrollbar-color: #dc2626 #f1f5f9;
+    }
+
+    .terms-modal-body::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .terms-modal-body::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+
+    .terms-modal-body::-webkit-scrollbar-thumb {
+      background: #dc2626;
+      border-radius: 4px;
+    }
+
+    .terms-modal-body::-webkit-scrollbar-thumb:hover {
+      background: #b91c1c;
+    }
+
+    .terms-modal-footer {
+      display: flex;
+      gap: 12px;
+      padding: 24px;
+      border-top: 2px solid #f1f5f9;
+      background: #f8fafc;
+      border-radius: 0 0 20px 20px;
+    }
+
+    /* Benefit Boxes */
+    .benefit-box {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: linear-gradient(to right, #fef2f2, #fff7ed);
+      border-left: 4px solid #dc2626;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #1e293b;
+    }
+
+    /* Terms Scroll Box */
+    .terms-scroll-box {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #dc2626 #f1f5f9;
+    }
+
+    .terms-scroll-box::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .terms-scroll-box::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+
+    .terms-scroll-box::-webkit-scrollbar-thumb {
+      background: #dc2626;
+      border-radius: 4px;
+    }
+
+    .terms-scroll-box::-webkit-scrollbar-thumb:hover {
+      background: #b91c1c;
+    }
+
+    .terms-content {
+      padding-right: 8px;
+    }
+
+    .term-section {
+      margin-bottom: 16px;
+    }
+
+    /* Checkbox Container */
+    .terms-checkbox-container {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      padding: 16px;
+      background: linear-gradient(to right, #fef2f2, #fff7ed);
+      border: 2px solid #f87171;
+      border-radius: 12px;
+      margin-top: 16px;
+      transition: all 200ms ease;
+    }
+
+    .terms-checkbox-container.checked {
+      border: 2px solid #10b981;
+      background: linear-gradient(to right, #f0fdf4, #ecfdf5);
+    }
+
+    .terms-checkbox {
+      width: 20px;
+      height: 20px;
+      margin-top: 2px;
+      accent-color: #dc2626;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .terms-checkbox:checked + .terms-checkbox-label {
+      color: #1e293b;
+    }
+
+    .terms-checkbox-label {
+      font-size: 14px;
+      color: #475569;
+      cursor: pointer;
+      line-height: 1.5;
+    }
+
+    /* Buttons */
+    .terms-cancel-btn {
+      flex: 1;
+      padding: 12px 24px;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      background: white;
+      color: #475569;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms ease;
+    }
+
+    .terms-cancel-btn:hover {
+      background: #f8fafc;
+      border-color: #dc2626;
+    }
+
+    .terms-join-btn {
+      flex: 2;
+      padding: 12px 24px;
+      background: linear-gradient(to right, #dc2626, #f97316);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms ease;
+      box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
+    }
+
+    .terms-join-btn:hover:not(:disabled) {
+      box-shadow: 0 8px 12px rgba(220, 38, 38, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .terms-join-btn:disabled {
+      background: #cbd5e1;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* Success Notification */
+    .success-notification {
+      position: fixed;
+      top: 24px;
+      right: -400px;
+      z-index: 1000;
+      transition: right 400ms ease-out;
+    }
+
+    .success-notification.show {
+      right: 24px;
+    }
+
+    .success-notification-content {
+      display: flex;
+      align-items: center;
+      background: white;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      border-left: 4px solid #10b981;
+      border-radius: 8px;
+      padding: 16px 20px;
+      min-width: 300px;
+    }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUpScale {
+      from {
+        opacity: 0;
+        transform: translateY(40px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Mobile Responsive for Terms Modal */
+    @media (max-width: 640px) {
+      .terms-modal-container {
+        width: 95%;
+        max-height: 95vh;
+      }
+
+      .terms-modal-header {
+        padding: 20px;
+      }
+
+      .terms-modal-body {
+        padding: 20px;
+      }
+
+      .terms-modal-footer {
+        flex-direction: column;
+        padding: 20px;
+      }
+
+      .terms-cancel-btn,
+      .terms-join-btn {
+        flex: 1;
+        width: 100%;
+      }
+    }
+
+    @keyframes fadeInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes fadeInRight {
+      from {
+        opacity: 0;
+        transform: translateX(40px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% {
+        box-shadow: 0 0 20px rgba(198, 40, 40, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 40px rgba(198, 40, 40, 0.6);
+      }
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: -1000px 0;
+      }
+      100% {
+        background-position: 1000px 0;
+      }
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .animate-fade-in-up {
+      animation: fadeInUp 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-down {
+      animation: fadeInDown 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-left {
+      animation: fadeInLeft 0.8s ease-out forwards;
+    }
+
+    .animate-fade-in-right {
+      animation: fadeInRight 0.8s ease-out forwards;
+    }
+
+    .animate-slide-up {
+      animation: slideUp 0.6s ease-out forwards;
+    }
+
+    .pulse-glow {
+      animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    .float-animation {
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .fade-in-on-scroll {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+    }
+
+    /* ===== NOTIFICATION ===== */
+    .notification-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      background: linear-gradient(135deg, #C62828, #E53935);
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      border: 2px solid rgba(15, 23, 42, 0.8);
+      animation: pulse-glow 2s ease-in-out infinite;
+    }
+
+    @media (max-width: 1023px) {
+      .lg\:hidden {
+        display: flex !important;
+      }
+    }
+
+    @media (min-width: 1024px) {
+      .lg\:hidden {
+        display: none !important;
+      }
+      
+      .mobile-menu {
+        display: none !important;
+      }
+    }
+
+    /* Mobile Menu */
+    .mobile-menu {
+      position: fixed;
+      top: 80px;
+      left: 0;
+      right: 0;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(32px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease;
+      z-index: 40;
+    }
+
+    .mobile-menu.active {
+      max-height: 500px;
+      display: block !important;
+    }
+
+    .mobile-menu-content {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* Mobile optimizations */
+    @media (max-width: 639px) {
+      #filterChipsRow {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+
+      #filterChipsRow::-webkit-scrollbar {
+        display: none;
+      }
+
+      .recommended-card,
+      .club-card {
+        min-width: 0;
+      }
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: { colors: { brand:"#C62828" } }
+      }
+    }
+  </script>
+</head>
+
+<body class="min-h-screen text-white light-mode:text-[#1e293b]">
+
+  <!-- Shared Student Navigation -->
+  <%- include('../layouts/studentNav', { 
+    currentPath: '/student/discover',
+    student: typeof student !== 'undefined' ? student : {},
+    announcements: typeof announcements !== 'undefined' ? announcements : [],
+    csrfToken: typeof csrfToken !== 'undefined' ? csrfToken : ''
+  }) %>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <main class="min-h-screen bg-[#0a0f1a] text-white px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 light-mode:bg-[#f8fafc] light-mode:text-[#1e293b]">
+    <div class="max-w-7xl mx-auto">
+
+      <!-- ===== HERO SECTION — Inspiring Welcome ===== -->
+      <div class="hero-discover-section mb-8 sm:mb-12 animate-fade-in-down relative overflow-hidden rounded-2xl bg-gradient-to-br from-red-600/10 via-purple-600/10 to-blue-600/10 border border-white/10 p-6 sm:p-8 md:p-12">
+        <!-- Background Pattern -->
+        <div class="absolute inset-0 opacity-20">
+          <div class="absolute top-0 right-0 w-64 h-64 bg-red-500/20 rounded-full blur-3xl"></div>
+          <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl"></div>
+        </div>
+
+        <div class="relative z-10">
+          <!-- Main Headline -->
+          <div class="text-center mb-6 sm:mb-8">
+            <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold mb-3 sm:mb-4 bg-gradient-to-r from-white via-white/90 to-white/70 bg-clip-text text-transparent" style="font-size: clamp(32px, 6vw, 64px);">
+              Discover Your Community
+            </h1>
+            <h2 class="text-xl sm:text-2xl lg:text-3xl font-semibold text-white/90 mb-2">
+              at University of Mindanao
+            </h2>
+            <p class="text-base sm:text-lg text-white/70 max-w-2xl mx-auto">
+              Join <span class="font-bold text-white"><%= stats.total_clubs || 200 %>+</span> student clubs across Academics, Civic, Prime, Religious, and Media & Publications
+            </p>
+          </div>
+
+          <!-- Search Bar (Large, Prominent) -->
+          <div class="max-w-3xl mx-auto mb-6">
+            <div class="flex items-center gap-3 bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 focus-within:border-red-500/50 focus-within:bg-white/15 transition-all shadow-lg">
+              <i class="fas fa-search text-white/60 text-lg sm:text-xl"></i>
+              <input
+                id="searchInput"
+                type="text"
+                placeholder="Search for clubs, interests, or activities..."
+                class="w-full bg-transparent outline-none placeholder:text-white/50 text-white text-base sm:text-lg font-medium"
+                autocomplete="off"
+              />
+              <div id="searchSuggestions" class="hidden absolute top-full left-0 right-0 mt-2 bg-white/95 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl max-h-64 overflow-y-auto z-50"></div>
+            </div>
+          </div>
+
+
+          <!-- Active Filters Display -->
+          <div id="activeFilters" class="flex flex-wrap items-center justify-center gap-2 mt-4 hidden">
+            <span class="text-xs sm:text-sm text-white/60">Active filters:</span>
+            <div id="activeFilterChips" class="flex flex-wrap gap-2"></div>
+            <button id="clearAllFilters" class="text-xs sm:text-sm text-red-400 hover:text-red-300 transition-colors font-medium">
+              Clear all
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== BROWSE ALL CLUBS — Filterable Club List (Hidden by default, shown when category selected) ===== -->
+      <section id="browseClubsSection" class="hidden fade-in-on-scroll mb-8 sm:mb-10">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 sm:mb-6">
+          <div>
+            <h2 class="text-2xl sm:text-3xl lg:text-[28px] font-bold mb-1">Browse All Clubs</h2>
+            <p class="text-sm sm:text-base text-white/70">Showing <span id="clubCount"><%= clubs ? clubs.length : 0 %></span> clubs</p>
+          </div>
+            </div>
+
+        <div id="clubGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          <% if (clubs && clubs.length > 0) { %>
+            <% clubs.forEach((club, index) => { 
+                  let badgeClass = 'badge-tech';
+              if (club.category) {
+                const cat = club.category.toLowerCase();
+                    if (cat.includes('academic')) badgeClass = 'badge-academic';
+                    else if (cat.includes('civic')) badgeClass = 'badge-civic';
+                    else if (cat.includes('religious')) badgeClass = 'badge-religious';
+                    else if (cat.includes('art') || cat.includes('creative')) badgeClass = 'badge-arts';
+                    else if (cat.includes('sport')) badgeClass = 'badge-sports';
+                    else if (cat.includes('volunteer') || cat.includes('service')) badgeClass = 'badge-volunteer';
+                else if (cat.includes('media') || cat.includes('publication')) badgeClass = 'badge-tech';
+              }
+              const initials = club.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            %>
+              <div class="club-card" 
+                   data-name="<%= (club.name || '').toLowerCase() %>" 
+                   data-category="<%= club.category || '' %>"
+                   data-members="<%= club.display_member_count || club.member_count || 0 %>"
+                   data-events="<%= club.display_event_count || club.event_count || 0 %>"
+                   data-club-id="<%= club.id %>">
+                <div class="flex items-start gap-4 mb-3">
+                  <div class="club-logo flex-shrink-0">
+                    <% if (club.logo) { %>
+                      <img src="<%= club.logo %>" alt="<%= club.name %>" class="w-full h-full object-cover rounded-full" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                    <% } %>
+                    <div class="<%= club.logo ? 'hidden' : 'flex' %> w-full h-full items-center justify-center text-sm font-bold text-white">
+                        <%= initials %>
+                    </div>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                      <h3 class="font-bold text-base text-white truncate"><%= club.name %></h3>
+                      <% if (club.category) { %>
+                            <span class="badge <%= badgeClass %> text-xs px-2 py-0.5 rounded-full">
+                          <%= club.category %>
+                            </span>
+                          <% } %>
+                        </div>
+                    <p class="club-description text-xs text-white/75 mb-3 line-clamp-2">
+                      <%= (club.description || 'Join and participate in club activities').substring(0, 100) %>...
+                    </p>
+                    <div class="flex items-center gap-3 text-xs text-white/60 mb-3 flex-wrap">
+                      <%
+                        // Use display_member_count first, then member_count, then officer_count as fallback
+                        const memberCount = club.display_member_count || club.member_count || club.officer_count || 0;
+                        const eventCount = club.display_event_count || club.event_count || 0;
+                        const memberNames = club.member_names || [];
+                        const firstMemberName = club.first_member_name || (memberNames.length > 0 ? memberNames[0] : null);
+                        const otherCount = Math.max(memberCount - (firstMemberName ? 1 : 0), 0);
+                      %>
+                      <% if (memberCount > 0 && firstMemberName) { %>
+                        <div class="flex items-center gap-2">
+                          <div class="flex -space-x-2">
+                            <% 
+                              const avatarCount = Math.min(3, Math.max(memberNames.length, memberCount));
+                              for (let i = 0; i < avatarCount; i++) { 
+                                const memberName = memberNames[i];
+                                const initial = memberName ? memberName.charAt(0).toUpperCase() : String.fromCharCode(65 + (i % 26));
+                            %>
+                              <div class="w-5 h-5 rounded-full bg-gradient-to-br <%= ['from-blue-400 to-blue-600', 'from-purple-400 to-purple-600', 'from-pink-400 to-pink-600'][i % 3] %> border-2 border-white/30 flex items-center justify-center text-[8px] font-bold text-white member-avatar-border" title="<%= memberName || 'Member ' + (i + 1) %>">
+                                <%= initial %>
+                      </div>
+              <% } %>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                            <p class="text-xs font-medium text-white/90">
+                              <span class="font-semibold"><%= firstMemberName %></span>
+                              <% if (otherCount > 0) { %>
+                                <span class="text-white/70"> and <%= otherCount %> <%= otherCount === 1 ? 'other' : 'others' %></span>
+                              <% } %>
+                              <span class="text-white/70"> are members</span>
+                        </p>
+                      </div>
+                        </div>
+                      <% } else if (memberCount > 0) { %>
+                        <span class="flex items-center gap-1 text-white/90">
+                          <i class="fas fa-users text-[10px]"></i>
+                          <span><%= memberCount %> <%= memberCount === 1 ? 'member' : 'members' %></span>
+                        </span>
+                      <% } else { %>
+                        <span class="flex items-center gap-1 text-white/60">
+                          <i class="fas fa-users text-[10px]"></i>
+                          <span>No members yet</span>
+                        </span>
+                      <% } %>
+                      <span class="text-white/40" aria-hidden="true">·</span>
+                      <span class="flex items-center gap-1 <%= eventCount > 0 ? 'text-white/90' : 'text-white/60' %>">
+                        <i class="fas fa-calendar text-[10px]"></i>
+                        <% if (eventCount > 0) { %>
+                          <span><%= eventCount %> <%= eventCount === 1 ? 'upcoming event' : 'upcoming events' %></span>
+                        <% } else { %>
+                          <span>No events yet</span>
+                        <% } %>
+                      </span>
+                    </div>
+                    <div class="flex gap-2">
+                      <button class="flex-1 join-btn" data-club-id="<%= club.id %>" data-club-name="<%= club.name %>">
+                        Join Club
+                      </button>
+                      <a href="/student/club/<%= club.id %>" class="view-details-btn">Learn More →</a>
+                    </div>
+                  </div>
+                    </div>
+                  </div>
+                <% }) %>
+          <% } else { %>
+            <div class="col-span-full text-center py-12">
+              <i class="fas fa-inbox text-4xl text-white/20 mb-3"></i>
+              <p class="text-white/60 mb-2">No clubs found</p>
+              <p class="text-sm text-white/40">Try adjusting your filters</p>
+            </div>
+              <% } %>
+            </div>
+          </section>
+
+      <!-- ===== MAIN CONTENT ===== -->
+      <div class="space-y-6 sm:space-y-8">
+
+          <!-- ===== ALL CLUBS AVAILABLE ===== -->
+          <% if (clubs && clubs.length > 0) { %>
+          <section id="allClubsSection" class="fade-in-on-scroll mb-8 sm:mb-10">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 sm:mb-6">
+              <div>
+                <h2 class="text-2xl sm:text-3xl lg:text-[28px] font-bold mb-1">All Clubs Available</h2>
+                <p class="text-sm sm:text-base text-white/70">Clubs from your department, plus Civic and Religious clubs</p>
+              </div>
+            </div>
+            <div id="allClubsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+              <% clubs.forEach((club) => {
+                const initials = club.name ? club.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'CL';
+                let badgeClass = 'badge-tech';
+                if (club.category) {
+                  const cat = club.category.toLowerCase();
+                  if (cat.includes('academic')) badgeClass = 'badge-academic';
+                  else if (cat.includes('civic')) badgeClass = 'badge-civic';
+                  else if (cat.includes('religious')) badgeClass = 'badge-religious';
+                  else if (cat.includes('art') || cat.includes('creative')) badgeClass = 'badge-arts';
+                  else if (cat.includes('sport')) badgeClass = 'badge-sports';
+                  else if (cat.includes('volunteer') || cat.includes('service')) badgeClass = 'badge-volunteer';
+                }
+                const memberCount = club.display_member_count || club.member_count || 0;
+                const eventCount = club.display_event_count || club.event_count || 0;
+              %>
+              <div class="club-card bg-white/5 border border-white/10 rounded-xl p-5 sm:p-6 hover:bg-white/10 hover:border-white/20 transition-all group" data-category="<%= club.category || '' %>" data-name="<%= (club.name || '').toLowerCase() %>" data-description="<%= ((club.description || '').toLowerCase()) %>" data-department="<%= (club.department || '').toLowerCase() %>" data-members="<%= memberCount %>" data-events="<%= eventCount %>">
+                <div class="flex items-start gap-4 mb-4">
+                  <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-lg bg-gradient-to-br from-red-500/30 to-orange-500/30 flex items-center justify-center text-lg sm:text-xl font-bold text-white border border-white/20 flex-shrink-0">
+                    <% if (club.photo || club.logo) { %>
+                      <img src="<%= club.photo || club.logo %>" alt="<%= club.name %>" class="w-full h-full object-cover rounded-lg" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                    <% } %>
+                    <div class="<%= (club.photo || club.logo) ? 'hidden' : 'flex' %> w-full h-full items-center justify-center">
+                      <%= initials %>
+                    </div>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">
+                      <h3 class="font-bold text-lg sm:text-xl text-white group-hover:text-red-400 transition-colors"><%= club.name %></h3>
+                      <% if (club.category) { %>
+                        <span class="badge <%= badgeClass %> text-xs">
+                          <%= club.category %>
+                        </span>
+                      <% } %>
+                    </div>
+                    <p class="text-sm text-white/70 line-clamp-2 mb-3">
+                      <%= (club.description || 'Join and participate in club activities').substring(0, 100) %><%= (club.description && club.description.length > 100) ? '...' : '' %>
+                    </p>
+                    <div class="flex items-center gap-3 text-xs text-white/60">
+                      <span class="flex items-center gap-1">
+                        <i class="fas fa-users"></i>
+                        <%= memberCount %> <%= memberCount === 1 ? 'member' : 'members' %>
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <i class="fas fa-calendar"></i>
+                        <%= eventCount %> <%= eventCount === 1 ? 'event' : 'events' %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button class="flex-1 join-btn px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-semibold text-sm transition-all" data-club-id="<%= club.id %>" data-club-name="<%= club.name %>">
+                    Join Club
+                  </button>
+                  <a href="/student/club/<%= club.id %>" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-sm transition-all">
+                    View →
+                  </a>
+                </div>
+              </div>
+              <% }); %>
+            </div>
+          </section>
+          <% } %>
+
+          <!-- ===== FEATURED CLUBS — Editorial Curation ===== -->
+          <% if (featuredClubs && featuredClubs.length > 0) { %>
+          <section class="fade-in-on-scroll mb-8 sm:mb-10">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-5 sm:mb-6">
+              <div>
+                <h2 class="text-2xl sm:text-3xl lg:text-[28px] font-bold mb-1">Featured This Month</h2>
+                <p class="text-sm sm:text-base text-white/70">Spotlight clubs with upcoming events and special opportunities</p>
+              </div>
+              <span class="text-xs sm:text-sm text-white/90 flex items-center gap-1.5 px-4 py-2 rounded-full bg-gradient-to-r from-purple-400/20 to-pink-400/20 border border-purple-400/30 font-semibold">
+                <i class="fas fa-star text-purple-400"></i>
+                Editor's Pick
+              </span>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6">
+              <% featuredClubs.slice(0, 2).forEach((club, index) => { 
+                let badgeClass = 'badge-tech';
+                if (club.category) {
+                  const cat = club.category.toLowerCase();
+                  if (cat.includes('academic')) badgeClass = 'badge-academic';
+                  else if (cat.includes('civic')) badgeClass = 'badge-civic';
+                  else if (cat.includes('religious')) badgeClass = 'badge-religious';
+                  else if (cat.includes('art') || cat.includes('creative')) badgeClass = 'badge-arts';
+                  else if (cat.includes('sport')) badgeClass = 'badge-sports';
+                  else if (cat.includes('volunteer') || cat.includes('service')) badgeClass = 'badge-volunteer';
+                }
+                const initials = club.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+              %>
+              <div class="featured-club-card bg-gradient-to-br from-white/8 to-white/5 border-2 border-purple-500/30 rounded-2xl p-6 sm:p-8 hover:border-purple-500/50 transition-all relative overflow-hidden group">
+                <!-- Featured Badge -->
+                <div class="absolute top-4 right-4 z-10">
+                  <span class="px-3 py-1 rounded-full bg-gradient-to-r from-purple-500/30 to-pink-500/30 border border-purple-400/50 text-xs font-bold text-white flex items-center gap-1.5">
+                    <i class="fas fa-star text-yellow-300"></i>
+                    FEATURED
+                  </span>
+                </div>
+                
+                <div class="relative z-10">
+                  <div class="flex items-start gap-4 mb-4">
+                    <div class="w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-purple-500/30 to-pink-500/30 flex items-center justify-center text-xl sm:text-2xl font-bold text-white border-2 border-purple-400/50 flex-shrink-0">
+                    <% if (club.logo) { %>
+                        <img src="<%= club.logo %>" alt="<%= club.name %>" class="w-full h-full object-cover rounded-xl" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                    <% } %>
+                      <div class="<%= club.logo ? 'hidden' : 'flex' %> w-full h-full items-center justify-center">
+                      <%= initials %>
+                    </div>
+                  </div>
+                    <div class="flex-1 min-w-0 pt-1">
+                    <div class="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3 class="font-bold text-xl sm:text-2xl text-white"><%= club.name %></h3>
+                      <% if (club.category) { %>
+                          <span class="badge <%= badgeClass %> text-xs">
+                          <%= club.category %>
+                        </span>
+                      <% } %>
+                        <span class="badge bg-green-500/20 text-green-400 border border-green-500/30 text-xs">
+                          <i class="fas fa-circle text-[6px] mr-1"></i>
+                          Active
+                        </span>
+                    </div>
+                      <p class="text-sm text-white/80 leading-relaxed line-clamp-2 mb-3">
+                        <%= (club.description || 'Join and participate in club activities').substring(0, 120) %>...
+                      </p>
+                  </div>
+                </div>
+                
+                  <!-- Testimonial Quote -->
+                  <div class="bg-white/5 rounded-lg p-4 mb-4 border-l-4 border-purple-400/50">
+                    <p class="text-sm text-white/90 italic mb-2">
+                      "This club helped me discover my passion and meet amazing people who share my interests."
+                    </p>
+                    <p class="text-xs text-white/60">
+                      — Active Member, Joined 2023
+                    </p>
+                </div>
+
+                  <!-- Member Count with Social Proof - Dynamic -->
+                  <div class="space-y-2 mb-4">
+                    <%
+                      // Use display_member_count first, then member_count, then officer_count as fallback
+                      const featuredMemberCount = club.display_member_count || club.member_count || club.officer_count || 0;
+                      const featuredEventCount = club.display_event_count || club.event_count || 0;
+                      const featuredMemberNames = club.member_names || [];
+                      const featuredFirstMemberName = club.first_member_name || (featuredMemberNames.length > 0 ? featuredMemberNames[0] : null);
+                      const featuredOtherCount = Math.max(featuredMemberCount - (featuredFirstMemberName ? 1 : 0), 0);
+                    %>
+                    <% if (featuredMemberCount > 0 && featuredFirstMemberName) { %>
+                      <div class="flex items-center gap-2">
+                        <!-- Member Avatars -->
+                        <div class="flex -space-x-2">
+                          <% 
+                            const featuredAvatarCount = Math.min(3, Math.max(featuredMemberNames.length, featuredMemberCount));
+                            for (let i = 0; i < featuredAvatarCount; i++) { 
+                              const memberName = featuredMemberNames[i];
+                              const initial = memberName ? memberName.charAt(0).toUpperCase() : String.fromCharCode(65 + (i % 26));
+                          %>
+                            <div class="w-6 h-6 rounded-full bg-gradient-to-br <%= ['from-blue-400 to-blue-600', 'from-purple-400 to-purple-600', 'from-pink-400 to-pink-600'][i % 3] %> border-2 border-white/30 flex items-center justify-center text-[10px] font-bold text-white member-avatar-border" title="<%= memberName || 'Member ' + (i + 1) %>">
+                              <%= initial %>
+                </div>
+                          <% } %>
+              </div>
+                        <div class="flex-1 min-w-0">
+                          <p class="text-xs font-medium text-white/90">
+                            <span class="font-semibold"><%= featuredFirstMemberName %></span>
+                            <% if (featuredOtherCount > 0) { %>
+                              <span class="text-white/70"> and <%= featuredOtherCount %> <%= featuredOtherCount === 1 ? 'other' : 'others' %></span>
+          <% } %>
+                            <span class="text-white/70"> are members</span>
+              </p>
+            </div>
+                      </div>
+                    <% } %>
+                    
+                    <!-- Stats Row - Only show if member names are not available -->
+                    <% if (!(featuredMemberCount > 0 && featuredFirstMemberName)) { %>
+                      <div class="flex items-center gap-1.5 sm:gap-2 text-tertiary text-xs flex-wrap">
+                        <span class="flex items-center gap-1 font-semibold <%= featuredMemberCount > 0 ? 'text-white/90' : 'text-white/60' %>">
+                          <i class="fas fa-users text-[10px]" aria-hidden="true"></i>
+                          <% if (featuredMemberCount > 0) { %>
+                            <span><%= featuredMemberCount %> <%= featuredMemberCount === 1 ? 'member' : 'members' %></span>
+                          <% } else { %>
+                            <span>No members yet</span>
+                      <% } %>
+                        </span>
+                        <span class="text-tertiary" aria-hidden="true">·</span>
+                        <span class="flex items-center gap-1 font-semibold <%= featuredEventCount > 0 ? 'text-white/90' : 'text-white/60' %>">
+                          <i class="fas fa-calendar text-[10px]" aria-hidden="true"></i>
+                          <% if (featuredEventCount > 0) { %>
+                            <span><%= featuredEventCount %> <%= featuredEventCount === 1 ? 'upcoming event' : 'upcoming events' %></span>
+                          <% } else { %>
+                            <span>No events yet</span>
+                          <% } %>
+                        </span>
+                      </div>
+                    <% } else { %>
+                      <!-- Event count only when member names are shown -->
+                      <div class="flex items-center gap-1.5 sm:gap-2 text-tertiary text-xs flex-wrap">
+                        <span class="flex items-center gap-1 font-semibold <%= featuredEventCount > 0 ? 'text-white/90' : 'text-white/60' %>">
+                          <i class="fas fa-calendar text-[10px]" aria-hidden="true"></i>
+                          <% if (featuredEventCount > 0) { %>
+                            <span><%= featuredEventCount %> <%= featuredEventCount === 1 ? 'upcoming event' : 'upcoming events' %></span>
+                          <% } else { %>
+                            <span>No events yet</span>
+                          <% } %>
+                        </span>
+                    </div>
+                    <% } %>
+                    
+                    <!-- Next Event -->
+                    <% if (club.next_event_name || club.next_event_date) { %>
+                      <div class="flex items-center gap-2 p-2 rounded-lg bg-white/5 border border-white/10 mt-2">
+                        <i class="fas fa-calendar-check text-[10px] text-blue-400"></i>
+                    <div class="flex-1 min-w-0">
+                          <p class="text-xs font-medium text-white/90">Next event:</p>
+                          <p class="text-xs text-white/70 truncate">
+                            <%= club.next_event_name || 'Upcoming Event' %>
+                            <% if (club.next_event_date) { %>
+                              <% 
+                                const eventDate = new Date(club.next_event_date);
+                                const formattedDate = eventDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                              %>
+                              • <%= formattedDate %>
+                      <% } %>
+                          </p>
+                    </div>
+                      </div>
+                    <% } %>
+                  </div>
+                  
+                  <!-- Featured Because -->
+                  <div class="mb-4">
+                    <p class="text-xs text-purple-300 font-medium mb-1">
+                      <i class="fas fa-info-circle mr-1"></i>
+                      Featured because:
+                    </p>
+                    <p class="text-xs text-white/70">
+                      <%= index === 0 ? 'Hosting major event this month' : 'High engagement and active community' %>
+                    </p>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="flex gap-3">
+                    <button class="flex-1 join-btn" data-club-id="<%= club.id %>" data-club-name="<%= club.name %>">
+                      Join Club
+                    </button>
+                    <a href="/student/club/<%= club.id %>" class="view-details-btn px-4">Learn More →</a>
+                  </div>
+                  </div>
+                </div>
+                <% }) %>
+                  </div>
+          </section>
+          <% } %>
+
+      </div>
+
+      <!-- ===== CALL-TO-ACTION SECTIONS — Engagement Drivers ===== -->
+      <div class="space-y-6 sm:space-y-8 mt-12 sm:mt-16">
+        <!-- Can't Find What You're Looking For? -->
+        <section class="bg-gradient-to-br from-red-600/10 via-purple-600/10 to-blue-600/10 border-2 border-white/10 rounded-2xl p-6 sm:p-8 fade-in-on-scroll">
+          <div class="text-center max-w-2xl mx-auto">
+            <div class="text-5xl sm:text-6xl mb-4">💡</div>
+            <h3 class="text-2xl sm:text-3xl font-bold mb-3">Can't Find What You're Looking For?</h3>
+            <p class="text-base sm:text-lg text-white/80 mb-6">
+              Have an idea for a club? Submit a proposal and gather founding members to start your own community!
+            </p>
+            <button class="px-8 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-bold text-base sm:text-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105">
+              <i class="fas fa-plus-circle mr-2"></i>
+              Propose a New Club
+          </button>
+        </div>
+      </section>
+
+        <!-- Invite Friends -->
+        <section class="bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-white/10 rounded-2xl p-6 sm:p-8 fade-in-on-scroll">
+          <div class="flex flex-col sm:flex-row items-center gap-6 sm:gap-8">
+            <div class="flex-1 text-center sm:text-left">
+              <h3 class="text-xl sm:text-2xl font-bold mb-2">Invite Friends to Join</h3>
+              <p class="text-sm sm:text-base text-white/70 mb-4">
+                Know someone who'd love these clubs? Share UniClub with your friends and build your community together.
+              </p>
+              <div class="flex flex-wrap gap-3 justify-center sm:justify-start">
+                <button class="px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white font-medium transition-all">
+                  <i class="fab fa-facebook mr-2"></i>
+                  Share on Facebook
+            </button>
+                <button class="px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white font-medium transition-all">
+                  <i class="fas fa-link mr-2"></i>
+                  Copy Link
+            </button>
+          </div>
+        </div>
+            <div class="text-5xl sm:text-6xl flex-shrink-0">👥</div>
+      </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== FOOTER (Minimal) ===== -->
+  <footer class="border-t border-white/10 py-6 px-4 sm:px-6 lg:px-8 mt-12">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-2">
+          <img src="/img/logo.png" alt="UM Logo" class="w-6 h-6 object-contain">
+          <p class="text-white font-semibold text-sm">UniClub</p>
+        </div>
+        <p class="text-xs text-white/50">© 2024 University of Mindanao</p>
+        <div class="flex gap-4 text-xs text-white/50">
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Privacy</a>
+          <a href="#" class="hover:text-white/70 transition-colors focus:outline-none focus:ring-1 focus:ring-white/50 rounded px-1">Terms</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ===== CLUB DATA (JSON) ===== -->
+  <script id="club-data" type="application/json">
+    <%
+    // Build club data array server-side
+    const allClubsDataArray = [];
+    if (clubs && clubs.length > 0) {
+      clubs.forEach(club => {
+        allClubsDataArray.push({
+          id: club.id,
+          name: (club.name || "").replace(/'/g, "\\'"),
+          description: (club.description || "").replace(/'/g, "\\'").replace(/\n/g, "\\n"),
+          category: club.category || "",
+          department: club.department || "",
+          programs: club.programs || "",
+          adviser: club.adviser || "",
+          status: club.status || "Active",
+          officer_count: club.officer_count || 0,
+          member_count: club.member_count || 0,
+          display_member_count: club.display_member_count || club.member_count || 0,
+          event_count: club.event_count || 0,
+          display_event_count: club.display_event_count || club.event_count || 0,
+          member_names: club.member_names || [],
+          first_member_name: club.first_member_name || (club.member_names && club.member_names.length > 0 ? club.member_names[0] : null),
+          next_event_date: club.next_event_date || "",
+          next_event_name: (club.next_event_name || "").replace(/'/g, "\\'")
+        });
+      });
+    }
+    if (featuredClubs && featuredClubs.length > 0) {
+      featuredClubs.forEach(club => {
+        // Only add if not already in allClubsDataArray
+        if (!allClubsDataArray.find(c => c.id === club.id)) {
+          allClubsDataArray.push({
+            id: club.id,
+            name: (club.name || "").replace(/'/g, "\\'"),
+            description: (club.description || "").replace(/'/g, "\\'").replace(/\n/g, "\\n"),
+            category: club.category || "",
+            department: club.department || "",
+            programs: club.programs || "",
+            adviser: club.adviser || "",
+            status: club.status || "Active",
+            officer_count: club.officer_count || 0,
+            member_count: club.member_count || 0,
+            display_member_count: club.display_member_count || club.member_count || 0,
+            event_count: club.event_count || 0,
+            display_event_count: club.display_event_count || club.event_count || 0,
+            member_names: club.member_names || [],
+            first_member_name: club.first_member_name || (club.member_names && club.member_names.length > 0 ? club.member_names[0] : null),
+            next_event_date: club.next_event_date || "",
+            next_event_name: (club.next_event_name || "").replace(/'/g, "\\'")
+          });
+        }
+      });
+    }
+    %>
+    <%- JSON.stringify(allClubsDataArray).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026') %>
+  </script>
+
+  <!-- ===== CLUB DETAILS MODAL ===== -->
+  <!-- ===== TERMS AND CONDITIONS MODAL ===== -->
+  <div id="termsModal" class="terms-modal-overlay">
+    <div class="terms-modal-container">
+      <!-- Header -->
+      <div class="terms-modal-header">
+        <div class="flex items-center gap-3 flex-1 min-w-0">
+          <div class="text-4xl">📋</div>
+          <div class="flex-1 min-w-0">
+            <h3 class="text-2xl font-bold text-gray-900">Join Club</h3>
+            <p class="text-sm text-gray-600 mt-0.5" id="termsModalClubName">Club Name</p>
+            </div>
+          </div>
+        <button id="closeTermsModal" class="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-colors flex-shrink-0">
+          <i class="fas fa-times text-3xl"></i>
+        </button>
+      </div>
+      
+      <!-- Body (Scrollable) -->
+      <div class="terms-modal-body">
+        <!-- Welcome Section -->
+        <div class="mb-6">
+          <p class="text-base text-gray-900 mb-4">
+            Welcome! You're about to join <span id="termsModalClubNameBody" class="font-semibold">UMTC CODES</span>
+          </p>
+          <p class="text-base text-gray-600 mb-4">
+            By joining this club, you'll get access to:
+          </p>
+
+          <!-- Benefits List -->
+          <div class="space-y-2 mb-6">
+            <div class="benefit-box">
+              <i class="fas fa-calendar text-red-600 mr-3"></i>
+              <span>Exclusive events and workshops</span>
+        </div>
+            <div class="benefit-box">
+              <i class="fas fa-comments text-red-600 mr-3"></i>
+              <span>Member-only discussions and networking</span>
+      </div>
+            <div class="benefit-box">
+              <i class="fas fa-trophy text-red-600 mr-3"></i>
+              <span>Achievement points and recognition</span>
+            </div>
+            <div class="benefit-box">
+              <i class="fas fa-envelope text-red-600 mr-3"></i>
+              <span>Updates about club activities</span>
+      </div>
+    </div>
+  </div>
+
+        <!-- Divider -->
+        <div class="border-t-2 border-gray-200 my-6"></div>
+
+        <!-- Terms & Conditions Section -->
+        <div class="mb-6">
+          <h4 class="text-lg font-bold text-gray-900 mb-4">Terms & Conditions</h4>
+          
+          <!-- Terms Box (Scrollable) -->
+          <div class="terms-scroll-box">
+            <div class="terms-content">
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">1. Purpose</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                  UniCLub is an online platform designed to help students discover, join, and engage with clubs and organizations. The website provides information about club activities, events, news, and resources. Its purpose is to create a safe, organized, and accessible environment for all students who wish to participate in extracurricular activities.
+                </p>
+      </div>
+      
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">2. Membership Eligibility</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-2">
+                  Membership in any club is subject to the rules, requirements, and guidelines established by that club. Users must:
+                </p>
+                <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc mb-2">
+                  <li>Provide accurate and complete personal information when registering.</li>
+                  <li>Meet any eligibility criteria set by the club or the organization overseeing it.</li>
+                  <li>Comply with the club's rules, values, and code of conduct.</li>
+                </ul>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                  Membership may be revoked if a member violates rules, engages in misconduct, provides false information, or fails to follow club or organizational guidelines.
+          </p>
+        </div>
+
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">3. Website Use</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-2">
+                  By using UniCLub, you agree to:
+                </p>
+                <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc mb-2">
+                  <li>Use the website responsibly and respectfully.</li>
+                  <li>Avoid any activity that could harm the website, other users, or the clubs listed on the platform.</li>
+                  <li>Not engage in unauthorized access, distribution, or reproduction of website content.</li>
+          </ul>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                  The website is intended for informational and organizational purposes only, and users are expected to interact with it in good faith.
+                </p>
+        </div>
+
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">4. Privacy and Data Protection</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-2">
+                  UniCLub collects personal information to facilitate membership registration, communication, and participation in club activities. Your information will only be used for these purposes and will be protected under the <strong>Data Privacy Act of 2012 (Republic Act No. 10173)</strong>.
+                </p>
+                <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc mb-4">
+                  <li>UniCLub will not share your personal information with third parties without your consent, unless required by law.</li>
+                  <li>Users have the right to access, correct, or request the deletion of their personal information in accordance with applicable data protection laws.</li>
+                </ul>
+        </div>
+
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">5. Participation in Activities</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                  Members are encouraged to actively participate in club meetings, events, and activities. Participation is subject to the rules and expectations of each club, and all users are expected to engage respectfully with other members.
+          </p>
+        </div>
+
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">6. Intellectual Property</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                  All content on UniCLub, including text, graphics, logos, and materials, is the property of the platform or the respective clubs and organizations. Users may not copy, distribute, or reproduce content without explicit permission.
+          </p>
+        </div>
+
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">7. Liability</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-2">
+                  UniCLub is provided as a platform for information and club registration. The website and its operators are not liable for:
+                </p>
+                <ul class="text-sm text-gray-600 space-y-1 ml-4 list-disc mb-2">
+                  <li>Any direct, indirect, or consequential damages from using the website.</li>
+                  <li>Any actions, decisions, or outcomes arising from participation in clubs.</li>
+                </ul>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                  Users register and participate at their own risk.
+                </p>
+      </div>
+
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">8. Amendments</h5>
+                <p class="text-sm text-gray-600 leading-relaxed mb-4">
+                  UniCLub reserves the right to update or modify these Terms and Conditions at any time. Updates will be posted on the website. Continued use of the website after changes are posted constitutes acceptance of the updated terms.
+                </p>
+              </div>
+
+              <div class="term-section">
+                <h5 class="font-bold text-gray-900 mb-2">9. Governing Law</h5>
+                <p class="text-sm text-gray-600 leading-relaxed">
+                  These Terms and Conditions are governed by the laws of the Philippines. Any disputes arising from the use of the website or participation in clubs will be resolved under Philippine jurisdiction.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Checkbox with Gradient Border -->
+          <div class="terms-checkbox-container">
+            <input type="checkbox" id="acceptTerms" class="terms-checkbox">
+            <label for="acceptTerms" class="terms-checkbox-label">
+              I have read and agree to the <span class="text-red-600 underline hover:text-orange-600 cursor-pointer">Terms & Conditions</span> 
+              of UniCLub
+        </label>
+          </div>
+      </div>
+
+      </div>
+
+      <!-- Footer -->
+      <div class="terms-modal-footer">
+        <button id="cancelTerms" class="terms-cancel-btn">
+          Cancel
+        </button>
+        <button id="submitJoinRequest" class="terms-join-btn" disabled>
+          Join Club
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Success Notification -->
+  <div id="joinSuccessNotification" class="success-notification">
+    <div class="success-notification-content">
+      <i class="fas fa-clock text-amber-500 text-xl mr-3"></i>
+      <div>
+        <p class="font-semibold text-gray-900">Your request is pending</p>
+        <p class="text-sm text-gray-600" id="successClubName">Your application has been submitted successfully</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error Notification -->
+  <div id="joinErrorNotification" class="success-notification" style="background: linear-gradient(135deg, rgba(239, 68, 68, 0.95), rgba(220, 38, 38, 0.95)); border-left: 4px solid #dc2626;">
+    <div class="success-notification-content">
+      <i class="fas fa-exclamation-triangle text-yellow-300 text-xl mr-3"></i>
+      <div>
+        <p class="font-semibold text-white">Application Notice</p>
+        <p class="text-sm text-white/90" id="errorMessage">An error occurred</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== PENDING APPROVAL MODAL ===== -->
+  <div id="pendingModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <div class="text-center">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
+          <i class="fas fa-clock text-4xl text-amber-400"></i>
+        </div>
+        <h3 class="text-2xl font-bold mb-2">Application Submitted!</h3>
+        <p class="text-sm text-white/70 mb-6" id="pendingClubName">
+          Your application has been submitted successfully.
+        </p>
+        <div class="bg-white/5 rounded-lg p-4 mb-6 border border-white/10">
+          <p class="text-sm text-white/80 mb-2">
+            <i class="fas fa-info-circle text-blue-400 mr-2"></i>
+            Your application is now pending review by club officers.
+          </p>
+          <p class="text-xs text-white/60">
+            You will be notified once a decision has been made. This typically takes 3-5 business days.
+          </p>
+        </div>
+        <button id="closePendingModal" class="w-full px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-sm font-semibold transition-colors">
+          Got it!
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Mobile menu functionality
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    if (mobileMenuBtn && mobileMenu) {
+      mobileMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        mobileMenu.classList.toggle('active');
+      });
+
+      // Close menu when clicking outside
+      document.addEventListener('click', (e) => {
+        if (mobileMenu && !mobileMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+          mobileMenu.classList.remove('active');
+        }
+      });
+
+      // Close menu when clicking links
+      mobileMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          mobileMenu.classList.remove('active');
+        });
+      });
+
+      // Close menu on escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('active')) {
+          mobileMenu.classList.remove('active');
+        }
+      });
+    }
+
+    // Search and filter functionality
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const sortFilter = document.getElementById('sortFilter');
+    const clubGrid = document.getElementById('clubGrid'); // May not exist if Browse All Clubs section is removed
+    const clubCount = document.getElementById('clubCount'); // May not exist if Browse All Clubs section is removed
+    const clearFilters = document.getElementById('clearFilters');
+    const categoryChips = document.querySelectorAll('.category-chip');
+    const categoryChipsHero = document.querySelectorAll('.category-chip-hero');
+    const activeFilters = document.getElementById('activeFilters');
+    const activeFilterChips = document.getElementById('activeFilterChips');
+    const clearAllFilters = document.getElementById('clearAllFilters');
+    let selectedCategory = '';
+    let searchTimeout;
+
+    // Count clubs by category
+    function countClubsByCategory() {
+      const counts = {
+        'Academics': 0,
+        'Civic': 0,
+        'Prime': 0,
+        'Religious': 0,
+        'Media': 0
+      };
+
+      document.querySelectorAll('.club-card').forEach(card => {
+        const category = card.dataset.category || '';
+        const catLower = category.toLowerCase();
+        
+        if (catLower.includes('academic') || catLower.includes('academics')) counts['Academics']++;
+        else if (catLower.includes('civic') || catLower.includes('social') || catLower.includes('community')) counts['Civic']++;
+        else if (catLower.includes('prime') || catLower.includes('premier')) counts['Prime']++;
+        else if (catLower.includes('religious') || catLower.includes('religion')) counts['Religious']++;
+        else if (catLower.includes('media') || catLower.includes('publication')) counts['Media']++;
+      });
+
+      // Update category counts in hero chips
+      Object.keys(counts).forEach(cat => {
+        const countEl = document.getElementById(`count-${cat.toLowerCase()}`);
+        if (countEl) {
+          countEl.textContent = counts[cat];
+        }
+      });
+    }
+
+    // Initialize category counts
+    countClubsByCategory();
+
+    function updateClearButton() {
+      if (clearFilters) {
+        if (selectedCategory || (searchInput && searchInput.value.trim())) {
+        clearFilters.classList.remove('hidden');
+      } else {
+        clearFilters.classList.add('hidden');
+        }
+      }
+    }
+
+    function filterAndSortClubs() {
+      const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+      const category = selectedCategory;
+      const sortBy = sortFilter ? sortFilter.value : '';
+      
+      // Get the "All Clubs Available" section
+      const allClubsSection = document.getElementById('allClubsSection');
+      const allClubsGrid = document.getElementById('allClubsGrid');
+      const allClubsTitle = allClubsSection ? allClubsSection.querySelector('h2') : null;
+      const allClubsSubtitle = allClubsSection ? allClubsSection.querySelector('p') : null;
+      
+      // Check if there's an active search or filter
+      const hasActiveFilter = searchTerm || category;
+      
+      // Update section title based on filters
+      if (allClubsSection) {
+        allClubsSection.style.display = 'block'; // Always show the section
+        if (hasActiveFilter) {
+          // Update title to "Search Results" when searching/filtering
+          if (allClubsTitle) {
+            if (searchTerm && category) {
+              allClubsTitle.textContent = 'Search Results';
+            } else if (searchTerm) {
+              allClubsTitle.textContent = 'Search Results';
+            } else if (category) {
+              allClubsTitle.textContent = category + ' Clubs';
+            }
+          }
+          if (allClubsSubtitle) {
+            allClubsSubtitle.style.display = 'none'; // Hide subtitle when filtering
+          }
+        } else {
+          // Restore original title when no filters
+          if (allClubsTitle) {
+            allClubsTitle.textContent = 'All Clubs Available';
+          }
+          if (allClubsSubtitle) {
+            allClubsSubtitle.style.display = 'block'; // Show subtitle when no filters
+          }
+        }
+      }
+      
+      // Get all club cards (from All Clubs section)
+      const clubCards = Array.from(document.querySelectorAll('#allClubsGrid .club-card'));
+      
+      // Filter
+      let visibleCount = 0;
+      const debugClubs = []; // For debugging
+      
+      clubCards.forEach(card => {
+        const name = card.dataset.name || '';
+        const description = card.dataset.description || '';
+        const cardCategory = (card.dataset.category || '').trim();
+        const cardCategoryLower = cardCategory.toLowerCase();
+        const selectedCatLower = category ? category.trim().toLowerCase() : '';
+        
+        // Enhanced search: search in name, description, and category
+        const matchesSearch = !searchTerm || 
+          name.includes(searchTerm) || 
+          description.includes(searchTerm) ||
+          cardCategoryLower.includes(searchTerm);
+        
+        // Enhanced category matching - use exact or strict matching
+        let matchesCategory = !category;
+        if (category) {
+          // Normalize both for comparison
+          const normalizedCardCategory = cardCategoryLower;
+          const normalizedSelectedCategory = selectedCatLower;
+          
+          if (normalizedSelectedCategory === 'academics' || normalizedSelectedCategory === 'academic') {
+            // Match if category contains "academic" (case-insensitive)
+            // This handles "Academic", "Academics", "Academic Club", etc.
+            matchesCategory = normalizedCardCategory.includes('academic');
+          } else if (normalizedSelectedCategory === 'civic') {
+            // Match if category starts with "civic" (case-insensitive)
+            // This handles "Civic", "Civic Engagement", "Civic Service", etc.
+            // But we want to be more strict - only match if it's exactly "civic" or starts with "civic" followed by a space
+            const categoryWords = normalizedCardCategory.split(/\s+/).filter(w => w.length > 0);
+            matchesCategory = categoryWords.length > 0 && categoryWords[0] === 'civic';
+          } else if (normalizedSelectedCategory === 'prime') {
+            // Only match if category is exactly "prime" or "premier" (case-insensitive)
+            matchesCategory = normalizedCardCategory === 'prime' || normalizedCardCategory === 'premier';
+          } else if (normalizedSelectedCategory === 'religious') {
+            // Only match if category is exactly "religious" or "religion" (case-insensitive)
+            matchesCategory = normalizedCardCategory === 'religious' || normalizedCardCategory === 'religion';
+          } else if (normalizedSelectedCategory === 'media') {
+            // Only match if category contains "media" or "publication" (case-insensitive)
+            matchesCategory = normalizedCardCategory.includes('media') || normalizedCardCategory.includes('publication');
+          } else {
+            // Exact match for other categories
+            matchesCategory = normalizedCardCategory === normalizedSelectedCategory;
+          }
+          
+          // Debug logging for Civic filter
+          if (normalizedSelectedCategory === 'civic' && matchesCategory) {
+            debugClubs.push({ name, category: cardCategory, matches: matchesCategory });
+          }
+        }
+        
+        if (matchesSearch && matchesCategory) {
+          card.style.display = 'flex';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+      
+      // Debug logging for ALL filters
+      if (category) {
+        console.log('[Filter Debug] Selected category:', category);
+        console.log('[Filter Debug] Total club cards found:', clubCards.length);
+        console.log('[Filter Debug] Visible clubs:', visibleCount);
+        
+        // Log all clubs and their categories
+        const allClubsInfo = [];
+        clubCards.forEach(card => {
+          const cardName = card.dataset.name || '';
+          const cardCat = card.dataset.category || '';
+          const isVisible = card.style.display !== 'none';
+          allClubsInfo.push({
+            name: cardName,
+            category: cardCat,
+            categoryLower: cardCat.toLowerCase(),
+            visible: isVisible
+          });
+        });
+        console.log('[Filter Debug] All clubs info:', allClubsInfo);
+        
+        // Log why clubs are not matching
+        clubCards.forEach(card => {
+          const cardName = card.dataset.name || '';
+          const cardCategory = (card.dataset.category || '').trim().toLowerCase();
+          const selectedCatLower = category ? category.trim().toLowerCase() : '';
+          const matchesSearch = !searchTerm || cardName.toLowerCase().includes(searchTerm.toLowerCase());
+          
+          let matchesCategory = !category;
+          if (category) {
+            const normalizedCardCategory = cardCategory;
+            const normalizedSelectedCategory = selectedCatLower;
+            
+            if (normalizedSelectedCategory === 'academics' || normalizedSelectedCategory === 'academic') {
+              matchesCategory = normalizedCardCategory.includes('academic');
+            } else if (normalizedSelectedCategory === 'civic') {
+              const categoryWords = normalizedCardCategory.split(/\s+/).filter(w => w.length > 0);
+              matchesCategory = categoryWords.length > 0 && categoryWords[0] === 'civic';
+            } else if (normalizedSelectedCategory === 'prime') {
+              matchesCategory = normalizedCardCategory === 'prime' || normalizedCardCategory === 'premier';
+            } else if (normalizedSelectedCategory === 'religious') {
+              matchesCategory = normalizedCardCategory === 'religious' || normalizedCardCategory === 'religion';
+            } else if (normalizedSelectedCategory === 'media') {
+              matchesCategory = normalizedCardCategory.includes('media') || normalizedCardCategory.includes('publication');
+            } else {
+              matchesCategory = normalizedCardCategory === normalizedSelectedCategory;
+            }
+          }
+          
+          if (!matchesCategory && category) {
+            console.log(`[Filter Debug] Club "${cardName}" (category: "${card.dataset.category}") did NOT match filter "${category}"`);
+          }
+        });
+      }
+
+      // Sort visible cards
+      const visibleCards = clubCards.filter(card => card.style.display !== 'none');
+      
+      if (sortBy === 'members') {
+        visibleCards.sort((a, b) => {
+          const aMembers = parseInt(a.dataset.members || 0);
+          const bMembers = parseInt(b.dataset.members || 0);
+          return bMembers - aMembers;
+        });
+      } else if (sortBy === 'events') {
+        visibleCards.sort((a, b) => {
+          const aEvents = parseInt(a.dataset.events || 0);
+          const bEvents = parseInt(b.dataset.events || 0);
+          return bEvents - aEvents;
+        });
+      }
+      
+      // Reorder visible cards in the grid
+      if (allClubsGrid) {
+        // Remove any existing empty state
+        const existingEmptyState = allClubsGrid.querySelector('.empty-state');
+        if (existingEmptyState) {
+          existingEmptyState.remove();
+        }
+        
+        // Reorder visible cards in DOM
+        visibleCards.forEach(card => allClubsGrid.appendChild(card));
+        
+        // Show empty state if no clubs match
+        if (hasActiveFilter && visibleCount === 0) {
+          const emptyDiv = document.createElement('div');
+          emptyDiv.className = 'col-span-full text-center py-12 empty-state';
+          emptyDiv.innerHTML = `
+            <i class="fas fa-inbox text-4xl text-white/20 mb-3"></i>
+            <p class="text-white/60 mb-2">No clubs found</p>
+            <p class="text-sm text-white/40">Try adjusting your search or filters</p>
+          `;
+          allClubsGrid.appendChild(emptyDiv);
+        }
+      }
+      
+      // Update subtitle with count when filtering
+      if (hasActiveFilter && allClubsSubtitle) {
+        allClubsSubtitle.style.display = 'block';
+        allClubsSubtitle.textContent = `Found ${visibleCount} ${visibleCount === 1 ? 'club' : 'clubs'}`;
+      }
+      
+      // Remove any existing filtered results section (cleanup)
+      const filteredResultsSection = document.getElementById('filteredResultsSection');
+      if (filteredResultsSection) {
+        filteredResultsSection.remove();
+      }
+
+      updateClearButton();
+      updateActiveFilters();
+      countClubsByCategory();
+    }
+
+    // Debounced search
+    if (searchInput) {
+      // Search on input (with debounce)
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+          filterAndSortClubs();
+        }, 300);
+      });
+      
+      // Search on Enter key
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          clearTimeout(searchTimeout);
+          filterAndSortClubs();
+        }
+      });
+      
+      // Clear search on Escape
+      searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          searchInput.value = '';
+          filterAndSortClubs();
+        }
+      });
+    }
+
+    // Category filter dropdown
+    if (categoryFilter) {
+    categoryFilter.addEventListener('change', () => {
+      selectedCategory = categoryFilter.value;
+      // Update chips
+      categoryChips.forEach(chip => {
+        if (chip.dataset.category === selectedCategory) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      });
+      filterAndSortClubs();
+    });
+    }
+
+    // Category chips (regular)
+    categoryChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        // Remove active from all
+        categoryChips.forEach(c => c.classList.remove('active'));
+        categoryChipsHero.forEach(c => c.classList.remove('active'));
+        
+        // Set active
+        if (chip.dataset.category === selectedCategory) {
+          selectedCategory = '';
+        } else {
+          selectedCategory = chip.dataset.category;
+          chip.classList.add('active');
+          // Also activate hero chip if exists
+          const heroChip = Array.from(categoryChipsHero).find(c => c.dataset.category === selectedCategory);
+          if (heroChip) heroChip.classList.add('active');
+        }
+        
+        if (categoryFilter) categoryFilter.value = selectedCategory;
+        filterAndSortClubs();
+        updateActiveFilters();
+      });
+    });
+
+    // Category chips (hero)
+    categoryChipsHero.forEach(chip => {
+      chip.addEventListener('click', () => {
+        // Remove active from all
+        categoryChips.forEach(c => c.classList.remove('active'));
+        categoryChipsHero.forEach(c => c.classList.remove('active'));
+        
+        // Set active
+        const category = chip.dataset.category || '';
+        if (category === selectedCategory) {
+        selectedCategory = '';
+        } else {
+          selectedCategory = category;
+          chip.classList.add('active');
+          // Also activate regular chip if exists
+          const regularChip = Array.from(categoryChips).find(c => c.dataset.category === selectedCategory);
+          if (regularChip) regularChip.classList.add('active');
+        }
+        
+        if (categoryFilter) categoryFilter.value = selectedCategory;
+        filterAndSortClubs();
+        updateActiveFilters();
+        
+        // Show/hide clubs section when a category is selected
+        const browseSection = document.getElementById('browseClubsSection');
+        if (selectedCategory) {
+          if (browseSection) {
+            browseSection.classList.remove('hidden');
+            setTimeout(() => {
+              browseSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+          }
+        } else {
+          if (browseSection) {
+            browseSection.classList.add('hidden');
+          }
+        }
+      });
+    });
+
+    // Update active filters display
+    function updateActiveFilters() {
+      if (!activeFilters || !activeFilterChips) return;
+      
+      activeFilterChips.innerHTML = '';
+      const filters = [];
+      
+      if (selectedCategory) {
+        filters.push({ type: 'category', value: selectedCategory, label: selectedCategory || 'All' });
+      }
+      
+      if (searchInput.value.trim()) {
+        filters.push({ type: 'search', value: searchInput.value.trim(), label: `"${searchInput.value.trim()}"` });
+      }
+      
+      if (filters.length > 0) {
+        filters.forEach(filter => {
+          const chip = document.createElement('span');
+          chip.className = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/20 text-xs sm:text-sm text-white';
+          chip.innerHTML = `
+            <span>${filter.label}</span>
+            <button type="button" class="hover:text-red-400 transition-colors" data-filter-type="${filter.type}">
+              <i class="fas fa-times text-[10px]"></i>
+            </button>
+          `;
+          chip.querySelector('button').addEventListener('click', () => {
+            if (filter.type === 'category') {
+              selectedCategory = '';
+              categoryChips.forEach(c => c.classList.remove('active'));
+              categoryChipsHero.forEach(c => c.classList.remove('active'));
+              if (categoryFilter) categoryFilter.value = '';
+            } else if (filter.type === 'search') {
+              if (searchInput) searchInput.value = '';
+            }
+            filterAndSortClubs();
+            updateActiveFilters();
+            
+            // Show "All Clubs Available" section when filters are cleared
+            const allClubsSection = document.getElementById('allClubsSection');
+            if (allClubsSection && !selectedCategory && (!searchInput || !searchInput.value.trim())) {
+              allClubsSection.style.display = 'block';
+            }
+          });
+          activeFilterChips.appendChild(chip);
+        });
+        activeFilters.classList.remove('hidden');
+      } else {
+        activeFilters.classList.add('hidden');
+      }
+    }
+
+    // Clear all filters
+    if (clearAllFilters) {
+      clearAllFilters.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        selectedCategory = '';
+        categoryChips.forEach(c => c.classList.remove('active'));
+        categoryChipsHero.forEach(c => c.classList.remove('active'));
+        if (categoryFilter) categoryFilter.value = '';
+        filterAndSortClubs();
+        updateActiveFilters();
+        
+        // Show "All Clubs Available" section when filters are cleared
+        const allClubsSection = document.getElementById('allClubsSection');
+        if (allClubsSection) {
+          allClubsSection.style.display = 'block';
+        }
+      });
+    }
+
+    if (sortFilter) {
+      sortFilter.addEventListener('change', filterAndSortClubs);
+    }
+
+    if (clearFilters) {
+      clearFilters.addEventListener('click', () => {
+        if (searchInput) searchInput.value = '';
+        selectedCategory = '';
+        if (categoryFilter) categoryFilter.value = '';
+        categoryChips.forEach(c => c.classList.remove('active'));
+        categoryChipsHero.forEach(c => c.classList.remove('active'));
+        filterAndSortClubs();
+        
+        // Show "All Clubs Available" section when filters are cleared
+        const allClubsSection = document.getElementById('allClubsSection');
+        if (allClubsSection) {
+          allClubsSection.style.display = 'block';
+        }
+        
+        // Hide clubs section when filters are cleared
+        const browseSection = document.getElementById('browseClubsSection');
+        if (browseSection) {
+          browseSection.classList.add('hidden');
+        }
+      });
+    }
+
+    // Empty state clear filters button
+    const clearFiltersEmpty = document.getElementById('clearFiltersEmpty');
+    if (clearFiltersEmpty) {
+      clearFiltersEmpty.addEventListener('click', () => {
+        searchInput.value = '';
+        selectedCategory = '';
+        categoryFilter.value = '';
+        categoryChips.forEach(c => c.classList.remove('active'));
+        filterAndSortClubs();
+      });
+    }
+
+
+    // Club data storage
+    const clubDataMap = new Map();
+    // Load club data from JSON script tag
+    const clubDataScript = document.getElementById('club-data');
+    if (clubDataScript) {
+      try {
+        const allClubsData = JSON.parse(clubDataScript.textContent);
+        allClubsData.forEach(function(club) {
+          clubDataMap.set(club.id.toString(), club);
+        });
+      } catch (e) {
+        console.error('Error parsing club data:', e);
+      }
+    }
+
+    // Club Details Modal
+    let currentClubData = null;
+
+    // Terms and Conditions Modal
+    const termsModal = document.getElementById('termsModal');
+    const closeTermsModal = document.getElementById('closeTermsModal');
+    const cancelTerms = document.getElementById('cancelTerms');
+    const submitJoinRequest = document.getElementById('submitJoinRequest');
+    const acceptTerms = document.getElementById('acceptTerms');
+    // joinMessage field removed
+    const termsModalClubName = document.getElementById('termsModalClubName');
+    const termsModalClubNameBody = document.getElementById('termsModalClubNameBody');
+    const successNotification = document.getElementById('joinSuccessNotification');
+    const successClubName = document.getElementById('successClubName');
+    const errorNotification = document.getElementById('joinErrorNotification');
+    const errorMessage = document.getElementById('errorMessage');
+
+    function openTermsModal() {
+      if (!currentClubData) return;
+      
+      // Update club name in modal
+      const clubName = currentClubData.name || 'Club';
+      if (termsModalClubName) termsModalClubName.textContent = clubName;
+      if (termsModalClubNameBody) termsModalClubNameBody.textContent = clubName;
+      
+      // Reset form
+      acceptTerms.checked = false;
+      // joinMessage field removed
+      submitJoinRequest.disabled = true;
+      submitJoinRequest.innerHTML = 'Join Club';
+      
+      // Reset checkbox container styling
+      const checkboxContainer = acceptTerms?.closest('.terms-checkbox-container');
+      if (checkboxContainer) {
+        checkboxContainer.classList.remove('checked');
+      }
+      
+      // Show modal
+      termsModal.classList.add('active');
+    }
+
+    acceptTerms?.addEventListener('change', (e) => {
+      if (submitJoinRequest) {
+      submitJoinRequest.disabled = !e.target.checked;
+      }
+      // Update checkbox container styling
+      const checkboxContainer = acceptTerms?.closest('.terms-checkbox-container');
+      if (checkboxContainer) {
+        if (e.target.checked) {
+          checkboxContainer.classList.add('checked');
+        } else {
+          checkboxContainer.classList.remove('checked');
+        }
+      }
+    });
+
+    closeTermsModal?.addEventListener('click', () => {
+      termsModal.classList.remove('active');
+    });
+
+    cancelTerms?.addEventListener('click', () => {
+      termsModal.classList.remove('active');
+    });
+
+    function showSuccessNotification(clubName) {
+      if (successClubName) {
+        successClubName.textContent = `Your application to join ${clubName} has been submitted and is pending review.`;
+      }
+      if (successNotification) {
+        successNotification.classList.add('show');
+        setTimeout(() => {
+          successNotification.classList.remove('show');
+          successNotification.style.right = '-400px';
+        }, 5000);
+      }
+    }
+
+    function showErrorNotification(message) {
+      if (errorMessage) {
+        errorMessage.textContent = message;
+      }
+      if (errorNotification) {
+        errorNotification.classList.add('show');
+        setTimeout(() => {
+          errorNotification.classList.remove('show');
+          errorNotification.style.right = '-400px';
+        }, 6000);
+      }
+    }
+
+    submitJoinRequest?.addEventListener('click', async () => {
+      if (!acceptTerms.checked || !currentClubData) return;
+
+      try {
+        submitJoinRequest.disabled = true;
+        submitJoinRequest.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Joining...';
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        const response = await fetch('/student/clubs/join', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify({
+            club_id: currentClubData.id,
+            club_name: currentClubData.name,
+            message: ''
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          termsModal.classList.remove('active');
+          showSuccessNotification(currentClubData.name);
+          // Optionally open pending modal or just show success
+          // openPendingModal(currentClubData.name);
+        } else {
+          termsModal.classList.remove('active');
+          showErrorNotification(data.error || 'Failed to submit application. Please try again.');
+          submitJoinRequest.disabled = false;
+          submitJoinRequest.innerHTML = 'Join Club';
+        }
+      } catch (error) {
+        console.error('Error submitting join request:', error);
+        termsModal.classList.remove('active');
+        showErrorNotification('An error occurred. Please try again.');
+        submitJoinRequest.disabled = false;
+        submitJoinRequest.innerHTML = 'Join Club';
+      }
+    });
+
+    // Pending Approval Modal
+    const pendingModal = document.getElementById('pendingModal');
+    const pendingClubName = document.getElementById('pendingClubName');
+    const closePendingModal = document.getElementById('closePendingModal');
+
+    function openPendingModal(clubName) {
+      pendingClubName.textContent = `Your application to join ${clubName} has been submitted successfully.`;
+      pendingModal.classList.add('active');
+    }
+
+    closePendingModal?.addEventListener('click', () => {
+      pendingModal.classList.remove('active');
+    });
+
+    // Join button - directly opens terms modal
+    document.querySelectorAll('.join-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const clubId = btn.dataset.clubId;
+        const club = clubDataMap.get(clubId.toString());
+        if (club) {
+          currentClubData = club;
+          openTermsModal();
+        }
+      });
+    });
+
+    // View Details buttons now link to club details page (handled by href)
+
+    // Auto-open terms modal if join parameter is present
+    const urlParams = new URLSearchParams(window.location.search);
+    const joinClubId = urlParams.get('join');
+    if (joinClubId) {
+      const club = clubDataMap.get(joinClubId.toString());
+      if (club) {
+        currentClubData = club;
+        // Remove the query parameter from URL
+        window.history.replaceState({}, '', window.location.pathname);
+        // Open terms modal after a short delay to ensure page is loaded
+        setTimeout(() => {
+          openTermsModal();
+        }, 300);
+      }
+    }
+
+    // Close modals when clicking outside
+    [termsModal, pendingModal].forEach(modal => {
+      if (modal) {
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) {
+            modal.classList.remove('active');
+          }
+        });
+      }
+    });
+
+    // Close modals on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        [termsModal, pendingModal].forEach(modal => {
+          if (modal && modal.classList.contains('active')) {
+            modal.classList.remove('active');
+          }
+        });
+      }
+    });
+
+    // Dropdown and navbar functionality is handled by the shared navbar component (studentNav.ejs)
+
+    // ===== SCROLL ANIMATIONS ===== 
+    // Optional: Add fade-in animation on scroll (content is visible by default)
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+          observer.unobserve(entry.target);
+        }
+      });
+    }, observerOptions);
+
+    // Observe fade-in elements (they're already visible, this just adds smooth animation)
+    document.querySelectorAll('.fade-in-on-scroll').forEach(el => {
+      observer.observe(el);
+    });
+
+    // ===== PAGE LOAD ANIMATION =====
+    window.addEventListener('load', () => {
+      document.body.style.opacity = '0';
+      document.body.style.transition = 'opacity 0.6s ease-in';
+      setTimeout(() => {
+        document.body.style.opacity = '1';
+      }, 100);
+    });
+
+    // Theme toggle functionality is handled by the shared navbar component (studentNav.ejs)
+  </script>
+</body>
+</html>

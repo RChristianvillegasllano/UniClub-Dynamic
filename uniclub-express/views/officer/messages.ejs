@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'Messages | UniClub' %></title>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 700: '#7a0e0e', 800: '#6a0c0c', 900: '#5b0a0a' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-slate-800">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <%- include('./partials/sidebar', {
+      activePage: 'messages',
+      club: (typeof club !== 'undefined' ? club : null),
+      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0)
+    }) %>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto bg-gray-50">
+      <!-- Header -->
+      <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="px-6 md:px-8 py-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Messages</h1>
+              <p class="text-sm text-gray-600 mt-1">View messages from administrators</p>
+            </div>
+            <% if (typeof unreadCount !== 'undefined' && unreadCount > 0) { %>
+              <div class="px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold">
+                <%= unreadCount %> unread
+              </div>
+            <% } %>
+          </div>
+        </div>
+      </header>
+
+      <!-- Messages Content -->
+      <div class="p-6 md:p-8">
+        <% const _messages = (typeof messages !== 'undefined' && Array.isArray(messages)) ? messages : []; %>
+        
+        <% if (_messages.length > 0) { %>
+          <!-- Messages List -->
+          <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <!-- Search and Filter -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+              <div class="flex flex-wrap items-center gap-3">
+                <div class="flex-1 min-w-[200px]">
+                  <input 
+                    type="text" 
+                    id="messageSearch" 
+                    placeholder="Search messages..." 
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                  />
+                </div>
+                <select id="messageFilter" class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                  <option value="all">All Messages</option>
+                  <option value="unread">Unread</option>
+                  <option value="read">Read</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Messages -->
+            <div id="messagesList" class="divide-y divide-gray-200">
+              <% _messages.forEach(m => { %>
+                <div class="message-item px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors <%= m.read ? '' : 'bg-blue-50 border-l-4 border-blue-600' %>" 
+                     data-message-id="<%= m.id %>"
+                     data-subject="<%= (m.subject || '').toLowerCase() %>"
+                     data-read="<%= m.read ? 'true' : 'false' %>"
+                     onclick="window.location.href='/officer/messages/view/<%= m.id %>'">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-center gap-2 mb-1">
+                        <span class="font-semibold text-gray-900 text-sm"><%= m.sender_name || 'Admin' %></span>
+                        <% if (!m.read) { %>
+                          <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">New</span>
+                        <% } %>
+                      </div>
+                      <p class="text-sm font-medium text-gray-700 mb-1"><%= m.subject %></p>
+                      <p class="text-xs text-gray-500 line-clamp-2"><%= m.content %></p>
+                    </div>
+                    <div class="flex flex-col items-end gap-1 flex-shrink-0">
+                      <span class="text-xs text-gray-400">
+                        <%= m.created_at ? new Date(m.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '' %>
+                      </span>
+                      <span class="text-xs text-gray-400">
+                        <%= m.created_at ? new Date(m.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '' %>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              <% }) %>
+            </div>
+          </div>
+        <% } else { %>
+          <!-- Empty State -->
+          <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-10 md:p-12 text-center">
+              <div class="w-16 h-16 mx-auto mb-5 rounded-full bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center ring-4 ring-amber-50">
+                <i data-lucide="inbox" class="w-8 h-8 text-amber-600"></i>
+              </div>
+              <h3 class="text-xl font-bold text-gray-900 mb-2">No messages yet</h3>
+              <p class="text-sm text-gray-500 mb-8 max-w-md mx-auto leading-relaxed">
+                Messages from administrators will appear here when they send you updates or notifications. You'll be notified when new messages arrive.
+              </p>
+              
+              <!-- Action Buttons -->
+              <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mb-6">
+                <a href="/officer/communication" class="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm transition-colors shadow-sm">
+                  <i data-lucide="message-square" class="w-4 h-4"></i>
+                  Go to Communication
+                </a>
+                <a href="/officer" class="inline-flex items-center gap-2 px-5 py-2.5 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 rounded-lg font-medium text-sm transition-colors">
+                  <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                  View Dashboard
+                </a>
+              </div>
+              
+              <!-- Helper Card -->
+              <div class="mt-8 pt-6 border-t border-gray-100">
+                <div class="bg-amber-50/50 border border-amber-100 rounded-lg p-4 max-w-md mx-auto">
+                  <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 mt-0.5">
+                      <i data-lucide="info" class="w-4 h-4 text-amber-600"></i>
+                    </div>
+                    <p class="text-xs text-gray-600 text-left leading-relaxed">
+                      <span class="font-semibold text-gray-700">Tip:</span> Admins send important updates, announcements, and notifications here. Check back regularly or enable notifications to stay informed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    // Message filtering and search
+    const messageSearch = document.getElementById('messageSearch');
+    const messageFilter = document.getElementById('messageFilter');
+    const messageItems = document.querySelectorAll('.message-item');
+
+    function filterMessages() {
+      const searchTerm = (messageSearch?.value || '').toLowerCase();
+      const filterValue = messageFilter?.value || 'all';
+
+      messageItems.forEach(item => {
+        const subject = item.dataset.subject || '';
+        const isRead = item.dataset.read === 'true';
+        
+        const matchesSearch = !searchTerm || subject.includes(searchTerm);
+        const matchesFilter = filterValue === 'all' ||
+          (filterValue === 'unread' && !isRead) ||
+          (filterValue === 'read' && isRead);
+
+        item.style.display = matchesSearch && matchesFilter ? '' : 'none';
+      });
+    }
+
+    messageSearch?.addEventListener('input', filterMessages);
+    messageFilter?.addEventListener('change', filterMessages);
+  </script>
+</body>
+</html>
+

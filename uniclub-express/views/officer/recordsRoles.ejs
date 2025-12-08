@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'Officer Roles | UniClub' %></title>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'] },
+          colors: {
+            primary: { 700: '#7a0e0e', 800: '#6a0c0c', 900: '#5b0a0a' }
+          }
+        }
+      }
+    };
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
+  <div class="flex h-screen">
+    <%- include('./partials/sidebar', {
+      activePage: 'records-roles',
+      club: (typeof club !== 'undefined' ? club : null)
+    }) %>
+
+    <main class="flex-1 overflow-auto">
+      <header class="bg-white/90 backdrop-blur border-b border-gray-200 sticky top-0 z-10">
+        <div class="px-6 md:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p class="text-xs font-semibold tracking-[0.35em] uppercase text-primary-800">Records</p>
+            <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Officer Roles</h1>
+            <p class="text-gray-500 mt-1 text-sm">Review leadership positions, responsibilities, and succession readiness.</p>
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <a href="/officer/records" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50">
+              <i data-lucide="arrow-left" class="w-4 h-4"></i>
+              Back to records
+            </a>
+            <button class="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl bg-primary-800 text-white hover:bg-primary-900">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              Add officer role
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div class="p-6 md:p-8 space-y-8">
+        <!-- Summary cards -->
+        <% const summaryCards = [
+          { icon: 'users', label: 'Total officers', value: totalOfficers || 0, hint: 'Active assignments' },
+          { icon: 'layers', label: 'Distinct roles', value: Object.keys(roleStats || {}).length || 0, hint: 'Role variations' },
+          { icon: 'building', label: 'Departments represented', value: Object.keys(departmentStats || {}).length || 0, hint: 'Academic units' },
+          { icon: 'clock-8', label: 'Last update', value: (lastUpdated ? new Date(lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—'), hint: 'Roster sync' }
+        ]; %>
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <% summaryCards.forEach(function(card) { %>
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex flex-col gap-3">
+              <div class="flex items-center gap-3">
+                <span class="w-11 h-11 rounded-2xl bg-primary-800/10 text-primary-900 flex items-center justify-center">
+                  <i data-lucide="<%= card.icon %>" class="w-5 h-5"></i>
+                </span>
+                <div>
+                  <p class="text-xs uppercase tracking-wide text-gray-500"><%= card.label %></p>
+                  <p class="text-xs text-gray-400"><%= card.hint %></p>
+                </div>
+              </div>
+              <div class="flex items-end justify-between">
+                <h3 class="text-3xl font-extrabold text-gray-900"><%= card.value %></h3>
+              </div>
+            </div>
+          <% }) %>
+        </section>
+
+        <!-- Role distribution -->
+        <section class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+          <div class="flex flex-col gap-3 mb-6">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <p class="text-xs font-semibold tracking-[0.3em] text-primary-800 uppercase">Overview</p>
+                <h2 class="text-xl font-bold text-gray-900">Role distribution</h2>
+                <p class="text-sm text-gray-500">Ensure key functions like Finance, Operations, and Events stay covered.</p>
+              </div>
+              <button class="text-sm font-semibold text-gray-600 hover:text-gray-900 inline-flex items-center gap-1">
+                Download summary
+                <i data-lucide="download" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <% const roles = Object.keys(roleStats || {}); %>
+              <% if (roles.length) { %>
+                <% roles.forEach(function(role) { %>
+                  <div class="border border-gray-100 rounded-2xl px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <p class="text-sm font-semibold text-gray-900"><%= role %></p>
+                      <p class="text-xs text-gray-500">Active leader<%= roleStats[role] > 1 ? 's' : '' %></p>
+                    </div>
+                    <span class="text-lg font-extrabold text-primary-900"><%= roleStats[role] %></span>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <div class="col-span-full text-sm text-gray-500 py-6 text-center border border-dashed rounded-2xl">
+                  No role assignments yet. Add officers to populate this chart.
+                </div>
+              <% } %>
+            </div>
+          </div>
+        </section>
+
+        <!-- Officers table -->
+        <section class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+          <div class="px-6 py-5 border-b border-gray-100 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900">Officer roster</h2>
+              <p class="text-sm text-gray-500">Track responsibilities, program affiliations, and delegation.</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <div class="relative">
+                <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3"></i>
+                <input type="search" placeholder="Search officer name" class="pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800">
+              </div>
+              <select class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800">
+                <option value="all">All roles</option>
+                <% Object.keys(roleStats || {}).forEach(function(role) { %>
+                  <option value="<%= role %>"><%= role %></option>
+                <% }) %>
+              </select>
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-100 text-sm text-gray-700">
+              <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                <tr>
+                  <th class="px-6 py-3 text-left">Officer</th>
+                  <th class="px-6 py-3 text-left">Role</th>
+                  <th class="px-6 py-3 text-left">Department / Program</th>
+                  <th class="px-6 py-3 text-left">Username</th>
+                  <th class="px-6 py-3 text-left">Permissions</th>
+                  <th class="px-6 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100">
+                <% if (officers && officers.length) { %>
+                  <% officers.forEach(function(entry) { %>
+                    <tr class="hover:bg-gray-50 transition">
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                          <% if (entry.photo_url) { %>
+                            <img src="<%= entry.photo_url %>" alt="<%= entry.name %>" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary-100">
+                          <% } else { %>
+                            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold">
+                              <%= (entry.name || 'UC').split(' ').map(word => word[0]).join('').slice(0,2) %>
+                            </div>
+                          <% } %>
+                          <div>
+                            <p class="font-semibold text-gray-900"><%= entry.name %></p>
+                            <p class="text-xs text-gray-500">ID: <%= entry.studentid || '—' %></p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-primary-50 text-primary-900">
+                          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+                          <%= entry.role || 'Unassigned' %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4">
+                        <p class="font-medium text-gray-900 text-sm"><%= entry.department || 'No department' %></p>
+                        <p class="text-xs text-gray-500"><%= entry.program || 'Program TBD' %></p>
+                      </td>
+                      <td class="px-6 py-4">
+                        <code class="text-xs bg-gray-100 px-2 py-1 rounded-lg text-gray-700"><%= entry.username || '—' %></code>
+                      </td>
+                      <td class="px-6 py-4">
+                        <% const permissionKeys = Object.keys(entry.permissions || {}); %>
+                        <% if (permissionKeys.length) { %>
+                          <div class="flex flex-wrap gap-1">
+                            <% permissionKeys.slice(0,3).forEach(function(key) { %>
+                              <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold"><%= key %></span>
+                            <% }) %>
+                            <% if (permissionKeys.length > 3) { %>
+                              <span class="px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-semibold">+<%= permissionKeys.length - 3 %></span>
+                            <% } %>
+                          </div>
+                        <% } else { %>
+                          <span class="text-xs text-gray-400">Default access</span>
+                        <% } %>
+                      </td>
+                      <td class="px-6 py-4 text-right space-x-2">
+                        <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">View</button>
+                        <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">Reassign</button>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="6" class="px-6 py-16 text-center text-gray-500 text-sm">
+                      <i data-lucide="shield-off" class="w-8 h-8 mx-auto mb-3 text-gray-400"></i>
+                      <p class="font-semibold text-gray-700">No officers are assigned to this club yet.</p>
+                      <p class="text-sm text-gray-500 max-w-md mx-auto">Invite officers or request an update from the admin portal.</p>
+                    </td>
+                  </tr>
+                <% } %>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Notes and guidance -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <p class="text-xs font-semibold tracking-[0.3em] text-primary-800 uppercase">Playbook</p>
+                <h3 class="text-lg font-semibold text-gray-900">Succession planning</h3>
+              </div>
+              <i data-lucide="activity" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <ul class="space-y-3 text-sm text-gray-600">
+              <li class="flex gap-3">
+                <span class="w-2 h-2 mt-2 rounded-full bg-primary-800/50"></span>
+                Pair each critical role with an understudy or co-lead to reduce single points of failure.
+              </li>
+              <li class="flex gap-3">
+                <span class="w-2 h-2 mt-2 rounded-full bg-primary-800/50"></span>
+                Rotate committee leads each term to keep members engaged and ready for promotions.
+              </li>
+              <li class="flex gap-3">
+                <span class="w-2 h-2 mt-2 rounded-full bg-primary-800/50"></span>
+                Schedule quarterly reviews to confirm permissions align with current responsibilities.
+              </li>
+            </ul>
+          </div>
+          <div class="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <p class="text-xs font-semibold tracking-[0.3em] text-primary-800 uppercase">Access</p>
+                <h3 class="text-lg font-semibold text-gray-900">Permissions legend</h3>
+              </div>
+              <i data-lucide="key" class="w-5 h-5 text-gray-400"></i>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-gray-600">
+              <div class="border border-gray-100 rounded-2xl p-4">
+                <p class="font-semibold text-gray-900 mb-1">events:manage</p>
+                <p class="text-xs text-gray-500">Create, edit, and publish club events.</p>
+              </div>
+              <div class="border border-gray-100 rounded-2xl p-4">
+                <p class="font-semibold text-gray-900 mb-1">members:approve</p>
+                <p class="text-xs text-gray-500">Approve or reject membership applicants.</p>
+              </div>
+              <div class="border border-gray-100 rounded-2xl p-4">
+                <p class="font-semibold text-gray-900 mb-1">finance:submit</p>
+                <p class="text-xs text-gray-500">Upload budgets and reimbursement files.</p>
+              </div>
+              <div class="border border-gray-100 rounded-2xl p-4">
+                <p class="font-semibold text-gray-900 mb-1">comms:broadcast</p>
+                <p class="text-xs text-gray-500">Send announcements to all members.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+      sidebar.classList.remove('w-20');
+      sidebar.classList.add('w-64');
+      document.querySelectorAll('.sidebar-label').forEach(el => el.classList.remove('hidden'));
+      const brandText = document.getElementById('sidebarBrandText');
+      const brandLogo = document.getElementById('sidebarBrandLogo');
+      if (brandText) brandText.classList.remove('hidden');
+      if (brandLogo) brandLogo.classList.remove('hidden');
+    }
+
+    const recordsToggle = document.getElementById('recordsToggle');
+    const recordsGroup = document.getElementById('recordsGroup');
+    const recordsChevron = document.getElementById('recordsChevron');
+    if (recordsToggle && recordsGroup) {
+      recordsGroup.classList.remove('hidden');
+      recordsToggle.setAttribute('aria-expanded', 'true');
+      if (recordsChevron) {
+        recordsChevron.style.transform = 'rotate(180deg)';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderLucideIcons();
+    });
+  </script>
+</body>
+</html>
+
+

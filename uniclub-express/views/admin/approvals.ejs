@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="<%= csrfToken || '' %>">
+    <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+    <title><%= title || 'Approvals | UniClub Admin' %></title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* Mobile sidebar toggle */
+      @media (max-width: 1024px) {
+        .sidebar-hidden {
+          transform: translateX(-100%);
+        }
+      }
+
+      /* Officer avatar - matching officers page */
+      .officer-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 9999px;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-transform: uppercase;
+      }
+
+      /* Enhanced row hover with transform and shadow */
+      .approval-row {
+        transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+      }
+
+      .approval-row:hover {
+        background-color: #eff6ff !important;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+      }
+
+      /* Soft shadows */
+      .shadow-soft {
+        box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+      }
+
+      /* Toast notification styles - Enhanced design system */
+      .toast {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        min-width: 320px;
+        max-width: 420px;
+        padding: 16px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.1);
+        z-index: 10000;
+        animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      @keyframes slideInRight {
+        from {
+          transform: translateX(calc(100% + 24px));
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOutRight {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(calc(100% + 24px));
+          opacity: 0;
+        }
+      }
+      .toast-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-color: rgba(16, 185, 129, 0.3);
+      }
+      .toast-error {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        border-color: rgba(239, 68, 68, 0.3);
+      }
+      .toast-icon {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .toast-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .toast-title {
+        font-weight: 600;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .toast-message {
+        font-size: 13px;
+        opacity: 0.95;
+        line-height: 1.4;
+      }
+      .toast-close {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0.8;
+        transition: opacity 0.2s ease;
+        border-radius: 4px;
+      }
+      .toast-close:hover {
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      /* Badge styles */
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 9999px;
+        padding: 0.25rem 0.7rem;
+        font-size: 0.7rem;
+        font-weight: 600;
+      }
+
+      .badge-amber {
+        background-color: #fef3c7;
+        color: #92400e;
+      }
+
+      .badge-blue {
+        background-color: #dbeafe;
+        color: #1d4ed8;
+      }
+
+      .badge-slate {
+        background-color: #e2e8f0;
+        color: #475569;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans text-slate-800">
+    <!-- Toast container -->
+    <div id="toastContainer"></div>
+    
+    <!-- Mobile menu button -->
+    <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+      </svg>
+    </button>
+    <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+      <!-- Sidebar -->
+      <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+        <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/approvals'), messages: (typeof messages !== 'undefined' ? messages : []), pendingCount: (typeof pendingCount !== 'undefined' ? pendingCount : 0) }) %>
+      </div>
+      <!-- Overlay for mobile -->
+      <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
+
+      <!-- Main Content -->
+      <main class="flex flex-col gap-4 lg:mt-0 mt-16">
+        <!-- Header -->
+        <header class="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 class="text-3xl font-bold text-gray-900 mb-1">Approvals</h1>
+            <p class="text-base text-gray-600">Review and manage pending requests</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <% if (typeof pendingCount !== 'undefined' && pendingCount > 0) { %>
+              <div class="badge badge-amber">
+                <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                <span id="pendingCount"><%= pendingCount || 0 %></span> Pending
+              </div>
+            <% } %>
+            <a href="/admin/approvals/history" class="px-4 py-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-semibold transition-colors">
+              View History
+            </a>
+          </div>
+        </header>
+
+        <!-- Officer Approvals Section -->
+        <% const hasPendingOfficers = typeof pendingOfficers !== 'undefined' && pendingOfficers && pendingOfficers.length > 0; %>
+        <section class="<%= hasPendingOfficers ? 'bg-amber-50 border-2 border-amber-200' : 'bg-gray-50 border-2 border-gray-200' %> rounded-xl shadow-sm p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full <%= hasPendingOfficers ? 'bg-amber-500' : 'bg-gray-400' %> flex items-center justify-center">
+                <i data-lucide="clock" class="w-5 h-5 text-white"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold <%= hasPendingOfficers ? 'text-amber-900' : 'text-gray-900' %>">
+                  Pending Officer Approvals
+                  <% if (hasPendingOfficers) { %>
+                    <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-800">
+                      <%= pendingOfficers.length %>
+                    </span>
+                  <% } %>
+                </h2>
+                <p class="text-sm <%= hasPendingOfficers ? 'text-amber-700' : 'text-gray-600' %>">
+                  <% if (hasPendingOfficers) { %>
+                    <%= pendingOfficers.length %> officer<%= pendingOfficers.length !== 1 ? 's' : '' %> waiting for approval
+                  <% } else { %>
+                    No pending approvals
+                  <% } %>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <% if (typeof pendingOfficers !== 'undefined' && pendingOfficers && pendingOfficers.length > 0) { %>
+            <div class="overflow-x-auto rounded-xl border border-amber-200 bg-white">
+              <table class="w-full border-collapse text-sm">
+              <thead class="bg-amber-100 text-amber-900">
+                <tr class="text-left">
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Name</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Student ID</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Club/Organization</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Position</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Department</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Program</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Username</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Registered</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide text-center">Actions</th>
+                </tr>
+              </thead>
+                <tbody class="divide-y divide-amber-100">
+                  <% pendingOfficers.forEach(function(o, index) { %>
+                    <tr class="hover:bg-amber-50 transition-colors <%= index % 2 === 0 ? 'bg-white' : 'bg-amber-50/30' %>" 
+                        data-officer-id="<%= o.id %>"
+                        data-officer-name="<%= o.name %>"
+                        data-officer-studentid="<%= o.studentid || '' %>"
+                        data-officer-club="<%= o.club_name || 'Unassigned' %>"
+                        data-officer-role="<%= o.role || '—' %>">
+                      <td class="px-4 py-2.5">
+                        <div class="flex items-center gap-3">
+                          <div class="officer-avatar">
+                            <%= (o.first_name || o.name || '?').charAt(0) %><%= (o.last_name || '').charAt(0) %>
+                          </div>
+                          <div class="font-semibold text-slate-800 text-sm"><%= o.name %></div>
+                        </div>
+                      </td>
+                      <td class="px-4 py-2.5 text-slate-700 text-sm"><%= o.studentid || '—' %></td>
+                      <td class="px-4 py-2.5">
+                        <span class="badge badge-blue" title="<%= o.club_name || 'Unassigned' %>">
+                          <i data-lucide="shield" class="w-3 h-3"></i><%= o.club_name || 'Unassigned' %>
+                        </span>
+                      </td>
+                      <td class="px-4 py-2.5">
+                        <span class="badge badge-slate">
+                          <i data-lucide="award" class="w-3 h-3"></i><%= o.role || '—' %>
+                        </span>
+                      </td>
+                      <td class="px-4 py-2.5 text-slate-600 text-sm"><%= o.department || '—' %></td>
+                      <td class="px-4 py-2.5 text-slate-600 text-sm"><%= o.program || '—' %></td>
+                      <td class="px-4 py-2.5 text-slate-600 font-mono text-xs"><%= o.username || '—' %></td>
+                      <td class="px-4 py-2.5 text-slate-500 text-xs">
+                        <%= o.created_at ? new Date(o.created_at).toLocaleDateString() : '—' %>
+                      </td>
+                      <td class="px-4 py-2.5">
+                        <div class="flex items-center justify-center gap-2">
+                          <button 
+                            onclick="handleApproval(<%= o.id %>, 'approved')"
+                            class="px-3 py-1.5 rounded-md bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition shadow-sm flex items-center gap-1.5"
+                            title="Approve officer">
+                            <i data-lucide="check" class="w-3 h-3"></i> Approve
+                          </button>
+                          <button 
+                            onclick="handleApproval(<%= o.id %>, 'rejected')"
+                            class="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition shadow-sm flex items-center gap-1.5"
+                            title="Reject officer">
+                            <i data-lucide="x" class="w-3 h-3"></i> Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  <% }); %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <div class="text-center py-6 bg-white rounded-lg border <%= hasPendingOfficers ? 'border-amber-200' : 'border-gray-200' %>">
+              <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-green-100 flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-7 h-7 text-green-600"></i>
+              </div>
+              <h3 class="text-sm font-semibold text-gray-900 mb-1">No Pending Approvals</h3>
+              <p class="text-xs text-gray-600 mb-2">All officer requests have been processed.</p>
+              <a href="/admin/approvals/history" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                View approval history →
+              </a>
+            </div>
+          <% } %>
+        </section>
+
+        <!-- Other Approvals Section -->
+        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+          <div class="mb-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
+              <i data-lucide="file-check" class="w-5 h-5 text-white"></i>
+            </div>
+            <div>
+              <h2 class="text-lg font-semibold text-gray-900">Other Approvals</h2>
+              <p class="text-sm text-gray-600">Club registrations, activities, and general requests</p>
+            </div>
+          </div>
+
+          <!-- Tabs for different approval types -->
+          <div class="mb-4 flex gap-2 border-b border-gray-200">
+            <button class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-blue-600 pb-2 transition-colors">
+              Club Registrations
+            </button>
+            <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+              Activity Approvals
+            </button>
+            <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
+              General Requests
+            </button>
+          </div>
+
+          <!-- Search/Filter Toolbar -->
+          <div class="mb-4 flex flex-wrap items-center gap-3">
+            <div class="flex-1 min-w-[200px]">
+              <input 
+                type="text" 
+                placeholder="Search approvals..." 
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+              />
+            </div>
+            <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+              <option value="all">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </div>
+
+          <!-- Empty State -->
+          <div class="text-center py-8">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+              <i data-lucide="inbox" class="w-7 h-7 text-gray-400"></i>
+            </div>
+            <p class="text-sm font-medium text-gray-700 mb-1">No pending approvals</p>
+            <p class="text-xs text-gray-500 mb-3">Additional approval requests will appear here when submitted.</p>
+            <a href="/admin/approvals/history" class="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              View approval history →
+            </a>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="approvalModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+        <div class="p-6">
+          <!-- Icon -->
+          <div class="flex justify-center mb-4">
+            <div id="approvalModalIcon" class="w-16 h-16 rounded-full flex items-center justify-center">
+              <i data-lucide="alert-circle" class="w-10 h-10"></i>
+            </div>
+          </div>
+          
+          <!-- Title -->
+          <h3 id="approvalModalTitle" class="text-xl font-semibold text-gray-900 text-center mb-2">
+            Confirm Action
+          </h3>
+          
+          <!-- Message -->
+          <p id="approvalModalMessage" class="text-gray-600 text-center mb-6">
+            Are you sure you want to perform this action?
+          </p>
+          
+          <!-- Officer Details -->
+          <div id="approvalModalDetails" class="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 font-medium">Name:</span>
+              <span id="modalOfficerName" class="text-gray-900 font-semibold"></span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 font-medium">Student ID:</span>
+              <span id="modalOfficerStudentId" class="text-gray-900"></span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 font-medium">Club:</span>
+              <span id="modalOfficerClub" class="text-gray-900"></span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 font-medium">Role:</span>
+              <span id="modalOfficerRole" class="text-gray-900"></span>
+            </div>
+          </div>
+          
+          <!-- Buttons -->
+          <div class="flex gap-3">
+            <button 
+              id="approvalModalCancel" 
+              class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              id="approvalModalConfirm" 
+              class="flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-colors"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Initialize Lucide icons
+      lucide.createIcons();
+
+      // Mobile sidebar toggle
+      function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+
+      document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+      document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+      // Custom confirmation modal
+      let pendingApproval = null;
+      const approvalModal = document.getElementById('approvalModal');
+      const approvalModalIcon = document.getElementById('approvalModalIcon');
+      const approvalModalTitle = document.getElementById('approvalModalTitle');
+      const approvalModalMessage = document.getElementById('approvalModalMessage');
+      const modalOfficerName = document.getElementById('modalOfficerName');
+      const modalOfficerStudentId = document.getElementById('modalOfficerStudentId');
+      const modalOfficerClub = document.getElementById('modalOfficerClub');
+      const modalOfficerRole = document.getElementById('modalOfficerRole');
+      const approvalModalCancel = document.getElementById('approvalModalCancel');
+      const approvalModalConfirm = document.getElementById('approvalModalConfirm');
+
+      function showApprovalModal(officerId, action) {
+        const row = document.querySelector(`tr[data-officer-id="${officerId}"]`);
+        if (!row) return;
+
+        const officerName = row.getAttribute('data-officer-name') || 'Unknown Officer';
+        const officerStudentId = row.getAttribute('data-officer-studentid') || '—';
+        const officerClub = row.getAttribute('data-officer-club') || 'Unassigned';
+        const officerRole = row.getAttribute('data-officer-role') || '—';
+        const isApprove = action === 'approved';
+
+        // Set modal content
+        approvalModalTitle.textContent = isApprove ? 'Approve Officer' : 'Reject Officer';
+        approvalModalMessage.textContent = isApprove 
+          ? 'Are you sure you want to approve this officer? They will be able to log in to the system after approval.'
+          : 'Are you sure you want to reject this officer? This action cannot be undone.';
+        
+        modalOfficerName.textContent = officerName;
+        modalOfficerStudentId.textContent = officerStudentId || '—';
+        modalOfficerClub.textContent = officerClub;
+        modalOfficerRole.textContent = officerRole;
+
+        // Set icon and button colors
+        if (isApprove) {
+          approvalModalIcon.className = 'w-16 h-16 rounded-full flex items-center justify-center bg-green-100';
+          approvalModalIcon.innerHTML = '<i data-lucide="check-circle" class="w-10 h-10 text-green-600"></i>';
+          approvalModalConfirm.className = 'flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-colors bg-green-600 hover:bg-green-700';
+          approvalModalConfirm.textContent = 'Approve Officer';
+        } else {
+          approvalModalIcon.className = 'w-16 h-16 rounded-full flex items-center justify-center bg-red-100';
+          approvalModalIcon.innerHTML = '<i data-lucide="x-circle" class="w-10 h-10 text-red-600"></i>';
+          approvalModalConfirm.className = 'flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-colors bg-red-600 hover:bg-red-700';
+          approvalModalConfirm.textContent = 'Reject Officer';
+        }
+
+        // Store pending action
+        pendingApproval = { officerId, action };
+
+        // Show modal
+        approvalModal.classList.remove('hidden');
+        approvalModal.classList.add('flex');
+        lucide.createIcons();
+      }
+
+      function hideApprovalModal() {
+        approvalModal.classList.add('hidden');
+        approvalModal.classList.remove('flex');
+        pendingApproval = null;
+      }
+
+      // Modal event listeners
+      approvalModalCancel.addEventListener('click', hideApprovalModal);
+      approvalModalConfirm.addEventListener('click', async () => {
+        if (!pendingApproval) return;
+        
+        const { officerId, action } = pendingApproval;
+        hideApprovalModal();
+        await processApproval(officerId, action);
+      });
+
+      // Close modal on background click
+      approvalModal.addEventListener('click', (e) => {
+        if (e.target === approvalModal) {
+          hideApprovalModal();
+        }
+      });
+
+      // Handle approval/rejection
+      function handleApproval(officerId, action) {
+        showApprovalModal(officerId, action);
+      }
+
+      async function processApproval(officerId, action) {
+        try {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+          
+          if (!csrfToken) {
+            throw new Error('CSRF token not found. Please refresh the page and try again.');
+          }
+
+          const endpoint = `/admin/officers/${officerId}/${action === 'approved' ? 'approve' : 'reject'}`;
+          
+          // Use URLSearchParams for CSRF compatibility with express.urlencoded
+          const params = new URLSearchParams();
+          params.append('_csrf', csrfToken);
+          
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/x-www-form-urlencoded', // Important for URLSearchParams
+            },
+            body: params, // Send URLSearchParams as body
+            credentials: 'same-origin',
+          });
+
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text.substring(0, 200));
+            throw new Error('Server returned an unexpected response. Please try again.');
+          }
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to update officer status');
+          }
+
+          const actionTitle = action === 'approved' ? 'Officer Approved' : 'Officer Rejected';
+          showToast(data.message || actionTitle, 'success', actionTitle);
+          
+          // Remove the row from the table
+          const row = document.querySelector(`tr[data-officer-id="${officerId}"]`);
+          if (row) {
+            row.style.opacity = '0';
+            row.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+              row.remove();
+              updatePendingCount();
+            }, 300);
+          } else {
+            // If row not found, reload page
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Error updating officer:', error);
+          showToast(error.message || 'Unable to process the request. Please try again or contact support if the issue persists.', 'error', 'Action Failed');
+        }
+      }
+
+      // Update pending count and container colors
+      function updatePendingCount() {
+        const rows = document.querySelectorAll('tr[data-officer-id]');
+        const count = rows.length;
+        const countElement = document.getElementById('pendingCount');
+        if (countElement) {
+          countElement.textContent = count;
+        }
+        
+        // Update badge in header
+        const headerBadge = document.querySelector('header .badge-amber');
+        if (count > 0) {
+          if (headerBadge) {
+            headerBadge.innerHTML = `<i data-lucide="clock" class="w-3.5 h-3.5"></i> ${count} Pending`;
+            lucide.createIcons();
+          } else {
+            // Create badge if it doesn't exist
+            const headerDiv = document.querySelector('header > div:last-child');
+            if (headerDiv) {
+              const badge = document.createElement('div');
+              badge.className = 'badge badge-amber';
+              badge.innerHTML = `<i data-lucide="clock" class="w-3.5 h-3.5"></i> ${count} Pending`;
+              headerDiv.insertBefore(badge, headerDiv.firstChild);
+              lucide.createIcons();
+            }
+          }
+        } else {
+          // Remove badge when count is 0
+          if (headerBadge) {
+            headerBadge.remove();
+          }
+        }
+
+        // Update section container colors
+        const section = document.querySelector('section.bg-amber-50, section.bg-gray-50');
+        if (section) {
+          if (count === 0) {
+            section.className = section.className.replace('bg-amber-50 border-amber-200', 'bg-gray-50 border-gray-200');
+            const icon = section.querySelector('.w-10.h-10');
+            if (icon) {
+              icon.className = icon.className.replace('bg-amber-500', 'bg-gray-400');
+            }
+            const title = section.querySelector('h2');
+            if (title) {
+              title.className = title.className.replace('text-amber-900', 'text-gray-900');
+              // Remove count badge from title
+              const countBadge = title.querySelector('span');
+              if (countBadge) countBadge.remove();
+            }
+            const subtitle = section.querySelector('p');
+            if (subtitle) {
+              subtitle.className = subtitle.className.replace('text-amber-700', 'text-gray-600');
+            }
+          } else {
+            section.className = section.className.replace('bg-gray-50 border-gray-200', 'bg-amber-50 border-amber-200');
+            const icon = section.querySelector('.w-10.h-10');
+            if (icon) {
+              icon.className = icon.className.replace('bg-gray-400', 'bg-amber-500');
+            }
+            const title = section.querySelector('h2');
+            if (title) {
+              title.className = title.className.replace('text-gray-900', 'text-amber-900');
+              // Add count badge to title if not present
+              if (!title.querySelector('span')) {
+                const badge = document.createElement('span');
+                badge.className = 'ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-800';
+                badge.textContent = count;
+                title.appendChild(badge);
+              } else {
+                title.querySelector('span').textContent = count;
+              }
+            }
+            const subtitle = section.querySelector('p');
+            if (subtitle) {
+              subtitle.className = subtitle.className.replace('text-gray-600', 'text-amber-700');
+            }
+          }
+        }
+
+        // If no pending, show empty state
+        if (count === 0) {
+          const tableBody = document.querySelector('tbody');
+          if (tableBody) {
+            tableBody.innerHTML = `
+              <tr>
+                <td colspan="9" class="py-6 text-center">
+                  <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-green-100 flex items-center justify-center">
+                    <i data-lucide="check-circle" class="w-7 h-7 text-green-600"></i>
+                  </div>
+                  <h3 class="text-sm font-semibold text-gray-900 mb-1">No Pending Approvals</h3>
+                  <p class="text-xs text-gray-600 mb-2">All officer requests have been processed.</p>
+                  <a href="/admin/approvals/history" class="text-xs text-blue-600 hover:text-blue-700 font-medium">
+                    View approval history →
+                  </a>
+                </td>
+              </tr>
+            `;
+            lucide.createIcons();
+          }
+        }
+      }
+
+      // Enhanced Toast helper with icons and better design
+      function showToast(message, type = 'success', title = null) {
+        const container = document.getElementById('toastContainer');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        // Determine icon and title based on type
+        let iconName = 'check-circle';
+        let defaultTitle = 'Success';
+        if (type === 'error') {
+          iconName = 'alert-circle';
+          defaultTitle = 'Error';
+        } else if (type === 'success') {
+          iconName = 'check-circle';
+          defaultTitle = 'Success';
+        }
+        
+        const finalTitle = title || defaultTitle;
+        
+        toast.innerHTML = `
+          <div class="toast-icon">
+            <i data-lucide="${iconName}" class="w-6 h-6"></i>
+          </div>
+          <div class="toast-content">
+            <div class="toast-title">${finalTitle}</div>
+            <div class="toast-message">${message}</div>
+          </div>
+          <div class="toast-close" onclick="this.closest('.toast').remove()">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </div>
+        `;
+        
+        container.appendChild(toast);
+        
+        // Initialize icons for the new toast
+        lucide.createIcons({ container: toast });
+        
+        // Auto-remove after 4 seconds
+        const autoRemove = setTimeout(() => {
+          toast.style.animation = 'slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+          setTimeout(() => {
+            if (toast.parentNode) {
+              toast.remove();
+            }
+          }, 300);
+        }, 4000);
+        
+        // Clear timeout if user manually closes
+        toast.querySelector('.toast-close').addEventListener('click', () => {
+          clearTimeout(autoRemove);
+        });
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,871 @@
+<%
+  // Set defaults for variables
+  if (typeof currentPath === 'undefined') {
+    currentPath = '/student/dashboard';
+  }
+  // Handle both 'student' and 'user' variable names (dashboard uses 'user' as alias)
+  if (typeof student === 'undefined') {
+    if (typeof user !== 'undefined') {
+      student = user;
+    } else {
+      student = {};
+    }
+  }
+  if (typeof announcements === 'undefined') {
+    announcements = [];
+  }
+  if (typeof csrfToken === 'undefined') {
+    csrfToken = '';
+  }
+
+  // Helper function to check if a path is active
+  function isActive(path) {
+    return currentPath === path || currentPath.startsWith(path + '/');
+  }
+%>
+
+<style>
+  /* ===== NAVBAR STYLES ===== */
+  #navbar {
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    transition: all 0.3s ease;
+  }
+
+  #navbar.scrolled {
+    background: rgba(15, 23, 42, 0.9);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  }
+
+  .nav-link {
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+    position: relative;
+    padding: 8px 0;
+  }
+
+  .nav-link:hover {
+    color: #ffffff;
+  }
+
+  .nav-link::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: #C62828;
+    transition: width 0.2s ease;
+  }
+
+  .nav-link:hover::after {
+    width: 100%;
+  }
+
+  .nav-link.active {
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  .nav-link.active::after {
+    width: 100%;
+    background: #C62828;
+  }
+
+  /* Navbar spacing */
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* ===== BUTTONS ===== */
+  .btn-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-icon:hover {
+    background: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+  }
+
+  /* ===== NOTIFICATION BADGE ===== */
+  .notification-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: linear-gradient(135deg, #C62828, #E53935);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    border: 2px solid rgba(15, 23, 42, 0.8);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: 0 0 20px rgba(198, 40, 40, 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px rgba(198, 40, 40, 0.6);
+    }
+  }
+
+  /* ===== PROFILE PILL ===== */
+  .profile-pill {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .profile-pill:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .profile-pill[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.15);
+  }
+
+  .profile-pill[aria-expanded="true"] .profile-caret {
+    transform: rotate(180deg);
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  /* ===== PROFILE DROPDOWN ===== */
+  .profile-dropdown {
+    background: rgba(30, 35, 45, 0.96);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    width: 256px;
+  }
+
+  #profileMenu {
+    right: 0;
+  }
+
+  /* ===== MOBILE MENU ===== */
+  .mobile-menu {
+    display: none;
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(32px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+    z-index: 40;
+  }
+
+  .mobile-menu.active {
+    max-height: 500px;
+    display: block;
+  }
+
+  .mobile-menu-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Recommended badge for notifications */
+  .recommended-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 8px;
+    background: rgba(198, 40, 40, 0.25);
+    color: #ff6b6b;
+    border: 1px solid rgba(198, 40, 40, 0.35);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 800;
+  }
+
+  /* ===== LIGHT MODE STYLES ===== */
+  body.light-mode #navbar {
+    background: rgba(255, 255, 255, 1) !important;
+    border-bottom-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  body.light-mode #navbar.scrolled {
+    background: rgba(255, 255, 255, 1) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  }
+
+  body.light-mode .nav-link {
+    color: #475569;
+  }
+
+  body.light-mode .nav-link:hover,
+  body.light-mode .nav-link.active {
+    color: #1e293b;
+  }
+
+  body.light-mode .profile-dropdown {
+    background: rgba(255, 255, 255, 0.98);
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  }
+
+  body.light-mode .profile-dropdown .text-white {
+    color: #1e293b !important;
+  }
+
+  body.light-mode .profile-dropdown .text-white\/65,
+  body.light-mode .profile-dropdown .text-white\/80 {
+    color: #64748b !important;
+  }
+
+  body.light-mode .profile-dropdown .hover\:bg-white\/5:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+  }
+
+  body.light-mode .profile-dropdown .hover\:bg-red-500\/15:hover {
+    background: rgba(239, 68, 68, 0.1) !important;
+  }
+
+  body.light-mode .profile-dropdown .border-white\/10,
+  body.light-mode .profile-dropdown .border-white\/15 {
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  body.light-mode .profile-pill {
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  body.light-mode .profile-pill:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.15);
+  }
+
+  body.light-mode .profile-pill[aria-expanded="true"] {
+    background: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.2);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  }
+
+  body.light-mode .profile-pill .text-white\/85 {
+    color: #1e293b !important;
+  }
+
+  body.light-mode .profile-pill .ring-white\/20 {
+    border-color: rgba(0, 0, 0, 0.15);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+  }
+
+  body.light-mode .profile-pill .bg-white\/10 {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  body.light-mode .profile-pill .text-white\/70 {
+    color: #475569 !important;
+  }
+
+  body.light-mode .profile-caret {
+    color: #64748b;
+  }
+
+  body.light-mode .btn-icon {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #1e293b;
+  }
+
+  body.light-mode .btn-icon:hover {
+    background: rgba(0, 0, 0, 0.08);
+    color: #1e293b;
+  }
+
+  body.light-mode .mobile-menu {
+    background: rgba(255, 255, 255, 0.98);
+    border-bottom-color: rgba(0, 0, 0, 0.1);
+  }
+
+  body.light-mode .mobile-menu .nav-link {
+    color: #475569;
+  }
+
+  body.light-mode .mobile-menu .nav-link:hover {
+    color: #1e293b;
+  }
+
+  body.light-mode #themeToggle {
+    color: #1e293b;
+  }
+
+  body.light-mode #themeToggle:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  body.light-mode #themeToggle .w-9 {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  body.light-mode #themeIcon {
+    color: #475569;
+  }
+
+  body.light-mode #themeLabel {
+    color: #1e293b;
+  }
+
+  body.light-mode #themeDescription {
+    color: #64748b;
+  }
+
+  body.light-mode #themeSwitch {
+    background: #C62828;
+  }
+
+  body.light-mode #themeSwitchThumb {
+    background: white;
+    transform: translateX(16px);
+  }
+
+  body.light-mode a[href="/student/logout"] {
+    color: #dc2626 !important;
+  }
+
+  body.light-mode a[href="/student/logout"]:hover {
+    background: rgba(220, 38, 38, 0.1);
+  }
+
+  body.light-mode a[href="/student/logout"] .w-9 {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.2);
+  }
+
+  body.light-mode a[href="/student/logout"] i {
+    color: #dc2626;
+  }
+
+  body.light-mode a[href="/student/logout"] p {
+    color: #dc2626;
+  }
+
+  /* Profile name link in dropdown */
+  .profile-dropdown a[href="/student/profile"] {
+    text-decoration: none;
+  }
+
+  .profile-dropdown a[href="/student/profile"]:hover p {
+    color: #C62828 !important;
+  }
+
+  .profile-dropdown a[href="/student/profile"]:hover img,
+  .profile-dropdown a[href="/student/profile"]:hover div {
+    transform: scale(1.05);
+  }
+
+  body.light-mode .profile-dropdown a[href="/student/profile"]:hover p {
+    color: #C62828 !important;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 767px) {
+    .btn-icon {
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    .nav-actions {
+      gap: 8px;
+    }
+  }
+
+  /* Ensure hamburger menu is hidden on desktop/web view */
+  @media (min-width: 1024px) {
+    #mobile-menu-btn {
+      display: none !important;
+    }
+  }
+</style>
+
+<!-- ===== NAVBAR ===== -->
+<nav id="navbar" class="sticky top-0 z-50 border-b border-white/10" style="background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-20">
+      <!-- Logo -->
+      <a href="/student/dashboard" class="flex items-center gap-3 group">
+        <img src="/img/logo.png" alt="UM Logo" class="w-11 h-11 object-contain group-hover:scale-110 transition-transform">
+        <div class="hidden sm:block leading-tight">
+          <p class="uppercase tracking-[0.24em] text-white/80 text-[10px] font-medium">UNICLUB</p>
+          <p class="font-semibold text-base text-white">University of Mindanao</p>
+        </div>
+      </a>
+
+      <!-- Desktop Menu -->
+      <div class="hidden lg:flex items-center gap-8">
+        <a href="/student/dashboard" class="nav-link <%= isActive('/student/dashboard') ? 'active' : '' %>">Dashboard</a>
+        <a href="/student/discover" class="nav-link <%= isActive('/student/discover') ? 'active' : '' %>">Discover</a>
+        <a href="/student/my-clubs" class="nav-link <%= isActive('/student/my-clubs') ? 'active' : '' %>">My Clubs</a>
+        <a href="/student/events" class="nav-link <%= isActive('/student/events') ? 'active' : '' %>">Events</a>
+      </div>
+
+      <!-- Right Side -->
+      <div class="nav-actions">
+        <!-- Notifications -->
+        <div class="relative">
+          <button id="notificationBtn" class="btn-icon relative" aria-haspopup="true" aria-expanded="false" aria-controls="notificationMenu">
+            <i class="fas fa-bell"></i>
+            <% if (announcements && announcements.length > 0) { %>
+              <span class="notification-badge"><%= Math.min(announcements.length, 9) %></span>
+            <% } %>
+          </button>
+
+          <!-- Notification Dropdown -->
+          <div id="notificationMenu" class="hidden absolute right-0 mt-1.5 overflow-hidden z-[55] profile-dropdown" style="width: 360px; max-width: 90vw; pointer-events: auto;">
+            
+            <!-- Header -->
+            <div class="px-4 py-3.5 border-b border-white/15">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white">Notifications</h3>
+                <% if (announcements && announcements.length > 0) { %>
+                  <span class="recommended-badge"><%= announcements.length %></span>
+                <% } %>
+              </div>
+            </div>
+
+            <!-- Notifications List -->
+            <div class="max-h-96 overflow-y-auto">
+              <% if (announcements && announcements.length > 0) { %>
+                <% announcements.forEach((announcement, index) => { %>
+                  <a href="#" class="block px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
+                    <div class="flex items-start gap-3">
+                      <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="fas fa-bullhorn text-red-400 text-sm"></i>
+                      </div>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-white line-clamp-1"><%= announcement.title %></p>
+                        <p class="text-xs text-white/65 mt-0.5 line-clamp-2"><%= announcement.message || announcement.content %></p>
+                        <p class="text-xs text-white/45 mt-1">
+                          <% if (announcement.created_at) { %>
+                            <%= new Date(announcement.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                          <% } else { %>
+                            Recent
+                          <% } %>
+                        </p>
+                      </div>
+                    </div>
+                  </a>
+                <% }) %>
+              <% } else { %>
+                <!-- No notifications -->
+                <div class="px-4 py-12 text-center">
+                  <i class="fas fa-bell-slash text-4xl text-white/20 mb-3"></i>
+                  <p class="text-sm text-white/60">No notifications yet</p>
+                  <p class="text-xs text-white/45 mt-1">You'll see updates here</p>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Footer -->
+            <% if (announcements && announcements.length > 0) { %>
+              <div class="border-t border-white/15 px-4 py-3">
+                <a href="#" class="text-sm font-semibold text-red-400 hover:text-red-300 transition-colors flex items-center justify-center gap-1">
+                  View all notifications
+                  <i class="fas fa-arrow-right text-xs"></i>
+                </a>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <!-- Profile -->
+        <div class="relative hidden sm:block pl-2 md:pl-3 border-l border-white/10">
+          <button id="profileBtn" class="flex items-center gap-1.5 hover:bg-white/5 px-1.5 py-1.5 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-transparent profile-pill" aria-haspopup="true" aria-expanded="false" aria-controls="profileMenu">
+            <div class="text-right hidden sm:block min-w-0">
+              <p class="text-xs font-medium text-white/85 truncate"><%= student ? (student.first_name || 'Student') : 'Student' %></p>
+            </div>
+            <div class="relative w-9 h-9 rounded-full overflow-hidden shrink-0 ring-1 ring-white/20">
+              <% if (student && student.profile_picture) { %>
+                <img
+                  src="<%= student.profile_picture %>"
+                  alt="Profile"
+                  class="w-full h-full object-cover"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />
+              <% } %>
+              <div class="<%= student && student.profile_picture ? 'hidden' : 'flex' %> w-full h-full items-center justify-center text-[10px] font-semibold text-white/70 bg-white/10">
+                <%= student ? (student.first_name ? student.first_name.charAt(0).toUpperCase() : 'S') : 'S' %>
+              </div>
+            </div>
+            <svg class="w-3 h-3 text-white/60 transition-transform profile-caret" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+            </svg>
+          </button>
+
+          <div id="profileMenu" class="hidden absolute right-0 mt-1.5 overflow-hidden z-[9999] profile-dropdown" style="pointer-events: auto;">
+
+            <!-- Profile Summary (name only, not clickable) -->
+            <div class="px-4 py-3.5 border-b border-white/15">
+              <div class="flex items-center gap-3">
+                <div class="relative w-9 h-9 rounded-full overflow-hidden shrink-0 ring-1 ring-white/20">
+                  <% if (student && student.profile_picture) { %>
+                    <img
+                      src="<%= student.profile_picture %>"
+                      alt="Profile"
+                      class="w-full h-full object-cover"
+                      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                    />
+                  <% } %>
+                  <div class="<%= student && student.profile_picture ? 'hidden' : 'flex' %> w-full h-full items-center justify-center text-xs font-semibold text-white/70 bg-white/10">
+                    <%= student ? (student.first_name ? student.first_name.charAt(0).toUpperCase() : 'S') : 'S' %>
+                  </div>
+                </div>
+                <div class="leading-tight flex-1 min-w-0">
+                  <p class="text-sm font-bold text-white"><%= student ? ((student.first_name || '') + ' ' + (student.last_name || '')).trim() || 'Student' : 'Student' %></p>
+                  <p class="text-xs text-white/65 font-medium"><%= student ? (student.program || student.department || 'Student') : 'Student' %></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Divider under profile header -->
+            <div class="h-px bg-white/15"></div>
+
+            <!-- Profile Section -->
+            <a href="/student/profile" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors">
+              <div class="w-9 h-9 rounded-lg bg-white/10 border border-white/10 grid place-items-center flex-shrink-0">
+                <i class="fa-regular fa-user text-white/80 text-sm"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-white">Profile</p>
+                <p class="text-xs text-white/65 font-normal">View your profile</p>
+              </div>
+            </a>
+
+            <!-- Settings Section -->
+            <a href="/student/settings" class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors">
+              <div class="w-9 h-9 rounded-lg bg-white/10 border border-white/10 grid place-items-center flex-shrink-0">
+                <i class="fa-solid fa-gear text-white/80 text-sm"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-white">Settings</p>
+                <p class="text-xs text-white/65 font-normal">Edit account details</p>
+              </div>
+            </a>
+
+            <!-- Divider -->
+            <div class="h-px bg-white/10 my-1"></div>
+
+            <!-- Theme Toggle (Light Mode is default) -->
+            <button id="themeToggle" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left focus:outline-none focus:ring-2 focus:ring-white/30 rounded" aria-label="Toggle theme">
+              <div class="w-9 h-9 rounded-lg bg-white/10 border border-white/10 grid place-items-center flex-shrink-0">
+                <i class="fa-regular fa-moon text-white/80 text-sm" id="themeIcon"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-white" id="themeLabel">Turn Dark Mode</p>
+                <p class="text-xs text-white/65 font-normal" id="themeDescription">Switch to dark theme</p>
+              </div>
+              <div class="w-10 h-6 bg-[#C62828] rounded-full relative transition-colors" id="themeSwitch" style="background: #C62828;">
+                <div class="w-4 h-4 bg-white rounded-full absolute top-1 left-1 transition-transform" id="themeSwitchThumb" style="transform: translateX(16px);"></div>
+              </div>
+            </button>
+
+            <!-- Divider -->
+            <div class="h-px bg-white/10 my-1"></div>
+
+            <!-- Logout (Destructive) - Stronger divider above -->
+            <div class="h-px bg-white/20"></div>
+            <form action="/student/logout" method="POST" class="m-0">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <button type="submit" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-500/15 transition-colors text-red-400 group border-0 bg-transparent cursor-pointer">
+                <div class="w-9 h-9 rounded-lg bg-red-500/15 border border-red-500/20 grid place-items-center flex-shrink-0">
+                  <i class="fa-solid fa-right-from-bracket text-base text-red-400"></i>
+                </div>
+                <p class="text-sm font-semibold text-red-400">Logout</p>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Mobile Menu Toggle - Visible on mobile/tablet, hidden on desktop -->
+        <button id="mobile-menu-btn" class="lg:hidden btn-icon ml-1 relative z-50" type="button" aria-label="Toggle mobile menu">
+          <i class="fas fa-bars"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="mobile-menu">
+    <div class="mobile-menu-content">
+      <a href="/student/dashboard" class="nav-link text-base <%= isActive('/student/dashboard') ? 'active font-semibold' : '' %>">Dashboard</a>
+      <a href="/student/discover" class="nav-link text-base <%= isActive('/student/discover') ? 'active font-semibold' : '' %>">Discover</a>
+      <a href="/student/my-clubs" class="nav-link text-base <%= isActive('/student/my-clubs') ? 'active font-semibold' : '' %>">My Clubs</a>
+      <a href="/student/events" class="nav-link text-base <%= isActive('/student/events') ? 'active font-semibold' : '' %>">Events</a>
+      <hr class="border-white/10 my-2">
+      <a href="/student/profile" class="nav-link text-base">Profile Settings</a>
+      <a href="/student/logout" class="nav-link text-red-400 text-base">Logout</a>
+    </div>
+  </div>
+</nav>
+
+<script>
+  // ===== NOTIFICATION DROPDOWN =====
+  (function() {
+    const notificationBtn = document.getElementById('notificationBtn');
+    const notificationMenu = document.getElementById('notificationMenu');
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    
+    if (notificationBtn && notificationMenu) {
+      notificationBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !notificationMenu.classList.contains('hidden');
+        if (isOpen) {
+          notificationMenu.classList.add('hidden');
+          notificationBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          // Close profile menu if open
+          if (profileMenu && !profileMenu.classList.contains('hidden')) {
+            profileMenu.classList.add('hidden');
+            if (profileBtn) profileBtn.setAttribute('aria-expanded', 'false');
+          }
+          notificationMenu.classList.remove('hidden');
+          notificationBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      // Close when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!notificationMenu.contains(e.target) && !notificationBtn.contains(e.target)) {
+          notificationMenu.classList.add('hidden');
+          notificationBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !notificationMenu.classList.contains('hidden')) {
+          notificationMenu.classList.add('hidden');
+          notificationBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+  })();
+
+  // ===== PROFILE DROPDOWN =====
+  (function() {
+    // Wait for DOM to be ready
+    function initProfileDropdown() {
+      const profileBtn = document.getElementById('profileBtn');
+      const profileMenu = document.getElementById('profileMenu');
+      const notificationBtn = document.getElementById('notificationBtn');
+      const notificationMenu = document.getElementById('notificationMenu');
+      
+      if (!profileBtn || !profileMenu) {
+        console.warn('Profile dropdown elements not found');
+        return;
+      }
+      profileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = !profileMenu.classList.contains('hidden');
+        if (isOpen) {
+          profileMenu.classList.add('hidden');
+          profileBtn.setAttribute('aria-expanded', 'false');
+        } else {
+          // Close notification menu if open
+          if (notificationMenu && !notificationMenu.classList.contains('hidden')) {
+            notificationMenu.classList.add('hidden');
+            if (notificationBtn) notificationBtn.setAttribute('aria-expanded', 'false');
+          }
+          profileMenu.classList.remove('hidden');
+          profileBtn.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      // SIMPLE LINK HANDLING: Just close menu when links are clicked
+      profileMenu.addEventListener('click', function(e) {
+        const link = e.target.closest('a[href]');
+        if (link && profileMenu.contains(link)) {
+          const href = link.getAttribute('href');
+          if (href && href !== '#' && href !== 'javascript:void(0)') {
+            // Close menu - let browser handle navigation naturally
+            profileMenu.classList.add('hidden');
+            profileBtn.setAttribute('aria-expanded', 'false');
+          }
+        }
+      });
+
+      // Close when clicking outside
+      document.addEventListener('click', function(e) {
+        // Don't interfere with link clicks - they're handled above
+        const clickedLink = e.target.closest('a[href]');
+        if (clickedLink && profileMenu.contains(clickedLink)) {
+          return; // Let the link work naturally
+        }
+        
+        // Only close if clicking outside
+        const isClickInsideMenu = profileMenu.contains(e.target);
+        const isClickOnButton = profileBtn.contains(e.target);
+        
+        if (!isClickInsideMenu && !isClickOnButton) {
+          profileMenu.classList.add('hidden');
+          profileBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Close on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !profileMenu.classList.contains('hidden')) {
+          profileMenu.classList.add('hidden');
+          profileBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initProfileDropdown);
+    } else {
+      // DOM is already ready
+      initProfileDropdown();
+    }
+  })();
+
+  // ===== MOBILE MENU =====
+  (function() {
+    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+    const mobileMenu = document.getElementById('mobile-menu');
+    
+    if (mobileMenuBtn && mobileMenu) {
+      mobileMenuBtn.addEventListener('click', () => {
+        mobileMenu.classList.toggle('active');
+      });
+
+      // Close menu when clicking on links
+      mobileMenu.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          mobileMenu.classList.remove('active');
+        });
+      });
+    }
+  })();
+
+  // ===== NAVBAR SCROLL EFFECT =====
+  (function() {
+    const navbar = document.getElementById('navbar');
+    if (navbar) {
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 50) {
+          navbar.classList.add('scrolled');
+        } else {
+          navbar.classList.remove('scrolled');
+        }
+      });
+    }
+  })();
+
+  // ===== THEME TOGGLE FUNCTIONALITY =====
+  (function() {
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+    const themeSwitch = document.getElementById('themeSwitch');
+    const themeSwitchThumb = document.getElementById('themeSwitchThumb');
+    const themeLabel = document.getElementById('themeLabel');
+    const themeDescription = document.getElementById('themeDescription');
+
+    // Check for saved theme preference or default to light mode
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    
+    // Function to update theme UI with smooth transitions
+    function updateThemeUI(isLight) {
+      const html = document.documentElement;
+      const body = document.body;
+      
+      if (isLight) {
+        // Update data-theme attribute for CSS targeting
+        html.setAttribute('data-theme', 'light');
+        
+        // Update classes
+        html.classList.add('light-mode');
+        body.classList.add('light-mode');
+        
+        // Update inline background styles for instant change
+        html.style.setProperty('background-color', '#f8fafc', 'important');
+        body.style.setProperty('background-color', '#f8fafc', 'important');
+        
+        // Update UI elements
+        if (themeIcon) themeIcon.className = 'fa-regular fa-moon text-white/80 text-sm';
+        if (themeSwitch) themeSwitch.style.background = '#C62828';
+        if (themeSwitchThumb) themeSwitchThumb.style.transform = 'translateX(16px)';
+        if (themeLabel) themeLabel.textContent = 'Turn Dark Mode';
+        if (themeDescription) themeDescription.textContent = 'Switch to dark theme';
+      } else {
+        // Update data-theme attribute for CSS targeting
+        html.setAttribute('data-theme', 'dark');
+        
+        // Update classes
+        html.classList.remove('light-mode');
+        body.classList.remove('light-mode');
+        
+        // Update inline background styles for instant change
+        html.style.setProperty('background-color', '#0a0f1a', 'important');
+        body.style.setProperty('background-color', '#0a0f1a', 'important');
+        
+        // Update UI elements
+        if (themeIcon) themeIcon.className = 'fa-regular fa-sun text-white/80 text-sm';
+        if (themeSwitch) themeSwitch.style.background = 'rgba(255, 255, 255, 0.2)';
+        if (themeSwitchThumb) themeSwitchThumb.style.transform = 'translateX(0)';
+        if (themeLabel) themeLabel.textContent = 'Turn Light Mode';
+        if (themeDescription) themeDescription.textContent = 'Switch to light theme';
+      }
+    }
+    
+    // Apply theme on page load
+    updateThemeUI(currentTheme === 'light');
+
+    // Theme toggle handler
+    if (themeToggle) {
+      themeToggle.addEventListener('click', function(e) {
+        e.stopPropagation(); // Prevent closing the dropdown
+        const isLightMode = document.body.classList.contains('light-mode');
+        
+        if (isLightMode) {
+          // Switch to dark mode
+          localStorage.setItem('theme', 'dark');
+          updateThemeUI(false);
+        } else {
+          // Switch to light mode
+          localStorage.setItem('theme', 'light');
+          updateThemeUI(true);
+        }
+      });
+    }
+  })();
+</script>

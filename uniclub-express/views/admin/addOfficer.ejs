@@ -5,17 +5,157 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Add Officer | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+
+    /* Toast Notification Styles */
+    #toastContainer {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .toast {
+      min-width: 320px;
+      max-width: 420px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.2);
+      z-index: 10000;
+      animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      pointer-events: auto;
+    }
+
+    @keyframes slideInRight {
+      from {
+        transform: translateX(calc(100% + 24px));
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideOutRight {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(calc(100% + 24px));
+        opacity: 0;
+      }
+    }
+
+    .toast-success {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+
+    .toast-error {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .toast-warning {
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      color: white;
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .toast-info {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: white;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .toast-icon {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+    }
+
+    .toast-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .toast-title {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
+    .toast-message {
+      font-size: 13px;
+      opacity: 0.95;
+      line-height: 1.4;
+    }
+
+    .toast-close {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+      border-radius: 4px;
+      font-size: 16px;
+    }
+
+    .toast-close:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.2);
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/officers'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/officers'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main Content -->
-    <main class="flex flex-col gap-4">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
       <!-- Header -->
       <header class="mb-6 flex items-center justify-between">
         <div>
@@ -30,26 +170,73 @@
 
       <!-- Form Section -->
       <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <form action="/admin/officers/add" method="POST" class="space-y-5" id="officerForm">
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Full Name</label>
-            <input type="text" name="name" required
-                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+        <%
+          const data = (typeof formData !== 'undefined' && formData) ? formData : {};
+          const selectedClubId = data.club_id ? Number(data.club_id) : null;
+          const selectedDepartment = data.department || "";
+          const selectedProgram = data.program || "";
+          let presetPermissions = {};
+          try {
+            if (data.permissions) presetPermissions = JSON.parse(data.permissions);
+          } catch (err) {
+            presetPermissions = {};
+          }
+        %>
+        <form action="/admin/officers/add" method="POST" class="space-y-5" id="officerForm" data-dept-program>
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">First Name <span class="text-red-500">*</span></label>
+              <input type="text" name="first_name" id="firstName" required value="<%= data.first_name || '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]"
+                     placeholder="Enter first name"
+                     pattern="[A-Za-z\s'-]+"
+                     title="Only letters, spaces, hyphens, and apostrophes are allowed"
+                     oninput="validateName('firstName', 'firstNameWarning')">
+              <p class="text-xs text-gray-500 mt-1">Only letters, spaces, hyphens (-), and apostrophes (') allowed</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Last Name <span class="text-red-500">*</span></label>
+              <input type="text" name="last_name" id="lastName" required value="<%= data.last_name || '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]"
+                     placeholder="Enter last name"
+                     pattern="[A-Za-z\s'-]+"
+                     title="Only letters, spaces, hyphens, and apostrophes are allowed"
+                     oninput="validateName('lastName', 'lastNameWarning')">
+              <p class="text-xs text-gray-500 mt-1">Only letters, spaces, hyphens (-), and apostrophes (') allowed</p>
+            </div>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Student ID</label>
-            <input type="text" name="studentid" required
-                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+            <input type="text" name="studentid" id="studentid" required value="<%= data.studentid || '' %>"
+                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]"
+                   placeholder="e.g., 111222 (6 digits only)"
+                   maxlength="6"
+                   oninput="validateStudentId()">
+            <p class="text-xs text-gray-500 mt-1">Must be exactly 6 digits</p>
+          </div>
+
+          <!-- Validation Warnings -->
+          <div id="validationWarnings" class="hidden">
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <div class="flex items-start">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 mr-2 mt-0.5"></i>
+                <div class="flex-1">
+                  <h4 class="text-sm font-semibold text-yellow-800 mb-2">Validation Warnings:</h4>
+                  <ul id="warningList" class="text-sm text-yellow-700 list-disc list-inside space-y-1"></ul>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Club</label>
-            <select name="club" required
+            <select name="club_id" required
                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
               <% if (clubs && clubs.length > 0) { %>
                 <% clubs.forEach(c => { %>
-                  <option value="<%= c.name %>"><%= c.name %></option>
+                  <option value="<%= c.id %>" <%= selectedClubId !== null && Number(selectedClubId) === Number(c.id) ? 'selected' : '' %>><%= c.name %></option>
                 <% }) %>
               <% } else { %>
                 <option disabled>No clubs available</option>
@@ -59,46 +246,360 @@
 
           <div>
             <label class="block text-sm font-medium text-slate-600 mb-1">Role</label>
-            <input type="text" name="role" required
+            <select name="role" required
+                    class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+              <option value="">Select Role</option>
+              <option value="President" <%= data.role === 'President' ? 'selected' : '' %>>President</option>
+              <option value="Vice President" <%= data.role === 'Vice President' ? 'selected' : '' %>>Vice President</option>
+              <option value="Secretary" <%= data.role === 'Secretary' ? 'selected' : '' %>>Secretary</option>
+              <option value="Treasurer" <%= data.role === 'Treasurer' ? 'selected' : '' %>>Treasurer</option>
+              <option value="Chair" <%= data.role === 'Chair' ? 'selected' : '' %>>Chair</option>
+              <option value="Vice Chair" <%= data.role === 'Vice Chair' ? 'selected' : '' %>>Vice Chair</option>
+              <option value="Public Relations Officer" <%= data.role === 'Public Relations Officer' ? 'selected' : '' %>>Public Relations Officer</option>
+              <option value="Events Coordinator" <%= data.role === 'Events Coordinator' ? 'selected' : '' %>>Events Coordinator</option>
+              <option value="Member" <%= data.role === 'Member' ? 'selected' : '' %>>Member</option>
+              <option value="Other" <%= data.role && !['President', 'Vice President', 'Secretary', 'Treasurer', 'Chair', 'Vice Chair', 'Public Relations Officer', 'Events Coordinator', 'Member'].includes(data.role) ? 'selected' : '' %>>Other</option>
+            </select>
+            <div id="otherRoleContainer" class="mt-2 <%= data.role && !['President', 'Vice President', 'Secretary', 'Treasurer', 'Chair', 'Vice Chair', 'Public Relations Officer', 'Events Coordinator', 'Member'].includes(data.role) ? '' : 'hidden' %>">
+              <input type="text" name="role_other" id="roleOther" placeholder="Specify role" value="<%= data.role && !['President', 'Vice President', 'Secretary', 'Treasurer', 'Chair', 'Vice Chair', 'Public Relations Officer', 'Events Coordinator', 'Member'].includes(data.role) ? data.role : '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+            </div>
+            <input type="hidden" name="role_actual" id="roleActual" value="<%= data.role || '' %>">
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Username</label>
+              <input type="text" name="username" required autocomplete="username" value="<%= data.username || '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Password</label>
+              <input type="password" name="password" required autocomplete="new-password"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Photo URL <span class="text-gray-400 text-xs">(optional)</span></label>
+            <input type="url" name="photo_url" placeholder="https://" value="<%= data.photo_url || '' %>"
                    class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm font-medium text-slate-600 mb-1">Department</label>
-              <input type="text" name="department"
+              <select name="department" data-dept-select
                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <option value="">Select Department</option>
+                <option value="Department of Accounting Education" <%= selectedDepartment === 'Department of Accounting Education' ? 'selected' : '' %>>Department of Accounting Education</option>
+                <option value="Department of Arts and Sciences Education" <%= selectedDepartment === 'Department of Arts and Sciences Education' ? 'selected' : '' %>>Department of Arts and Sciences Education</option>
+                <option value="Department of Business Administration Education" <%= selectedDepartment === 'Department of Business Administration Education' ? 'selected' : '' %>>Department of Business Administration Education</option>
+                <option value="Department of Computing Education" <%= selectedDepartment === 'Department of Computing Education' ? 'selected' : '' %>>Department of Computing Education</option>
+                <option value="Department of Criminal Justice Education" <%= selectedDepartment === 'Department of Criminal Justice Education' ? 'selected' : '' %>>Department of Criminal Justice Education</option>
+                <option value="Department of Engineering Education" <%= selectedDepartment === 'Department of Engineering Education' ? 'selected' : '' %>>Department of Engineering Education</option>
+                <option value="Department of Hospitality Education" <%= selectedDepartment === 'Department of Hospitality Education' ? 'selected' : '' %>>Department of Hospitality Education</option>
+                <option value="Department of Teacher Education" <%= selectedDepartment === 'Department of Teacher Education' ? 'selected' : '' %>>Department of Teacher Education</option>
+              </select>
             </div>
 
             <div>
               <label class="block text-sm font-medium text-slate-600 mb-1">Program</label>
-              <input type="text" name="program"
+              <select name="program" data-program-select data-current="<%= selectedProgram %>"
                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <option value="">Select Program</option>
+              </select>
             </div>
           </div>
 
           <!-- Permissions -->
           <div class="border-t pt-4">
             <h3 class="text-sm font-semibold text-slate-700 mb-2">Permissions</h3>
-            <div class="grid md:grid-cols-2 gap-4">
-              <div>
-                <p class="text-xs text-slate-500 mb-2">Actions</p>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="view" class="perm-action"> View</label>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="create" class="perm-action"> Create</label>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="update" class="perm-action"> Update</label>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="edit" class="perm-action"> Edit</label>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_action" value="delete" class="perm-action"> Delete</label>
+            <div id="permissionsContainer" class="<%= data.role ? '' : 'hidden' %>">
+              <!-- Quick Actions -->
+              <div class="flex gap-3 mb-6 flex-wrap">
+                <button type="button" onclick="selectAllPermissions()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm">
+                  Select All
+                </button>
+                <button type="button" onclick="deselectAllPermissions()" class="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition text-sm">
+                  Deselect All
+                </button>
               </div>
-              <div>
-                <p class="text-xs text-slate-500 mb-2">Modules</p>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="attendance" class="perm-module"> Attendance</label>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="member_approvals" class="perm-module"> Member Approvals</label>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="club_records" class="perm-module"> Club Records</label>
-                <label class="flex items-center gap-2 text-sm mb-1"><input type="checkbox" name="perm_module" value="analytics" class="perm-module"> Analytics</label>
+
+              <!-- Permissions Grid -->
+              <div class="space-y-4">
+                <!-- Dashboard & Reports -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-blue-50 px-4 py-3 border-b border-blue-200">
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-800 flex items-center text-sm">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4 mr-2"></i>
+                        Dashboard & Reports
+                      </h2>
+                      <input type="checkbox" onchange="toggleSection(this, 'dashboard')" class="w-4 h-4 text-blue-600 rounded">
+                    </div>
+                  </div>
+                  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded dashboard-perm" data-perm="view_dashboard">
+                      <span class="text-sm text-gray-700">View Dashboard</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded dashboard-perm" data-perm="view_org_reports">
+                      <span class="text-sm text-gray-700">View Organization Reports</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded dashboard-perm" data-perm="export_reports">
+                      <span class="text-sm text-gray-700">Export Reports</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded dashboard-perm" data-perm="view_analytics">
+                      <span class="text-sm text-gray-700">View Analytics</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded dashboard-perm" data-perm="generate_custom_reports">
+                      <span class="text-sm text-gray-700">Generate Custom Reports</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Members & Officers Management -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-green-50 px-4 py-3 border-b border-green-200">
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-800 flex items-center text-sm">
+                        <i data-lucide="users" class="w-4 h-4 mr-2"></i>
+                        Members & Officers Management
+                      </h2>
+                      <input type="checkbox" onchange="toggleSection(this, 'members')" class="w-4 h-4 text-blue-600 rounded">
+                    </div>
+                  </div>
+                  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded members-perm" data-perm="view_members">
+                      <span class="text-sm text-gray-700">View Members List</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded members-perm" data-perm="add_members">
+                      <span class="text-sm text-gray-700">Add New Members</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded members-perm" data-perm="edit_members">
+                      <span class="text-sm text-gray-700">Edit Member Info</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded members-perm" data-perm="remove_members">
+                      <span class="text-sm text-gray-700">Remove Members</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded members-perm" data-perm="approve_applications">
+                      <span class="text-sm text-gray-700">Approve Applications</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded members-perm" data-perm="manage_officer_roles">
+                      <span class="text-sm text-gray-700">Manage Officer Roles</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Financial Management -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-yellow-50 px-4 py-3 border-b border-yellow-200">
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-800 flex items-center text-sm">
+                        <i data-lucide="dollar-sign" class="w-4 h-4 mr-2"></i>
+                        Financial Management
+                      </h2>
+                      <input type="checkbox" onchange="toggleSection(this, 'finance')" class="w-4 h-4 text-blue-600 rounded">
+                    </div>
+                  </div>
+                  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded finance-perm" data-perm="view_financial_records">
+                      <span class="text-sm text-gray-700">View Financial Records</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded finance-perm" data-perm="record_transactions">
+                      <span class="text-sm text-gray-700">Record Transactions</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded finance-perm" data-perm="approve_expenses">
+                      <span class="text-sm text-gray-700">Approve Expenses</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded finance-perm" data-perm="generate_financial_reports">
+                      <span class="text-sm text-gray-700">Generate Financial Reports</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded finance-perm" data-perm="manage_budget">
+                      <span class="text-sm text-gray-700">Manage Budget</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded finance-perm" data-perm="audit_finances">
+                      <span class="text-sm text-gray-700">Audit Finances</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Events & Activities -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-purple-50 px-4 py-3 border-b border-purple-200">
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-800 flex items-center text-sm">
+                        <i data-lucide="calendar" class="w-4 h-4 mr-2"></i>
+                        Events & Activities
+                      </h2>
+                      <input type="checkbox" onchange="toggleSection(this, 'events')" class="w-4 h-4 text-blue-600 rounded">
+                    </div>
+                  </div>
+                  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded events-perm" data-perm="view_events">
+                      <span class="text-sm text-gray-700">View Events</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded events-perm" data-perm="create_events">
+                      <span class="text-sm text-gray-700">Create Events</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded events-perm" data-perm="edit_events">
+                      <span class="text-sm text-gray-700">Edit Events</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded events-perm" data-perm="cancel_events">
+                      <span class="text-sm text-gray-700">Cancel Events</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded events-perm" data-perm="manage_attendance">
+                      <span class="text-sm text-gray-700">Manage Attendance</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded events-perm" data-perm="export_event_reports">
+                      <span class="text-sm text-gray-700">Export Event Reports</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Documents & Records -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-indigo-50 px-4 py-3 border-b border-indigo-200">
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-800 flex items-center text-sm">
+                        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+                        Documents & Records
+                      </h2>
+                      <input type="checkbox" onchange="toggleSection(this, 'documents')" class="w-4 h-4 text-blue-600 rounded">
+                    </div>
+                  </div>
+                  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded documents-perm" data-perm="view_documents">
+                      <span class="text-sm text-gray-700">View Documents</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded documents-perm" data-perm="upload_documents">
+                      <span class="text-sm text-gray-700">Upload Documents</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded documents-perm" data-perm="edit_documents">
+                      <span class="text-sm text-gray-700">Edit Documents</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded documents-perm" data-perm="delete_documents">
+                      <span class="text-sm text-gray-700">Delete Documents</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded documents-perm" data-perm="download_documents">
+                      <span class="text-sm text-gray-700">Download Documents</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded documents-perm" data-perm="manage_minutes">
+                      <span class="text-sm text-gray-700">Manage Meeting Minutes</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Communications & Announcements -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-pink-50 px-4 py-3 border-b border-pink-200">
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-800 flex items-center text-sm">
+                        <i data-lucide="message-square" class="w-4 h-4 mr-2"></i>
+                        Communications & Announcements
+                      </h2>
+                      <input type="checkbox" onchange="toggleSection(this, 'comms')" class="w-4 h-4 text-blue-600 rounded">
+                    </div>
+                  </div>
+                  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded comms-perm" data-perm="view_announcements">
+                      <span class="text-sm text-gray-700">View Announcements</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded comms-perm" data-perm="post_announcements">
+                      <span class="text-sm text-gray-700">Post Announcements</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded comms-perm" data-perm="edit_announcements">
+                      <span class="text-sm text-gray-700">Edit Announcements</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded comms-perm" data-perm="delete_announcements">
+                      <span class="text-sm text-gray-700">Delete Announcements</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded comms-perm" data-perm="send_notifications">
+                      <span class="text-sm text-gray-700">Send Notifications</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded comms-perm" data-perm="manage_social_media">
+                      <span class="text-sm text-gray-700">Manage Social Media</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- System Administration -->
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <div class="bg-red-50 px-4 py-3 border-b border-red-200">
+                    <div class="flex items-center justify-between">
+                      <h2 class="font-semibold text-gray-800 flex items-center text-sm">
+                        <i data-lucide="settings" class="w-4 h-4 mr-2"></i>
+                        System Administration
+                      </h2>
+                      <input type="checkbox" onchange="toggleSection(this, 'admin')" class="w-4 h-4 text-blue-600 rounded">
+                    </div>
+                  </div>
+                  <div class="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded admin-perm" data-perm="view_system_settings">
+                      <span class="text-sm text-gray-700">View System Settings</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded admin-perm" data-perm="modify_system_settings">
+                      <span class="text-sm text-gray-700">Modify System Settings</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded admin-perm" data-perm="manage_permissions">
+                      <span class="text-sm text-gray-700">Manage User Permissions</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded admin-perm" data-perm="view_audit_logs">
+                      <span class="text-sm text-gray-700">View Audit Logs</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded admin-perm" data-perm="backup_system">
+                      <span class="text-sm text-gray-700">Backup System</span>
+                    </label>
+                    <label class="flex items-center space-x-3 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input type="checkbox" class="w-4 h-4 text-blue-600 rounded admin-perm" data-perm="system_maintenance">
+                      <span class="text-sm text-gray-700">System Maintenance</span>
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
-            <input type="hidden" name="permissions" id="permissionsField" value="{}">
-            <p class="text-xs text-slate-500 mt-2">Defaults change based on Role</p>
+            <input type="hidden" name="permissions" id="permissionsField" value='<%- JSON.stringify(presetPermissions) %>'>
+            <p class="text-xs text-slate-500 mt-2">Select a role to load default permissions, then customize as needed.</p>
           </div>
 
           <div class="flex justify-end">
@@ -123,59 +624,400 @@
 
   <script>
     window.lucide && window.lucide.replace();
+    
+    // Role-based permission presets
+    const rolePermissions = {
+      president: [
+        'view_dashboard', 'view_org_reports', 'export_reports', 'view_analytics', 'generate_custom_reports',
+        'view_members', 'add_members', 'edit_members', 'remove_members', 'approve_applications', 'manage_officer_roles',
+        'view_financial_records', 'record_transactions', 'approve_expenses', 'generate_financial_reports', 'manage_budget',
+        'view_events', 'create_events', 'edit_events', 'cancel_events', 'manage_attendance', 'export_event_reports',
+        'view_documents', 'upload_documents', 'edit_documents', 'delete_documents', 'download_documents', 'manage_minutes',
+        'view_announcements', 'post_announcements', 'edit_announcements', 'delete_announcements', 'send_notifications', 'manage_social_media',
+        'view_system_settings', 'modify_system_settings', 'manage_permissions', 'view_audit_logs', 'backup_system', 'system_maintenance'
+      ],
+      'vice president': [
+        'view_dashboard', 'view_org_reports', 'export_reports', 'view_analytics',
+        'view_members', 'add_members', 'edit_members', 'approve_applications',
+        'view_financial_records', 'record_transactions', 'generate_financial_reports',
+        'view_events', 'create_events', 'edit_events', 'manage_attendance', 'export_event_reports',
+        'view_documents', 'upload_documents', 'edit_documents', 'download_documents', 'manage_minutes',
+        'view_announcements', 'post_announcements', 'edit_announcements', 'send_notifications',
+        'view_system_settings'
+      ],
+      secretary: [
+        'view_dashboard', 'view_org_reports', 'export_reports',
+        'view_members', 'add_members', 'edit_members',
+        'view_events', 'manage_attendance', 'export_event_reports',
+        'view_documents', 'upload_documents', 'edit_documents', 'download_documents', 'manage_minutes',
+        'view_announcements', 'post_announcements', 'send_notifications'
+      ],
+      treasurer: [
+        'view_dashboard', 'view_org_reports', 'export_reports', 'view_analytics',
+        'view_members',
+        'view_financial_records', 'record_transactions', 'approve_expenses', 'generate_financial_reports', 'manage_budget',
+        'view_events', 'export_event_reports',
+        'view_documents', 'upload_documents', 'download_documents',
+        'view_announcements'
+      ],
+      chair: [
+        'view_dashboard', 'view_org_reports', 'export_reports', 'view_analytics', 'generate_custom_reports',
+        'view_members', 'add_members', 'edit_members', 'remove_members', 'approve_applications', 'manage_officer_roles',
+        'view_financial_records', 'record_transactions', 'approve_expenses', 'generate_financial_reports', 'manage_budget',
+        'view_events', 'create_events', 'edit_events', 'cancel_events', 'manage_attendance', 'export_event_reports',
+        'view_documents', 'upload_documents', 'edit_documents', 'delete_documents', 'download_documents', 'manage_minutes',
+        'view_announcements', 'post_announcements', 'edit_announcements', 'delete_announcements', 'send_notifications', 'manage_social_media',
+        'view_system_settings', 'modify_system_settings', 'manage_permissions', 'view_audit_logs'
+      ],
+      'vice chair': [
+        'view_dashboard', 'view_org_reports', 'export_reports', 'view_analytics',
+        'view_members', 'add_members', 'edit_members', 'approve_applications',
+        'view_financial_records', 'record_transactions', 'generate_financial_reports',
+        'view_events', 'create_events', 'edit_events', 'manage_attendance', 'export_event_reports',
+        'view_documents', 'upload_documents', 'edit_documents', 'download_documents', 'manage_minutes',
+        'view_announcements', 'post_announcements', 'edit_announcements', 'send_notifications',
+        'view_system_settings'
+      ],
+      'public relations officer': [
+        'view_dashboard', 'view_org_reports',
+        'view_members',
+        'view_events',
+        'view_documents', 'upload_documents', 'download_documents',
+        'view_announcements', 'post_announcements', 'edit_announcements', 'delete_announcements', 'send_notifications', 'manage_social_media'
+      ],
+      'events coordinator': [
+        'view_dashboard', 'view_org_reports',
+        'view_members',
+        'view_events', 'create_events', 'edit_events', 'cancel_events', 'manage_attendance', 'export_event_reports',
+        'view_documents', 'upload_documents', 'download_documents',
+        'view_announcements', 'post_announcements', 'send_notifications'
+      ],
+      member: [
+        'view_dashboard',
+        'view_members',
+        'view_events',
+        'view_documents', 'download_documents',
+        'view_announcements'
+      ]
+    };
+
+    // Permission management functions
+    function selectAllPermissions() {
+      document.querySelectorAll('input[type="checkbox"][data-perm]').forEach(cb => cb.checked = true);
+      updatePermissionsField();
+    }
+
+    function deselectAllPermissions() {
+      document.querySelectorAll('input[type="checkbox"][data-perm]').forEach(cb => cb.checked = false);
+      updatePermissionsField();
+    }
+
+    function toggleSection(checkbox, sectionClass) {
+      const checkboxes = document.querySelectorAll(`.${sectionClass}-perm`);
+      checkboxes.forEach(cb => cb.checked = checkbox.checked);
+      updatePermissionsField();
+    }
+
+    function loadRolePermissions(role) {
+      const container = document.getElementById('permissionsContainer');
+      if (!role) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      deselectAllPermissions();
+
+      const roleKey = role.toLowerCase();
+      if (rolePermissions[roleKey]) {
+        rolePermissions[roleKey].forEach(perm => {
+          const checkbox = document.querySelector(`[data-perm="${perm}"]`);
+          if (checkbox) checkbox.checked = true;
+        });
+      }
+      updatePermissionsField();
+    }
+
+    function updatePermissionsField() {
+      const permField = document.getElementById('permissionsField');
+      const selected = [];
+      document.querySelectorAll('input[type="checkbox"][data-perm]:checked').forEach(cb => {
+        selected.push(cb.dataset.perm);
+      });
+      permField.value = JSON.stringify({ permissions: selected });
+    }
+
+    // Initialize permissions system
     (function(){
       const form = document.getElementById('officerForm');
-      const roleInput = form.querySelector('input[name="role"]');
+      const roleSelect = form.querySelector('select[name="role"]');
+      const roleOtherInput = document.getElementById('roleOther');
+      const roleActualInput = document.getElementById('roleActual');
+      const otherRoleContainer = document.getElementById('otherRoleContainer');
       const permField = document.getElementById('permissionsField');
-      const actionBoxes = Array.from(form.querySelectorAll('.perm-action'));
-      const moduleBoxes = Array.from(form.querySelectorAll('.perm-module'));
 
-      function setByRole(role){
-        const r = (role || '').toLowerCase();
-        const actions = { view:false, create:false, update:false, edit:false, delete:false };
-        const modules = { attendance:false, member_approvals:false, club_records:false, analytics:false };
-        if (r === 'president' || r === 'chair' || r === 'admin') {
-          Object.keys(actions).forEach(k => actions[k] = true);
-          Object.keys(modules).forEach(k => modules[k] = true);
-        } else if (r === 'secretary') {
-          actions.view = actions.create = actions.update = true;
-          modules.attendance = true;
-          modules.member_approvals = true; // can help process member approvals
-          modules.club_records = true; // manage club records updates
-        } else if (r === 'vp' || r === 'vice president') {
-          actions.view = actions.create = actions.update = actions.edit = true;
-          modules.attendance = true;
-          modules.member_approvals = true;
-          modules.club_records = true;
-        } else {
-          actions.view = true;
+      function getRoleValue() {
+        if (roleSelect.value === 'Other' && roleOtherInput) {
+          return roleOtherInput.value.trim();
         }
-        // reflect in UI
-        actionBoxes.forEach(cb => cb.checked = !!actions[cb.value]);
-        moduleBoxes.forEach(cb => cb.checked = !!modules[cb.value]);
-        writePerm(actions, modules);
+        return roleSelect.value;
       }
 
-      function writePerm(actions, modules){
-        const data = { actions, modules };
-        permField.value = JSON.stringify(data);
+      function updateRoleActual() {
+        if (roleActualInput) {
+          roleActualInput.value = getRoleValue();
+        }
       }
 
-      function readFromUI(){
-        const actions = {};
-        actionBoxes.forEach(cb => actions[cb.value] = cb.checked);
-        const modules = {};
-        moduleBoxes.forEach(cb => modules[cb.value] = cb.checked);
-        writePerm(actions, modules);
+      // Handle role select change
+      if (roleSelect) {
+        roleSelect.addEventListener('change', function(e) {
+          const selectedValue = e.target.value;
+          if (selectedValue === 'Other') {
+            otherRoleContainer.classList.remove('hidden');
+            if (roleOtherInput) {
+              roleOtherInput.required = true;
+              roleOtherInput.focus();
+            }
+            loadRolePermissions('');
+          } else {
+            otherRoleContainer.classList.add('hidden');
+            if (roleOtherInput) {
+              roleOtherInput.required = false;
+              roleOtherInput.value = '';
+            }
+            loadRolePermissions(selectedValue);
+            updateRoleActual();
+          }
+        });
       }
 
-      roleInput && roleInput.addEventListener('change', (e)=> setByRole(e.target.value));
-      actionBoxes.forEach(cb => cb.addEventListener('change', readFromUI));
-      moduleBoxes.forEach(cb => cb.addEventListener('change', readFromUI));
+      // Handle "Other" role input change
+      if (roleOtherInput) {
+        roleOtherInput.addEventListener('input', function(e) {
+          loadRolePermissions(e.target.value);
+          updateRoleActual();
+        });
+      }
 
-      // init
-      setByRole(roleInput ? roleInput.value : '');
+      // Update permissions field when any checkbox changes
+      document.querySelectorAll('input[type="checkbox"][data-perm]').forEach(cb => {
+        cb.addEventListener('change', updatePermissionsField);
+      });
+
+      // Load existing permissions if any
+      let existingPermissions = {};
+      try {
+        existingPermissions = JSON.parse(permField.value || '{}');
+      } catch (err) {
+        existingPermissions = {};
+      }
+
+      // Initialize permissions
+      if (existingPermissions.permissions && Array.isArray(existingPermissions.permissions)) {
+        existingPermissions.permissions.forEach(perm => {
+          const checkbox = document.querySelector(`[data-perm="${perm}"]`);
+          if (checkbox) checkbox.checked = true;
+        });
+        updatePermissionsField();
+      } else {
+        const currentRole = getRoleValue();
+        if (currentRole) {
+          loadRolePermissions(currentRole);
+        }
+      }
+
+      // Initialize role actual value
+      updateRoleActual();
+
+      // Handle form submission
+      form.addEventListener('submit', function(e) {
+        updateRoleActual();
+        updatePermissionsField();
+        const roleValue = getRoleValue();
+        if (!roleValue) {
+          e.preventDefault();
+          showToast('Please select or specify a role.', 'error', 'Validation Error');
+          return false;
+        }
+        if (roleSelect.value === 'Other') {
+          const otherValue = roleOtherInput ? roleOtherInput.value.trim() : '';
+          if (!otherValue) {
+            e.preventDefault();
+            showToast('Please specify the role.', 'error', 'Validation Error');
+            if (roleOtherInput) roleOtherInput.focus();
+            return false;
+          }
+        }
+        // Use role_actual as the primary field, remove name from select
+        if (roleActualInput) {
+          roleActualInput.name = 'role';
+        }
+        roleSelect.removeAttribute('name');
+      });
     })();
+
+    // Student ID validation: exactly 6 digits
+    function validateStudentId() {
+      const idInput = document.getElementById('studentid');
+      let id = idInput.value.trim();
+      
+      // Remove any non-digit characters
+      id = id.replace(/\D/g, '');
+      idInput.value = id;
+      
+      const warningsDiv = document.getElementById('validationWarnings');
+      const warningList = document.getElementById('warningList');
+      
+      if (id && id.length !== 6) {
+        idInput.classList.add('border-red-500');
+        idInput.classList.remove('border-slate-300');
+        
+        let idWarning = document.getElementById('idWarning');
+        if (!idWarning) {
+          idWarning = document.createElement('li');
+          idWarning.id = 'idWarning';
+          warningList.appendChild(idWarning);
+        }
+        idWarning.textContent = 'Student ID must be exactly 6 digits';
+        
+        warningsDiv.classList.remove('hidden');
+        return false;
+      } else {
+        idInput.classList.remove('border-red-500');
+        idInput.classList.add('border-slate-300');
+        
+        const idWarning = document.getElementById('idWarning');
+        if (idWarning) {
+          idWarning.remove();
+        }
+        
+        // Hide warnings if no warnings left
+        if (warningList.children.length === 0) {
+          warningsDiv.classList.add('hidden');
+        }
+        return true;
+      }
+    }
+
+    // Name validation: only letters, spaces, hyphens, and apostrophes
+    function validateName(inputId, warningId) {
+      const nameInput = document.getElementById(inputId);
+      const name = nameInput.value.trim();
+      const warningsDiv = document.getElementById('validationWarnings');
+      const warningList = document.getElementById('warningList');
+      
+      // Pattern: only letters, spaces, hyphens, and apostrophes
+      const namePattern = /^[A-Za-z\s'-]+$/;
+      
+      // Check for potentially malicious content (excluding apostrophe which is allowed)
+      const dangerousPatterns = /[<>\"&;{}[\]()=+*$%#@!`~|\\]/;
+      
+      if (name && (dangerousPatterns.test(name) || !namePattern.test(name))) {
+        nameInput.classList.add('border-red-500');
+        nameInput.classList.remove('border-slate-300');
+        
+        let nameWarning = document.getElementById(warningId);
+        if (!nameWarning) {
+          nameWarning = document.createElement('li');
+          nameWarning.id = warningId;
+          warningList.appendChild(nameWarning);
+        }
+        nameWarning.textContent = `${inputId === 'firstName' ? 'First' : 'Last'} name contains invalid characters. Only letters, spaces, hyphens (-), and apostrophes (') are allowed.`;
+        
+        warningsDiv.classList.remove('hidden');
+        return false;
+      } else {
+        nameInput.classList.remove('border-red-500');
+        nameInput.classList.add('border-slate-300');
+        
+        const nameWarning = document.getElementById(warningId);
+        if (nameWarning) {
+          nameWarning.remove();
+        }
+        
+        // Hide warnings if no warnings left
+        if (warningList.children.length === 0) {
+          warningsDiv.classList.add('hidden');
+        }
+        return true;
+      }
+    }
+
+    // Form submission validation
+    document.getElementById('officerForm').addEventListener('submit', function(e) {
+      const idValid = validateStudentId();
+      const firstNameValid = validateName('firstName', 'firstNameWarning');
+      const lastNameValid = validateName('lastName', 'lastNameWarning');
+      
+      if (!idValid || !firstNameValid || !lastNameValid) {
+        e.preventDefault();
+        showToast('Please fix the validation errors before submitting.', 'error', 'Validation Error');
+        return false;
+      }
+    });
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+  </script>
+  <script src="/js/departmentPrograms.js"></script>
+
+  <!-- Toast Container -->
+  <div id="toastContainer"></div>
+
+  <script>
+    // Toast Notification Function
+    function showToast(message, type = 'error', title = null) {
+      const container = document.getElementById('toastContainer');
+      if (!container) {
+        const newContainer = document.createElement('div');
+        newContainer.id = 'toastContainer';
+        newContainer.style.cssText = 'position: fixed; top: 24px; right: 24px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; pointer-events: none;';
+        document.body.appendChild(newContainer);
+        container = newContainer;
+      }
+
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+
+      const icons = {
+        success: '<i class="fas fa-check-circle"></i>',
+        error: '<i class="fas fa-exclamation-circle"></i>',
+        warning: '<i class="fas fa-exclamation-triangle"></i>',
+        info: '<i class="fas fa-info-circle"></i>'
+      };
+
+      const icon = icons[type] || icons.error;
+
+      toast.innerHTML = `
+        <div class="toast-icon">${icon}</div>
+        <div class="toast-content">
+          ${title ? `<div class="toast-title">${title}</div>` : ''}
+          <div class="toast-message">${message}</div>
+        </div>
+        <div class="toast-close" onclick="this.parentElement.remove()">×</div>
+      `;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+          if (toast.parentElement) {
+            toast.remove();
+          }
+        }, 300);
+      }, 5000);
+    }
   </script>
 </body>
 </html>

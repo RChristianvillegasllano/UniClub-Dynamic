@@ -19,10 +19,15 @@ router.get("/", async (req, res) => {
 router.post("/", async (req, res) => {
   try {
     const { name, birthday, student_id, department, program, club, role, permissions } = req.body;
-    const { rows } = await pool.query(
+    // MySQL doesn't support RETURNING, so insert then fetch
+    await pool.query(
       `INSERT INTO officers (name, birthday, student_id, department, program, club, role, permissions)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+       VALUES (?,?,?,?,?,?,?,?)`,
       [name, birthday, student_id, department, program, club, role, permissions]
+    );
+    // Fetch the inserted record
+    const { rows } = await pool.query(
+      `SELECT * FROM officers WHERE id = LAST_INSERT_ID()`
     );
     res.json(rows[0]);
   } catch (err) {
@@ -37,7 +42,7 @@ router.put("/:id", async (req, res) => {
     const { id } = req.params;
     const { name, birthday, student_id, department, program, club, role, permissions } = req.body;
     await pool.query(
-      `UPDATE officers SET name=$1, birthday=$2, student_id=$3, department=$4, program=$5, club=$6, role=$7, permissions=$8 WHERE id=$9`,
+      `UPDATE officers SET name=?, birthday=?, student_id=?, department=?, program=?, club=?, role=?, permissions=? WHERE id=?`,
       [name, birthday, student_id, department, program, club, role, permissions, id]
     );
     res.json({ message: "Officer updated successfully" });
@@ -51,7 +56,7 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
-    await pool.query("DELETE FROM officers WHERE id=$1", [id]);
+    await pool.query("DELETE FROM officers WHERE id=?", [id]);
     res.json({ message: "Officer deleted successfully" });
   } catch (err) {
     console.error("Error deleting officer:", err);

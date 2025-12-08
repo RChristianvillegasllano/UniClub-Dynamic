@@ -3,79 +3,758 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <title>Manage Clubs | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="stylesheet" href="/styles/table.css" />
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+
+    /* Club avatar/icon */
+    .club-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-transform: uppercase;
+      margin-right: 0.75rem;
+      flex-shrink: 0;
+    }
+
+    /* Enhanced row hover with transform and shadow */
+    .club-row {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+
+    .club-row:hover {
+      background-color: #eff6ff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+    }
+
+    /* Soft shadows */
+    .shadow-soft {
+      box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    /* Status badge styles - matching officers/students */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.4rem 0.85rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .status-badge:hover {
+      transform: translateY(-1px);
+    }
+
+    .status-active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .status-inactive {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    /* Status menu - matching officers/students */
+    .status-menu {
+      position: fixed;
+      background: #ffffff;
+      border-radius: 0.85rem;
+      box-shadow: 0 18px 40px rgba(15, 23, 42, 0.15);
+      border: 1px solid #e2e8f0;
+      padding: 0.35rem;
+      z-index: 1200;
+      width: 190px;
+    }
+
+    .status-menu button {
+      width: 100%;
+      background: transparent;
+      border: none;
+      text-align: left;
+      padding: 0.45rem 0.7rem;
+      border-radius: 0.6rem;
+      font-size: 0.78rem;
+      color: #1f2937;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .status-menu button:hover {
+      background: #f8fafc;
+      transform: translateX(2px);
+    }
+
+    /* Badge styles */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 9999px;
+      padding: 0.25rem 0.7rem;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .badge-slate {
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .badge-blue {
+      background-color: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .badge-green {
+      background-color: #dcfce7;
+      color: #166534;
+    }
+
+    /* Inline editing styles */
+    .editable-cell {
+      cursor: pointer;
+      position: relative;
+      padding: 0.25rem 0.5rem;
+      margin: -0.25rem -0.5rem;
+      border-radius: 4px;
+      transition: background-color 0.2s ease;
+    }
+
+    .editable-cell:hover {
+      background-color: #f0f9ff;
+    }
+
+    .editable-cell.editing {
+      padding: 0;
+    }
+
+    .editable-cell input,
+    .editable-cell select {
+      width: 100%;
+      padding: 0.5rem;
+      border: 2px solid #3b82f6;
+      border-radius: 4px;
+      font-size: inherit;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .editable-cell input:focus,
+    .editable-cell select:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Modal styles */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1300;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      background: #ffffff;
+      border-radius: 1rem;
+      padding: 1.5rem 1.75rem;
+      width: min(420px, 90vw);
+      box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
+    }
+
+    /* Table anchor for few rows */
+    .table-anchor {
+      min-height: 400px;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
-    <!-- Sidebar (uniform) -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/clubs'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
+    <!-- Sidebar -->
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/clubs'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main -->
-    <main class="flex flex-col gap-4">
-      <header class="mb-6 flex items-center justify-between">
+    <main class="flex flex-col gap-4 lg:mt-0 mt-16">
+      <!-- Header -->
+      <header class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 class="text-2xl font-bold text-slate-800">Manage Clubs</h1>
           <p class="text-sm text-slate-500">View, edit, or register student clubs</p>
         </div>
-        <a href="/admin/clubs/add"
-           class="flex items-center gap-2 px-4 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#870107] transition">
-          <i data-lucide="plus"></i> Add Club
-        </a>
+        <div class="flex items-center gap-2">
+          <a href="/admin/clubs/add"
+             class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm flex items-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add Club
+          </a>
+        </div>
       </header>
 
-      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <!-- Filters -->
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6">
+        <form method="GET" action="/admin/clubs" id="filterForm" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Search club</label>
+            <input type="text" name="search" value="<%= typeof _filters !== 'undefined' && _filters.search ? _filters.search : '' %>" placeholder="Name, description, or adviser" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Department</label>
+            <select name="department" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" title="Filter by department">
+              <option value="">All Departments</option>
+              <% if (typeof _departments !== 'undefined' && _departments) { %>
+                <% _departments.forEach(dept => { %>
+                  <option value="<%= dept %>" <%= (typeof _filters !== 'undefined' && _filters && _filters.department === dept) ? 'selected' : '' %>><%= dept %></option>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Category</label>
+            <select name="category" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" title="Filter by category">
+              <option value="">All Categories</option>
+              <% if (typeof _categories !== 'undefined' && _categories) { %>
+                <% _categories.forEach(cat => { %>
+                  <option value="<%= cat %>" <%= (typeof _filters !== 'undefined' && _filters && _filters.category === cat) ? 'selected' : '' %>><%= cat %></option>
+                <% }) %>
+              <% } %>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
+            <select name="status" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" title="Filter by status">
+              <option value="">All Status</option>
+              <option value="Active" <%= (typeof _filters !== 'undefined' && _filters && _filters.status === 'Active') ? 'selected' : '' %>>Active</option>
+              <option value="Inactive" <%= (typeof _filters !== 'undefined' && _filters && _filters.status === 'Inactive') ? 'selected' : '' %>>Inactive</option>
+            </select>
+          </div>
+          <div class="flex items-end gap-2">
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex-1">Search</button>
+            <a href="/admin/clubs" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">Reset</a>
+          </div>
+        </form>
+      </section>
+
+      <!-- Clubs Table -->
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6 table-anchor">
         <% if (clubs && clubs.length > 0) { %>
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-              <thead class="bg-slate-100 text-slate-700">
-                <tr>
-                  <th class="p-3 text-left font-semibold">Name</th>
-                  <th class="p-3 text-left font-semibold">Department</th>
-                  <th class="p-3 text-left font-semibold">Program</th>
-                  <th class="p-3 text-left font-semibold">Adviser</th>
-                  <th class="p-3 text-left font-semibold">Status</th>
-                  <th class="p-3 text-center font-semibold">Actions</th>
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full border-collapse text-sm" data-clubs-table>
+              <thead class="bg-slate-100 text-slate-700 text-xs uppercase tracking-wide sticky top-0 z-10">
+                <tr class="text-left">
+                  <th class="p-3 font-semibold">Club</th>
+                  <th class="p-3 font-semibold">Category</th>
+                  <th class="p-3 font-semibold">Department</th>
+                  <th class="p-3 font-semibold">Adviser</th>
+                  <th class="p-3 font-semibold">Officers</th>
+                  <th class="p-3 font-semibold">Events</th>
+                  <th class="p-3 font-semibold">Status</th>
+                  <th class="p-3 font-semibold text-center">Actions</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200">
                 <% clubs.forEach(c => { %>
-                  <tr class="hover:bg-slate-50">
-                    <td class="p-3"><%= c.name %></td>
-                    <td class="p-3"><%= c.department || '—' %></td>
-                    <td class="p-3"><%= c.program || '—' %></td>
-                    <td class="p-3"><%= c.adviser || '—' %></td>
-                    <td class="p-3"><span class="px-2 py-1 text-xs rounded <%= c.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600' %>"><%= c.status %></span></td>
-                    <td class="p-3 flex justify-center gap-2">
-                      <a href="/admin/clubs/edit/<%= c.id %>" class="px-3 py-1 rounded-md bg-blue-500 text-white text-xs hover:bg-blue-600">
-                        <i data-lucide="edit-3" class="w-3 h-3"></i> Edit
-                      </a>
-                      <form action="/admin/clubs/delete/<%= c.id %>" method="POST" onsubmit="return confirm('Delete this club?')">
-                        <button type="submit"
-                               class="px-3 py-1 rounded-md bg-red-500 text-white text-xs hover:bg-red-600">
-                          <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
+                  <% const status = (c.status || 'Active'); %>
+                  <tr class="club-row" data-club-id="<%= c.id %>">
+                    <td class="p-3">
+                      <div class="flex items-center gap-3">
+                        <div class="club-avatar overflow-hidden" title="<%= c.name %>">
+                          <% if (c.photo) { %>
+                            <img src="<%= c.photo %>" alt="<%= c.name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+                          <% } %>
+                          <div class="<%= c.photo ? 'hidden' : 'flex' %> w-full h-full items-center justify-center">
+                            <%= (c.name || '?').charAt(0) %><%= (c.name || '').charAt(1) || '' %>
+                          </div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                          <div class="font-semibold text-slate-800 text-sm">
+                            <span class="editable-cell" data-field="name" data-club-id="<%= c.id %>" data-original="<%= c.name || '' %>" title="Double-click to edit name">
+                              <%= c.name %>
+                            </span>
+                          </div>
+                          <% if (c.description) { %>
+                            <div class="mt-0.5 text-xs text-slate-500 line-clamp-1">
+                              <%= c.description.length > 60 ? c.description.substring(0, 60) + '...' : c.description %>
+                            </div>
+                          <% } %>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="badge badge-blue editable-cell" data-field="category" data-club-id="<%= c.id %>" data-original="<%= c.category || '' %>" title="Double-click to edit category">
+                        <i data-lucide="tag" class="w-3 h-3"></i><%= c.category || 'Uncategorized' %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="editable-cell" data-field="department" data-club-id="<%= c.id %>" data-original="<%= c.department || '' %>" title="Double-click to edit department">
+                        <%= c.department || '—' %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="editable-cell" data-field="adviser" data-club-id="<%= c.id %>" data-original="<%= c.adviser || '' %>" title="Double-click to edit adviser">
+                        <%= c.adviser || '—' %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="badge badge-slate" title="Number of officers">
+                        <i data-lucide="users" class="w-3 h-3"></i><%= c.officer_count || 0 %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <span class="badge badge-green" title="Number of events">
+                        <i data-lucide="calendar" class="w-3 h-3"></i><%= c.event_count || 0 %>
+                      </span>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <button type="button"
+                              class="status-badge <%= status.toLowerCase() === 'active' ? 'status-active' : 'status-inactive' %>"
+                              data-status-pill
+                              data-status="<%= status %>"
+                              data-club-id="<%= c.id %>"
+                              title="Click to update status">
+                        <span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>
+                        <%= status %>
+                      </button>
+                    </td>
+                    <td class="p-3 align-middle">
+                      <div class="flex items-center justify-center gap-2">
+                        <a href="/admin/clubs/edit/<%= c.id %>"
+                           class="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700 transition shadow-sm flex items-center gap-1.5"
+                           title="Edit club">
+                          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i> Edit
+                        </a>
+                        <button type="button"
+                                data-delete-club
+                                data-club-id="<%= c.id %>"
+                                data-club-name="<%= c.name %>"
+                                class="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition shadow-sm flex items-center gap-1.5"
+                                title="Delete club">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
                         </button>
-                      </form>
+                      </div>
                     </td>
                   </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
+          <p class="mt-4 text-xs text-slate-400">Tip: double-click club name, category, department, or adviser to edit inline. Click the status pill to update availability.</p>
         <% } else { %>
           <p class="text-center text-slate-500 py-6">No clubs found. Add your first club to get started!</p>
         <% } %>
       </section>
 
+      <!-- Footer -->
       <footer class="text-center text-xs text-slate-400 py-4 border-t mt-8">
         &copy; <%= new Date().getFullYear() %> UniClub Management System. All rights reserved.
       </footer>
     </main>
   </div>
 
-  <script> window.lucide && window.lucide.replace(); </script>
+  <!-- Delete confirmation modal -->
+  <div id="deleteModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-card">
+      <div class="flex items-start gap-3">
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-red-600">
+          <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+        </div>
+        <div class="flex-1">
+          <h3 id="deleteModalTitle" class="text-lg font-semibold text-slate-800">Delete Club</h3>
+          <p class="mt-1 text-sm text-slate-500">
+            Are you sure you want to remove <span id="deleteClubName" class="font-medium text-slate-700"></span>? This action cannot be undone.
+          </p>
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-2">
+        <button type="button" id="cancelDeleteBtn" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100">
+          Cancel
+        </button>
+        <form id="deleteForm" method="POST" style="display: inline;">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          <button type="submit" class="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700">
+            Delete
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[9999] space-y-2"></div>
+
+  <script>
+    // Toast notification system
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const icons = {
+        success: '<i data-lucide="check-circle" class="w-5 h-5"></i>',
+        error: '<i data-lucide="x-circle" class="w-5 h-5"></i>',
+        warning: '<i data-lucide="alert-triangle" class="w-5 h-5"></i>',
+        info: '<i data-lucide="info" class="w-5 h-5"></i>'
+      };
+      
+      const colors = {
+        success: 'bg-green-50 border-green-200 text-green-800',
+        error: 'bg-red-50 border-red-200 text-red-800',
+        warning: 'bg-amber-50 border-amber-200 text-amber-800',
+        info: 'bg-blue-50 border-blue-200 text-blue-800'
+      };
+
+      toast.className = `${colors[type] || colors.info} border-l-4 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] max-w-[500px] animate-[slideIn_0.3s_ease]`;
+      toast.innerHTML = `
+        ${icons[type] || icons.info}
+        <span class="flex-1 font-medium text-sm">${message}</span>
+        <button onclick="this.parentElement.remove()" class="text-current opacity-60 hover:opacity-100">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      `;
+
+      container.appendChild(toast);
+      
+      // Re-render lucide icons
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+
+      // Auto remove after duration
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+
+      return toast;
+    }
+
+    // Add CSS animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateX(0);
+          opacity: 1;
+        }
+      }
+      @keyframes slideOut {
+        from {
+          transform: translateX(0);
+          opacity: 1;
+        }
+        to {
+          transform: translateX(100%);
+          opacity: 0;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  </script>
+
+  <script>
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
+    }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+    // Delete modal
+    let currentDeleteClubId = null;
+    
+    function showDeleteModal(clubId, clubName) {
+      const modal = document.getElementById('deleteModal');
+      const nameSpan = document.getElementById('deleteClubName');
+      
+      currentDeleteClubId = clubId;
+      nameSpan.textContent = clubName;
+      modal.classList.add('active');
+    }
+
+    function closeDeleteModal() {
+      const modal = document.getElementById('deleteModal');
+      modal.classList.remove('active');
+      currentDeleteClubId = null;
+    }
+
+    document.getElementById('cancelDeleteBtn')?.addEventListener('click', closeDeleteModal);
+
+    document.querySelectorAll('[data-delete-club]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const clubId = btn.dataset.clubId;
+        const clubName = btn.dataset.clubName;
+        showDeleteModal(clubId, clubName);
+      });
+    });
+
+    // Handle delete form submission
+    const deleteForm = document.getElementById('deleteForm');
+    if (deleteForm) {
+      deleteForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        if (!currentDeleteClubId) {
+          showToast('Error: No club selected for deletion', 'error');
+          return;
+        }
+
+        const submitBtn = deleteForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Deleting...';
+
+        try {
+          // Get CSRF token from the form
+          const csrfToken = deleteForm.querySelector('input[name="_csrf"]')?.value || '';
+          
+          // Use URLSearchParams for CSRF compatibility
+          const params = new URLSearchParams();
+          params.append('_csrf', csrfToken);
+          
+          const response = await fetch(`/admin/clubs/delete/${currentDeleteClubId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Accept': 'application/json'
+            },
+            body: params.toString(),
+            credentials: 'same-origin'
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            const errorMessage = data.error || 'Failed to delete club';
+            throw new Error(errorMessage);
+          }
+
+          // Success - close modal, show toast and reload page
+          closeDeleteModal();
+          showToast(data.message || 'Club deleted successfully', 'success');
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } catch (error) {
+          console.error('Error deleting club:', error);
+          showToast('Error: ' + error.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+      });
+    }
+
+    // Status menu functionality - matching officers/students pages
+    (function () {
+      const statusOptions = ["Active", "Inactive"];
+      const statusClassMap = {
+        "Active": "status-active",
+        "Inactive": "status-inactive"
+      };
+
+      function handleOutsideStatusMenu(event) {
+        if (!event.target.closest('.status-menu') && !event.target.closest('[data-status-pill]')) {
+          closeStatusMenu();
+        }
+      }
+
+      function closeStatusMenu() {
+        document.querySelectorAll('.status-menu').forEach(menu => menu.remove());
+        document.removeEventListener('click', handleOutsideStatusMenu);
+      }
+
+      function openStatusMenu(button) {
+        closeStatusMenu();
+        const clubId = button.dataset.clubId;
+        const currentStatus = button.dataset.status || "Active";
+        const rect = button.getBoundingClientRect();
+
+        const menu = document.createElement('div');
+        menu.className = 'status-menu';
+
+        statusOptions.forEach(status => {
+          const option = document.createElement('button');
+          option.type = 'button';
+          option.innerHTML = `
+            <span class="inline-flex h-2.5 w-2.5 rounded-full ${statusClassMap[status] || 'bg-slate-200'}"></span>
+            <span>${status}</span>
+          `;
+          if (status === currentStatus) {
+            option.style.fontWeight = '600';
+          }
+          option.addEventListener('click', () => updateStatus(clubId, status, button));
+          menu.appendChild(option);
+        });
+
+        document.body.appendChild(menu);
+        menu.style.top = `${rect.bottom + window.scrollY + 6}px`;
+        menu.style.left = `${rect.left + window.scrollX}px`;
+
+        setTimeout(() => document.addEventListener('click', handleOutsideStatusMenu), 0);
+      }
+
+      async function updateStatus(id, status, button) {
+        try {
+          const response = await fetch(`/admin/clubs/${id}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+          });
+          const result = await response.json();
+          if (!result.success) throw new Error(result.error || 'Failed to update status');
+          button.dataset.status = status;
+          button.className = `status-badge ${statusClassMap[status] || 'status-active'}`;
+          button.innerHTML = `<span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>${status}`;
+        } catch (error) {
+          showToast(error.message || 'Unable to update status right now.', 'error');
+        } finally {
+          closeStatusMenu();
+        }
+      }
+
+      document.querySelectorAll('[data-status-pill]').forEach(button => {
+        button.addEventListener('click', (event) => {
+          event.stopPropagation();
+          openStatusMenu(button);
+        });
+      });
+    })();
+
+    const refreshIcons = () => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons();
+      } else if (window.lucide?.replace) {
+        window.lucide.replace();
+      }
+    };
+
+    // Inline editing
+    document.querySelectorAll('.editable-cell').forEach(cell => {
+      cell.addEventListener('dblclick', function() {
+        if (this.classList.contains('editing')) return;
+        
+        const field = this.dataset.field;
+        const clubId = this.dataset.clubId;
+        const original = this.dataset.original;
+        
+        this.classList.add('editing');
+        const currentText = this.textContent.trim();
+        
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentText;
+        
+        const oldContent = this.innerHTML;
+        this.innerHTML = '';
+        this.appendChild(input);
+        input.focus();
+        if (input.select) input.select();
+        
+        const save = async () => {
+          const newValue = input.value.trim();
+          if (newValue === original) {
+            this.innerHTML = oldContent;
+            this.classList.remove('editing');
+            return;
+          }
+          
+          try {
+            const response = await fetch(`/admin/clubs/${clubId}/field`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ field: field, value: newValue })
+            });
+            
+            const data = await response.json();
+            if (data.success) {
+              // Update display based on field type
+              if (field === 'category') {
+                this.innerHTML = `<span class="badge badge-blue"><i data-lucide="tag" class="w-3 h-3"></i>${newValue || 'Uncategorized'}</span>`;
+              } else {
+                this.textContent = newValue || '—';
+              }
+              this.dataset.original = newValue;
+              refreshIcons();
+            } else {
+              showToast('Error: ' + (data.error || 'Failed to update'), 'error');
+              this.innerHTML = oldContent;
+            }
+          } catch (error) {
+            showToast('Error: ' + error.message, 'error');
+            this.innerHTML = oldContent;
+          }
+          
+          this.classList.remove('editing');
+        };
+        
+        const cancel = () => {
+          this.innerHTML = oldContent;
+          this.classList.remove('editing');
+        };
+        
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            save();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancel();
+          }
+        });
+      });
+    });
+
+    refreshIcons();
+  </script>
 </body>
 </html>

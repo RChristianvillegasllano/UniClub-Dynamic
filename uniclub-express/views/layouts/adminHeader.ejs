@@ -28,6 +28,7 @@
     </nav>
 
     <form action="/admin/logout" method="POST" class="hidden md:block">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <button
         type="submit"
         class="bg-yellow-500 hover:bg-yellow-600 text-maroon-900 font-semibold px-4 py-2 rounded-lg"
@@ -61,6 +62,7 @@
       <a href="/admin/clubs" class="hover:text-yellow-400">Clubs</a>
       <a href="/admin/events" class="hover:text-yellow-400">Events</a>
       <form action="/admin/logout" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button
           type="submit"
           class="w-full text-left hover:text-yellow-400 mt-3"

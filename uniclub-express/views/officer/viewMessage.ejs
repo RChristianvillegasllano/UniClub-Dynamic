@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'View Message | UniClub' %></title>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: { 700: '#7a0e0e', 800: '#6a0c0c', 900: '#5b0a0a' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 font-sans text-slate-800">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <%- include('./partials/sidebar', {
+      activePage: 'messages',
+      club: (typeof club !== 'undefined' ? club : null),
+      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0)
+    }) %>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-auto">
+      <!-- Header -->
+      <header class="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div class="px-6 md:px-8 py-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <a href="/officer/messages" class="p-2 hover:bg-gray-100 rounded-lg transition">
+                <i data-lucide="arrow-left" class="w-5 h-5 text-gray-600"></i>
+              </a>
+              <div>
+                <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Message</h1>
+                <p class="text-sm text-gray-600 mt-1">View message details</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Message Content -->
+      <div class="p-6 md:p-8 max-w-4xl">
+        <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <!-- Message Header -->
+          <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div class="flex items-start justify-between">
+              <div class="flex-1">
+                <h2 class="text-xl font-bold text-gray-900 mb-2"><%= message.subject %></h2>
+                <div class="flex items-center gap-4 text-sm text-gray-600">
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="user" class="w-4 h-4"></i>
+                    <span><%= message.sender_name || 'Admin' %></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="mail" class="w-4 h-4"></i>
+                    <span><%= message.sender_email || 'admin@uniclub.local' %></span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                    <span>
+                      <%= message.created_at ? new Date(message.created_at).toLocaleString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      }) : '' %>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <% if (!message.read) { %>
+                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">New</span>
+              <% } %>
+            </div>
+          </div>
+
+          <!-- Message Body -->
+          <div class="px-6 py-6">
+            <div class="prose max-w-none">
+              <p class="text-gray-700 whitespace-pre-wrap leading-relaxed"><%= message.content %></p>
+            </div>
+          </div>
+
+          <!-- Message Footer -->
+          <div class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div class="flex items-center justify-between">
+              <a href="/officer/messages" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition text-sm font-medium">
+                <i data-lucide="arrow-left" class="w-4 h-4 inline mr-1"></i> Back to Messages
+              </a>
+              <div class="text-xs text-gray-500">
+                <% if (message.recipient_name) { %>
+                  Sent to: <%= message.recipient_name %>
+                <% } else if (message.recipient_type === 'officer' && !message.recipient_id) { %>
+                  Sent to: All Officers
+                <% } %>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
+

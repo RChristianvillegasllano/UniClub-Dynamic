@@ -5,95 +5,333 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reports | UniClub Admin</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="icon" href="/img/uniclub-logo.png" />
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* Mobile sidebar toggle */
+    @media (max-width: 1024px) {
+      .sidebar-hidden {
+        transform: translateX(-100%);
+      }
+    }
+    
+    /* Soft shadows - matching students/officers */
+    .shadow-soft {
+      box-shadow: 0 22px 40px rgba(15, 23, 42, 0.08);
+    }
+    
+    /* Report row hover effects - matching students/officers */
+    .report-row {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+    }
+    
+    .report-row:hover {
+      background-color: #eff6ff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12);
+    }
+    
+    /* Truncate long text */
+    .truncate-text {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* Table readability */
+    .report-table tbody tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .report-table tbody tr:hover {
+      background-color: #eef2ff;
+    }
+
+    .report-table td.muted-column,
+    .report-table th.muted-column {
+      color: #64748b;
+    }
+
+    /* Filter chips */
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.15rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: #e2e8f0;
+      color: #1e293b;
+    }
+
+    /* Permission badges */
+    .permission-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      border: 1px solid #bfdbfe;
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .permission-badge.danger {
+      border-color: #fecaca;
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .officer-report-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    .officer-report-table thead {
+      background: #f8fafc;
+    }
+
+    .officer-report-table th {
+      font-size: 0.7rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #475569;
+      padding: 0.75rem 1rem;
+    }
+
+    .officer-report-table tbody tr {
+      transition: background-color 0.15s ease, transform 0.15s ease;
+    }
+
+    .officer-report-table tbody tr:hover {
+      background-color: #f8fafc;
+      transform: translateY(-1px);
+    }
+
+    .officer-report-cell {
+      padding: 1rem;
+      vertical-align: middle;
+    }
+
+    .officer-report-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 9999px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .officer-report-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      border-radius: 9999px;
+      padding: 0.2rem 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .officer-report-badge.blue {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .officer-report-badge.gray {
+      background: #e2e8f0;
+      color: #475569;
+    }
+
+    .officer-report-status {
+      border-radius: 999px;
+      padding: 0.25rem 0.85rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .officer-report-status.active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .officer-report-status.inactive {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .officer-report-status.graduated {
+      background: #e0e7ff;
+      color: #3730a3;
+    }
+
+    /* Sticky columns for officer reports */
+    @media (min-width: 1024px) {
+      .officers-report-table th,
+      .officers-report-table td {
+        white-space: nowrap;
+      }
+      .officers-report-table th:nth-child(1),
+      .officers-report-table td:nth-child(1) {
+        position: sticky;
+        left: 0;
+        width: 220px;
+        min-width: 220px;
+        max-width: 220px;
+        background: #ffffff;
+        z-index: 5;
+        box-shadow: inset -1px 0 0 #e2e8f0;
+      }
+      .officers-report-table th:nth-child(2),
+      .officers-report-table td:nth-child(2) {
+        position: sticky;
+        left: 220px;
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+        background: #ffffff;
+        z-index: 4;
+        box-shadow: inset -1px 0 0 #e2e8f0;
+      }
+      .officers-report-table th:nth-child(3),
+      .officers-report-table td:nth-child(3) {
+        position: sticky;
+        left: 360px;
+        width: 170px;
+        min-width: 170px;
+        max-width: 170px;
+        background: #ffffff;
+        z-index: 3;
+        box-shadow: inset -1px 0 0 #e2e8f0;
+      }
+      .officers-report-table th:nth-child(4),
+      .officers-report-table td:nth-child(4) {
+        position: sticky;
+        left: 530px;
+        width: 140px;
+        min-width: 140px;
+        max-width: 140px;
+        background: #ffffff;
+        z-index: 2;
+        box-shadow: inset -1px 0 0 #e2e8f0;
+      }
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50 font-sans text-slate-800">
-  <div class="min-h-screen grid grid-cols-[260px_1fr] gap-6 p-6">
+  <!-- Mobile menu button -->
+  <button id="mobileMenuBtn" class="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-100 transition">
+    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+    </svg>
+  </button>
+  <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
     <!-- Sidebar -->
-    <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/reports'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
+      <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/reports'), messages: (typeof messages !== 'undefined' ? messages : []) }) %>
+    </div>
+    <!-- Overlay for mobile -->
+    <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
 
     <!-- Main -->
-    <main class="flex flex-col gap-6">
+    <main class="flex flex-col gap-6 lg:mt-0 mt-16">
+      <!-- Enhanced Header -->
       <header class="flex items-center justify-between">
         <div>
-          <h1 class="text-2xl font-bold text-slate-800">Reports</h1>
-          <p class="text-sm text-slate-500">Generate and export detailed reports</p>
+          <h1 class="text-3xl font-bold text-slate-800 mb-1">📊 Reports</h1>
+          <p class="text-sm text-slate-500">Generate and export detailed system reports</p>
         </div>
       </header>
 
-      <!-- Report Type Selector -->
+      <!-- Enhanced Report Type Selector -->
       <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 class="text-lg font-semibold mb-4">Select Report Type</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <a href="/admin/reports?type=overview" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'overview' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">📊</div>
-            <div class="font-semibold text-sm">Overview</div>
-          </a>
+        <h2 class="text-xl font-bold text-slate-800 mb-1">Report Types</h2>
+        <p class="text-sm text-slate-500 mb-6">Select a report category to view detailed analytics</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <a href="/admin/reports?type=students" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'students' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">👩‍🎓</div>
-            <div class="font-semibold text-sm">Students</div>
+             class="px-5 py-4 rounded-xl border-2 transition-all duration-200 <%= reportType === 'students' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md scale-105' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm' %>">
+            <div class="text-3xl mb-2">👩‍🎓</div>
+            <div class="font-bold text-sm mb-1">Students</div>
+            <div class="text-xs text-slate-500">Student records</div>
           </a>
           <a href="/admin/reports?type=clubs" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'clubs' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">🏛️</div>
-            <div class="font-semibold text-sm">Clubs</div>
+             class="px-5 py-4 rounded-xl border-2 transition-all duration-200 <%= reportType === 'clubs' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md scale-105' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm' %>">
+            <div class="text-3xl mb-2">🏛️</div>
+            <div class="font-bold text-sm mb-1">Clubs</div>
+            <div class="text-xs text-slate-500">Club information</div>
           </a>
           <a href="/admin/reports?type=officers" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'officers' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">👔</div>
-            <div class="font-semibold text-sm">Officers</div>
+             class="px-5 py-4 rounded-xl border-2 transition-all duration-200 <%= reportType === 'officers' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md scale-105' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm' %>">
+            <div class="text-3xl mb-2">👔</div>
+            <div class="font-bold text-sm mb-1">Officers</div>
+            <div class="text-xs text-slate-500">Officer details</div>
           </a>
           <a href="/admin/reports?type=events" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'events' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">🎉</div>
-            <div class="font-semibold text-sm">Events</div>
+             class="px-5 py-4 rounded-xl border-2 transition-all duration-200 <%= reportType === 'events' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md scale-105' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm' %>">
+            <div class="text-3xl mb-2">🎉</div>
+            <div class="font-bold text-sm mb-1">Events</div>
+            <div class="text-xs text-slate-500">Event listings</div>
           </a>
           <a href="/admin/reports?type=requirements" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'requirements' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">📋</div>
-            <div class="font-semibold text-sm">Requirements</div>
+             class="px-5 py-4 rounded-xl border-2 transition-all duration-200 <%= reportType === 'requirements' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md scale-105' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm' %>">
+            <div class="text-3xl mb-2">📋</div>
+            <div class="font-bold text-sm mb-1">Requirements</div>
+            <div class="text-xs text-slate-500">Requirement status</div>
           </a>
           <a href="/admin/reports?type=activities" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'activities' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">🎯</div>
-            <div class="font-semibold text-sm">Activities</div>
+             class="px-5 py-4 rounded-xl border-2 transition-all duration-200 <%= reportType === 'activities' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md scale-105' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm' %>">
+            <div class="text-3xl mb-2">🎯</div>
+            <div class="font-bold text-sm mb-1">Activities</div>
+            <div class="text-xs text-slate-500">Activity logs</div>
           </a>
           <a href="/admin/reports?type=messages" 
-             class="px-4 py-3 rounded-xl border-2 transition <%= reportType === 'messages' ? 'border-red-700 bg-red-50 text-red-700' : 'border-gray-200 hover:border-red-300' %>">
-            <div class="text-2xl mb-2">💬</div>
-            <div class="font-semibold text-sm">Messages</div>
+             class="px-5 py-4 rounded-xl border-2 transition-all duration-200 <%= reportType === 'messages' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md scale-105' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm' %>">
+            <div class="text-3xl mb-2">💬</div>
+            <div class="font-bold text-sm mb-1">Messages</div>
+            <div class="text-xs text-slate-500">Message history</div>
           </a>
         </div>
       </section>
 
       <!-- Filters -->
       <% if (reportType !== 'overview') { %>
-      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 class="text-lg font-semibold mb-4">Filters</h2>
-        <form method="get" action="/admin/reports" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6">
+        <h2 class="text-lg font-semibold text-slate-800 mb-4">Filters</h2>
+        <form method="get" action="/admin/reports" class="grid grid-cols-1 md:grid-cols-4 gap-3">
           <input type="hidden" name="type" value="<%= reportType %>">
           
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Start Date</label>
             <input type="date" name="startDate" value="<%= filters.startDate %>" 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                   class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
           </div>
           
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">End Date</label>
             <input type="date" name="endDate" value="<%= filters.endDate %>" 
-                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                   class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
           </div>
           
           <% if (reportType === 'clubs' || reportType === 'events' || reportType === 'officers' || reportType === 'requirements') { %>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Club</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Club</label>
             <select name="club_id" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
               <option value="">All Clubs</option>
               <% clubs.forEach(club => { %>
                 <option value="<%= club.id %>" <%= filters.club_id == club.id ? 'selected' : '' %>><%= club.name %></option>
@@ -104,9 +342,9 @@
           
           <% if (reportType === 'events' || reportType === 'requirements' || reportType === 'activities') { %>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Status</label>
             <select name="status" 
-                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500">
+                    class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
               <option value="">All Statuses</option>
               <option value="Active" <%= filters.status === 'Active' ? 'selected' : '' %>>Active</option>
               <option value="Pending" <%= filters.status === 'Pending' ? 'selected' : '' %>>Pending</option>
@@ -118,12 +356,12 @@
           
           <div class="flex items-end gap-2">
             <button type="submit" 
-                    class="px-4 py-2 bg-red-700 hover:bg-red-800 text-white rounded-lg font-semibold transition">
-              Apply Filters
+                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm flex-1">
+              Search
             </button>
             <a href="/admin/reports?type=<%= reportType %>" 
-               class="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-semibold transition">
-              Clear
+               class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition">
+              Reset
             </a>
           </div>
         </form>
@@ -131,119 +369,304 @@
       <% } %>
 
       <!-- Report Content -->
-      <section class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold"><%= reportTitle %></h2>
+      <section class="bg-white rounded-2xl border border-gray-200 shadow-soft p-6">
+        <%
+          const hasActiveFilters = filters && (filters.startDate || filters.endDate || filters.club_id || filters.status);
+          const chipData = [];
+          if (filters && filters.startDate) {
+            chipData.push({ label: 'From', value: filters.startDate });
+          }
+          if (filters && filters.endDate) {
+            chipData.push({ label: 'To', value: filters.endDate });
+          }
+          if (filters && filters.club_id) {
+            const selectedClub = Array.isArray(clubs) ? clubs.find(c => String(c.id) === String(filters.club_id)) : null;
+            chipData.push({ label: 'Club', value: selectedClub ? selectedClub.name : filters.club_id });
+          }
+          if (filters && filters.status) {
+            chipData.push({ label: 'Status', value: filters.status });
+          }
+        %>
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+          <div class="flex-1">
+            <h2 class="text-2xl font-bold text-slate-800 mb-1"><%= reportTitle %></h2>
+            <% if (reportType !== 'overview' && Array.isArray(reportData) && reportData.length > 0) { %>
+              <p class="text-sm text-slate-500">
+                Showing <strong><%= reportData.length %></strong> record<%= reportData.length !== 1 ? 's' : '' %>
+                <% if (hasActiveFilters) { %>
+                  <span class="text-xs text-slate-400 ml-2">(filtered)</span>
+                <% } %>
+              </p>
+            <% } %>
+            <% if (hasActiveFilters && chipData.length > 0) { %>
+              <div class="flex flex-wrap gap-2 mt-2">
+                <% chipData.forEach(function(chip) { %>
+                  <span class="filter-chip">
+                    <span class="uppercase text-[10px] text-slate-500"><%= chip.label %>:</span>
+                    <span><%= chip.value %></span>
+                  </span>
+                <% }); %>
+              </div>
+            <% } %>
+          </div>
+          <div class="flex items-center gap-3">
+            <% if (hasActiveFilters) { %>
+              <a href="/admin/reports?type=<%= reportType %>" class="text-xs font-semibold text-blue-600 hover:underline">
+                Reset filters
+              </a>
+            <% } %>
           <% if (reportType !== 'overview' && Array.isArray(reportData) && reportData.length > 0) { %>
           <a href="/admin/reports/export?type=<%= reportType %>&startDate=<%= filters.startDate %>&endDate=<%= filters.endDate %>&club_id=<%= filters.club_id %>&status=<%= filters.status %>" 
-             class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition">
-            <i data-lucide="download"></i> Export CSV
+             class="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition shadow-sm">
+            <i data-lucide="download" class="w-4 h-4"></i> Export CSV
           </a>
           <% } %>
+          </div>
         </div>
 
-        <!-- Overview Report -->
-        <% if (reportType === 'overview') { %>
-          <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div class="bg-gradient-to-br from-red-50 to-red-100 rounded-xl p-6 border border-red-200">
-              <div class="text-sm text-red-700 font-medium mb-1">Total Students</div>
-              <div class="text-3xl font-bold text-red-800"><%= reportData.students || 0 %></div>
-            </div>
-            <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-              <div class="text-sm text-blue-700 font-medium mb-1">Total Clubs</div>
-              <div class="text-3xl font-bold text-blue-800"><%= reportData.clubs || 0 %></div>
-            </div>
-            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-              <div class="text-sm text-green-700 font-medium mb-1">Total Events</div>
-              <div class="text-3xl font-bold text-green-800"><%= reportData.events || 0 %></div>
-            </div>
-            <div class="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-              <div class="text-sm text-purple-700 font-medium mb-1">Total Officers</div>
-              <div class="text-3xl font-bold text-purple-800"><%= reportData.officers || 0 %></div>
-            </div>
-            <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-xl p-6 border border-orange-200">
-              <div class="text-sm text-orange-700 font-medium mb-1">Total Requirements</div>
-              <div class="text-3xl font-bold text-orange-800"><%= reportData.requirements || 0 %></div>
-            </div>
-            <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl p-6 border border-indigo-200">
-              <div class="text-sm text-indigo-700 font-medium mb-1">Total Messages</div>
-              <div class="text-3xl font-bold text-indigo-800"><%= reportData.messages || 0 %></div>
-            </div>
-          </div>
-        <% } else if (Array.isArray(reportData) && reportData.length > 0) { %>
-          <!-- Table Reports -->
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse text-sm">
-              <thead class="bg-slate-100 text-slate-700">
-                <tr>
-                  <% 
-                    const firstRow = reportData[0];
-                    const keys = Object.keys(firstRow);
-                    keys.forEach(key => {
-                      if (key !== 'id' || reportType === 'students' || reportType === 'officers') {
+        <!-- Report Table -->
+        <% if (Array.isArray(reportData) && reportData.length > 0) { %>
+          <!-- Enhanced Table Reports - Matching Students/Officers Design -->
+          <%
+            function parsePermissions(raw) {
+              let perms = [];
+              if (!raw) return perms;
+              try {
+                if (typeof raw === 'string') {
+                  const parsed = JSON.parse(raw);
+                  perms = Array.isArray(parsed) ? parsed : (parsed.permissions || []);
+                } else if (Array.isArray(raw)) {
+                  perms = raw;
+                } else if (typeof raw === 'object') {
+                  perms = raw.permissions || [];
+                }
+              } catch (err) {
+                perms = [];
+              }
+              return perms;
+            }
+            const permissionLabelMap = {
+              view_dashboard: 'Dashboard',
+              view_dashboard_reports: 'Reports',
+              export_reports: 'Export Reports',
+              view_members: 'Members',
+              add_members: 'Add Members',
+              edit_members: 'Edit Members',
+              remove_members: 'Remove Members',
+              approve_applications: 'Approve Applications',
+              manage_officer_roles: 'Manage Roles',
+              view_financial_records: 'Finance',
+              record_transactions: 'Record Transactions',
+              approve_expenses: 'Approve Expenses',
+              generate_financial_reports: 'Finance Reports',
+              manage_budget: 'Budget',
+              view_events: 'Events',
+              create_events: 'Create Events',
+              edit_events: 'Edit Events',
+              cancel_events: 'Cancel Events',
+              manage_attendance: 'Attendance',
+              export_event_reports: 'Event Reports',
+              view_documents: 'Documents',
+              upload_documents: 'Upload Docs',
+              edit_documents: 'Edit Docs',
+              delete_documents: 'Delete Docs',
+              download_documents: 'Download Docs',
+              manage_minutes: 'Minutes',
+              view_announcements: 'Announcements',
+              post_announcements: 'Post Announcements',
+              edit_announcements: 'Edit Announcements',
+              delete_announcements: 'Delete Announcements',
+              send_notifications: 'Notifications',
+              manage_social_media: 'Social Media',
+              view_system_settings: 'System Settings',
+              modify_system_settings: 'Modify System',
+              manage_permissions: 'Permissions',
+              view_audit_logs: 'Audit Logs',
+              backup_system: 'Backup System',
+              system_maintenance: 'System Maintenance'
+            };
+            const dangerPermissions = ['manage_officer_roles', 'manage_permissions', 'modify_system_settings', 'system_maintenance', 'delete_documents', 'delete_announcements'];
+          %>
+          <% if (reportType === 'officers') { %>
+            <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
+              <table class="officer-report-table">
+                <thead>
+                  <tr>
+                    <th>Officer</th>
+                    <th>Student ID</th>
+                    <th>Club</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Permissions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% reportData.forEach(row => { 
+                      const firstName = row.first_name || row.firstname || '';
+                      const lastName = row.last_name || row.lastname || '';
+                      const displayName = [firstName, lastName].filter(Boolean).join(' ') || row.name || '—';
+                      const initials = (firstName || displayName).charAt(0) + (lastName ? lastName.charAt(0) : '');
+                      const program = row.program || row.course || '';
+                      const department = row.department || 'No department';
+                      const studentId = row.studentid || row.student_id || '—';
+                      const clubName = row.club || row.club_name || 'Unassigned';
+                      const role = row.role || 'Member';
+                      const status = (row.status || 'Active').toLowerCase();
+                      const perms = parsePermissions(row.permissions);
                   %>
-                    <th class="p-3 text-left font-semibold capitalize"><%= key.replace(/_/g, ' ') %></th>
-                  <% 
-                      }
-                    });
-                  %>
+                    <tr class="report-row">
+                      <td class="officer-report-cell">
+                        <div class="flex items-center gap-3">
+                          <div class="officer-report-avatar"><%= initials.toUpperCase() %></div>
+                          <div class="space-y-1">
+                            <p class="font-semibold text-slate-800 leading-tight"><%= displayName %></p>
+                            <% if (program) { %>
+                              <span class="officer-report-badge gray text-xs"><%= program %></span>
+                            <% } %>
+                            <p class="text-xs text-slate-500"><%= department %></p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="officer-report-cell font-semibold text-slate-800">
+                        <%= studentId %>
+                      </td>
+                      <td class="officer-report-cell">
+                        <span class="officer-report-badge blue text-xs">
+                          <i data-lucide="shield" class="w-3 h-3"></i>
+                          <%= clubName %>
+                        </span>
+                      </td>
+                      <td class="officer-report-cell">
+                        <span class="officer-report-badge gray text-xs">
+                          <i data-lucide="award" class="w-3 h-3"></i>
+                          <%= role %>
+                        </span>
+                      </td>
+                      <td class="officer-report-cell">
+                        <span class="officer-report-status <%= status %> text-xs">
+                          <span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>
+                          <%= row.status || 'Active' %>
+                        </span>
+                      </td>
+                      <td class="officer-report-cell">
+                        <% if (!perms || perms.length === 0) { %>
+                          <span class="text-xs text-gray-400 italic">None</span>
+                        <% } else { %>
+                          <div class="flex flex-wrap gap-1">
+                            <% perms.slice(0, 4).forEach(function(p) { %>
+                              <span class="permission-badge <%= dangerPermissions.includes(p) ? 'danger' : '' %>">
+                                <%= permissionLabelMap[p] || p %>
+                              </span>
+                            <% }); %>
+                            <% if (perms.length > 4) { %>
+                              <span class="permission-badge muted-column bg-gray-50 border-gray-200 text-gray-600">
+                                +<%= perms.length - 4 %> more
+                              </span>
+                            <% } %>
+                          </div>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } else { %>
+            <%
+              const firstRow = reportData[0] || {};
+              const hiddenColumns = ['password', 'password_hash', 'hashed_password'];
+              let keys = Object.keys(firstRow).filter(key => {
+                if (hiddenColumns.includes(key)) {
+                  return false;
+                }
+                if (key === 'id' && reportType !== 'students') {
+                  return false;
+                }
+                return true;
+              });
+              const mutedColumns = ['department', 'program', 'club', 'club_name', 'email', 'phone', 'created_at', 'updated_at'];
+            %>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full border-collapse text-sm report-table">
+                <thead class="bg-slate-100 text-slate-700 text-xs uppercase tracking-wide">
+                  <tr class="text-left">
+                    <% keys.forEach(key => { %>
+                      <th class="p-3 font-semibold <%= mutedColumns.includes(key) ? 'muted-column' : '' %>">
+                        <%= key.replace(/_/g, ' ') %>
+                      </th>
+                    <% }); %>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-200">
-                <% reportData.forEach(row => { %>
-                  <tr class="hover:bg-slate-50">
+                <% reportData.forEach((row) => { %>
+                  <tr class="report-row">
                     <% 
                       keys.forEach(key => {
-                        if (key !== 'id' || reportType === 'students' || reportType === 'officers') {
+                          const cellClasses = mutedColumns.includes(key) ? 'muted-column' : '';
                           const value = row[key];
                           const displayValue = value === null || value === undefined ? '—' : value;
-                          const isDate = typeof value === 'object' && value instanceof Date;
+                          const isDate = Object.prototype.toString.call(value) === '[object Date]';
                           const dateStr = isDate ? value.toLocaleDateString() : String(displayValue);
                     %>
-                      <td class="p-3">
+                        <td class="p-3 text-slate-700 align-top <%= cellClasses %>">
                         <% if (key === 'status' || key === 'read') { %>
-                          <span class="px-2 py-1 text-xs rounded <%= 
-                            displayValue === 'Active' || displayValue === true ? 'bg-green-100 text-green-700' : 
-                            displayValue === 'Pending' ? 'bg-yellow-100 text-yellow-700' : 
-                            displayValue === 'Completed' ? 'bg-blue-100 text-blue-700' : 
-                            displayValue === 'Cancelled' || displayValue === false ? 'bg-red-100 text-red-700' : 
-                            'bg-slate-200 text-slate-600' 
+                          <span class="inline-flex items-center gap-0.5 px-2.5 py-1 rounded-full text-xs font-semibold <%= 
+                            displayValue === 'Active' || displayValue === true ? 'bg-green-100 text-green-800' : 
+                            displayValue === 'Pending' ? 'bg-yellow-100 text-yellow-800' : 
+                            displayValue === 'Completed' ? 'bg-blue-100 text-blue-800' : 
+                            displayValue === 'Cancelled' || displayValue === false ? 'bg-red-100 text-red-800' : 
+                            'bg-slate-100 text-slate-700' 
                           %>">
+                            <span class="inline-flex h-2 w-2 rounded-full bg-current opacity-70"></span>
                             <%= displayValue === true ? 'Read' : displayValue === false ? 'Unread' : displayValue %>
                           </span>
+                        <% } else if (key === 'description' && dateStr.length > 100) { %>
+                          <div class="truncate-text max-w-xs" title="<%= dateStr %>">
+                            <%= dateStr %>
+                          </div>
                         <% } else { %>
                           <%= dateStr %>
                         <% } %>
                       </td>
-                    <% 
-                        }
-                      });
-                    %>
+                      <% }); %>
                   </tr>
                 <% }) %>
               </tbody>
             </table>
           </div>
-          <div class="mt-4 text-sm text-gray-600">
-            Total records: <strong><%= reportData.length %></strong>
-          </div>
+          <% } %>
         <% } else { %>
-          <div class="text-center py-12">
-            <div class="text-4xl mb-4">📭</div>
-            <p class="text-gray-500 text-lg">No data found for this report</p>
-            <p class="text-gray-400 text-sm mt-2">Try adjusting your filters or select a different report type</p>
+          <div class="text-center py-16">
+            <div class="text-6xl mb-4">📭</div>
+            <p class="text-gray-600 text-lg font-semibold mb-2">No data found for this report</p>
+            <p class="text-gray-400 text-sm">Try adjusting your filters or select a different report type</p>
           </div>
         <% } %>
       </section>
     </main>
   </div>
 
-  <script> 
-    if (window.lucide) {
-      window.lucide.replace();
+  <script>
+    const renderLucideIcons = (options) => {
+      if (window.lucide?.createIcons) {
+        window.lucide.createIcons(options);
+      } else if (window.lucide?.replace) {
+        window.lucide.replace(options);
+      }
+    };
+
+    // Mobile sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const overlay = document.getElementById('sidebarOverlay');
+      if (sidebar && overlay) {
+        sidebar.classList.toggle('sidebar-hidden');
+        overlay.classList.toggle('hidden');
+      }
     }
+    document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+    renderLucideIcons();
   </script>
 </body>
 </html>
-
-
