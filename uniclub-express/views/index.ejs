@@ -439,16 +439,15 @@
     </div>
   </footer>
 
+  <script type="application/json" id="stats-data">
+    <%- JSON.stringify(typeof stats !== 'undefined' ? stats : { students: 0, clubs: 0, events: 0 }) %>
+  </script>
   <script>
     // Set current year dynamically
     document.getElementById('current-year').textContent = new Date().getFullYear();
 
     // Stats data from server
-    const statsData = {
-      students: <%- typeof stats !== 'undefined' ? stats.students : 0 %>,
-      clubs: <%- typeof stats !== 'undefined' ? stats.clubs : 0 %>,
-      events: <%- typeof stats !== 'undefined' ? stats.events : 0 %>
-    };
+    const statsData = JSON.parse(document.getElementById('stats-data').textContent);
 
     // Animate numbers on scroll
     function animateValue(element, start, end, duration) {
