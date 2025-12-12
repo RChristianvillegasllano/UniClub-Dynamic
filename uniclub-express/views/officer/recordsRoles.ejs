@@ -157,11 +157,14 @@
                     <tr class="hover:bg-gray-50 transition">
                       <td class="px-6 py-4">
                         <div class="flex items-center gap-3">
-                          <% if (entry.photo_url) { %>
-                            <img src="<%= entry.photo_url %>" alt="<%= entry.name %>" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary-100">
+                          <% if (entry.profile_picture) { %>
+                            <img src="<%= entry.profile_picture %>" alt="<%= entry.name %>" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary-100" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="hidden w-10 h-10 rounded-full bg-primary-100 text-primary-700 font-semibold flex items-center justify-center text-xs ring-2 ring-primary-100">
+                              <%= entry.name ? (entry.name.charAt(0).toUpperCase() + (entry.name.split(' ')[1] ? entry.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'OF' %>
+                            </div>
                           <% } else { %>
-                            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-semibold">
-                              <%= (entry.name || 'UC').split(' ').map(word => word[0]).join('').slice(0,2) %>
+                            <div class="w-10 h-10 rounded-full bg-primary-100 text-primary-700 font-semibold flex items-center justify-center text-xs ring-2 ring-primary-100">
+                              <%= entry.name ? (entry.name.charAt(0).toUpperCase() + (entry.name.split(' ')[1] ? entry.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'OF' %>
                             </div>
                           <% } %>
                           <div>

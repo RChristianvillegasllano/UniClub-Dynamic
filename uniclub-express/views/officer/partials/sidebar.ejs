@@ -15,16 +15,18 @@
   <nav class="mt-4">
     <% const sidebarActive = typeof activePage !== 'undefined' ? activePage : ''; %>
     <% 
-      // Get accessible pages - EJS automatically makes res.locals available
-      // accessiblePages should be set by the middleware in routes
+      // Get accessible pages (strict) - prefer local variable, otherwise res.locals
+      // Normalize to lowercase for reliable comparisons
       let accessiblePagesList = [];
       if (typeof accessiblePages !== 'undefined' && Array.isArray(accessiblePages)) {
         accessiblePagesList = accessiblePages;
+      } else if (typeof locals !== 'undefined' && Array.isArray(locals.accessiblePages)) {
+        accessiblePagesList = locals.accessiblePages;
       } else {
-        // Fallback: if not passed explicitly, default to showing all (for backwards compatibility)
-        // In production, this should always be set by the middleware
-        accessiblePagesList = ['all'];
+        // Safety fallback: only allow dashboard & messages
+        accessiblePagesList = ['home'];
       }
+      accessiblePagesList = accessiblePagesList.map(p => (typeof p === 'string' ? p.toLowerCase() : p));
       
       // Map sidebar items to tier page identifiers
       const sidebarPageMap = {
@@ -150,28 +152,16 @@
 </aside>
 
 <script>
-  // Records dropdown toggle functionality
+  // Records dropdown toggle functionality (event delegation so it survives rerenders)
   (function() {
-    let isInitialized = false;
+    const sidebarActive = '<%= typeof activePage !== "undefined" ? activePage : "" %>';
     
-    function initRecordsDropdown() {
-      // Prevent multiple initializations
-      if (isInitialized) return;
-      
-      const recordsToggle = document.getElementById('recordsToggle');
+    function setInitialState() {
       const recordsGroup = document.getElementById('recordsGroup');
       const recordsChevron = document.getElementById('recordsChevron');
+      const recordsToggle = document.getElementById('recordsToggle');
+      if (!recordsGroup || !recordsToggle) return;
       
-      if (!recordsToggle || !recordsGroup) {
-        // Elements not found yet, try again later
-        setTimeout(initRecordsDropdown, 100);
-        return;
-      }
-      
-      isInitialized = true;
-      
-      // Set initial state based on whether records page is active
-      const sidebarActive = '<%= typeof activePage !== "undefined" ? activePage : "" %>';
       if (sidebarActive && sidebarActive.startsWith('records')) {
         recordsGroup.classList.remove('hidden');
         if (recordsChevron) {
@@ -179,34 +169,41 @@
         }
         recordsToggle.setAttribute('aria-expanded', 'true');
       }
-      
-      // Add click event listener
-      recordsToggle.addEventListener('click', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const isHidden = recordsGroup.classList.contains('hidden');
-        recordsGroup.classList.toggle('hidden');
-        
-        if (recordsChevron) {
-          recordsChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
-        
-        // Update aria-expanded for accessibility
-        recordsToggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-      });
     }
     
-    // Run when DOM is ready
+    function handleRecordsClick(e) {
+      const toggle = e.target.closest('#recordsToggle');
+      if (!toggle) return;
+      const recordsGroup = document.getElementById('recordsGroup');
+      const recordsChevron = document.getElementById('recordsChevron');
+      if (!recordsGroup) return;
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const isHidden = recordsGroup.classList.contains('hidden');
+      recordsGroup.classList.toggle('hidden');
+      
+      if (recordsChevron) {
+        recordsChevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+      }
+      
+      toggle.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+    }
+    
+    function initRecordsDropdown() {
+      // Delay to ensure DOM + icons finished rendering
+      setInitialState();
+      document.addEventListener('click', handleRecordsClick, true);
+    }
+    
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initRecordsDropdown);
+      document.addEventListener('DOMContentLoaded', () => setTimeout(initRecordsDropdown, 50));
     } else {
-      // DOM is already ready, but wait a bit for EJS to render
       setTimeout(initRecordsDropdown, 50);
     }
     
-    // Backup: also try on window load
-    window.addEventListener('load', initRecordsDropdown);
+    window.addEventListener('load', () => setTimeout(setInitialState, 50));
   })();
 </script>
 

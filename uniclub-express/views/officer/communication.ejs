@@ -106,11 +106,14 @@
                   <p class="text-sm font-semibold text-gray-900"><%= profileName %></p>
                   <p class="text-xs text-gray-600"><%= profileRole %></p>
                 </div>
-                <% if (!isAdminView && typeof officer !== 'undefined' && officer && officer.photo_url) { %>
-                  <img src="<%= officer.photo_url %>" alt="Profile" class="w-11 h-11 rounded-full ring-2 ring-red-600 object-cover">
+                <% if (!isAdminView && typeof officer !== 'undefined' && officer && officer.profile_picture) { %>
+                  <img src="<%= officer.profile_picture %>" alt="Profile" class="w-11 h-11 rounded-full ring-2 ring-red-600 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden w-11 h-11 rounded-full ring-2 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= isAdminView ? 'AD' : ((typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC') %>
+                  </div>
                 <% } else { %>
-                  <div class="w-11 h-11 rounded-full ring-2 ring-red-600 bg-gray-200 flex items-center justify-center text-xs text-gray-600">
-                    <%= isAdminView ? 'AD' : 'UC' %>
+                  <div class="w-11 h-11 rounded-full ring-2 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= isAdminView ? 'AD' : ((typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC') %>
                   </div>
                 <% } %>
               </button>
@@ -236,6 +239,11 @@
         <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,520px)_1fr] gap-6 items-start">
           <!-- Composer -->
           <section class="space-y-6">
+            <% 
+              // Check if user can post announcements
+              var canPost = (typeof canPostAnnouncements !== 'undefined' && canPostAnnouncements) || false;
+            %>
+            <% if (canPost) { %>
             <div class="bg-white rounded-3xl shadow-xl border border-gray-200">
               <div class="flex items-center justify-between gap-4 px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-3xl">
                 <div>
@@ -389,6 +397,14 @@
                 </div>
               </form>
             </div>
+            <% } else { %>
+            <!-- View-only message for users without post permission -->
+            <div class="bg-white rounded-3xl shadow-xl border border-gray-200 p-8 text-center">
+              <i data-lucide="lock" class="w-12 h-12 text-gray-400 mx-auto mb-4"></i>
+              <h3 class="text-lg font-semibold text-gray-900 mb-2">View-Only Access</h3>
+              <p class="text-sm text-gray-600">You don't have permission to create or edit announcements. You can only view existing announcements.</p>
+            </div>
+            <% } %>
           </section>
 
           <!-- Timeline -->

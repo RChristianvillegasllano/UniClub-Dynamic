@@ -59,8 +59,11 @@
         <article class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-md p-6">
           <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-5 mb-5">
             <div class="flex items-center gap-4">
-              <% if (officer && officer.photo_url) { %>
-                <img src="<%= officer.photo_url %>" alt="Profile photo" class="w-16 h-16 rounded-2xl object-cover ring-4 ring-brand-50">
+              <% if (officer && officer.profile_picture) { %>
+                <img src="<%= officer.profile_picture %>" alt="Profile photo" class="w-16 h-16 rounded-2xl object-cover ring-4 ring-brand-50" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="hidden w-16 h-16 rounded-2xl bg-brand-600/10 text-brand-700 font-semibold flex items-center justify-center ring-4 ring-brand-50">
+                  <span><%= officer && officer.name ? officer.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() : 'OF' %></span>
+                </div>
               <% } else { %>
                 <div class="w-16 h-16 rounded-2xl bg-brand-600/10 text-brand-700 font-semibold flex items-center justify-center ring-4 ring-brand-50">
                   <span><%= officer && officer.name ? officer.name.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() : 'OF' %></span>
@@ -92,7 +95,7 @@
             </div>
             <div class="rounded-xl border border-gray-100 p-4 bg-gray-50/70">
               <p class="text-xs font-semibold uppercase text-gray-500 tracking-wide">Last updated</p>
-              <p class="text-base font-semibold text-gray-900 mt-1"><%= officer && officer.updated_at ? new Date(officer.updated_at).toLocaleDateString() : 'Recently' %></p>
+              <p class="text-base font-semibold text-gray-900 mt-1"><%= officer && (officer.updated_at || officer.created_at) ? new Date(officer.updated_at || officer.created_at).toLocaleDateString() : 'Recently' %></p>
               <p class="text-sm text-gray-500 mt-0.5">Keep your details fresh for members.</p>
             </div>
           </div>
@@ -214,6 +217,49 @@
         </form>
       </section>
 
+      <% if (typeof canEditClub !== 'undefined' && canEditClub && club) { %>
+      <section class="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <form id="clubPhotoForm" method="POST" action="/officer/club/photo" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
+          <div class="p-6 border-b border-gray-100">
+            <p class="text-xs font-semibold uppercase text-gray-500 tracking-[0.2em]">Club Management</p>
+            <h2 class="text-xl font-semibold text-gray-900 mt-1">Club Photo</h2>
+            <p class="text-sm text-gray-500 mt-1">Update your club's photo. This will be visible to all students. Max size: 5MB. Supported formats: JPG, PNG, GIF, WebP</p>
+          </div>
+          <div class="p-6 space-y-5">
+            <% if (club.photo) { %>
+              <div class="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                <div class="flex items-center gap-4">
+                  <img src="<%= club.photo %>" alt="Current club photo" class="w-24 h-24 object-cover rounded-lg border border-gray-300">
+                  <div class="flex-1">
+                    <p class="text-sm font-medium text-gray-700">Current Photo</p>
+                    <p class="text-xs text-gray-500 mt-1"><%= club.name %></p>
+                  </div>
+                  <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer hover:text-red-700">
+                    <input type="checkbox" name="delete_photo" class="rounded">
+                    <span>Delete photo</span>
+                  </label>
+                </div>
+              </div>
+            <% } %>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Upload New Photo</label>
+              <input type="file" name="photo" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" 
+                class="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+              <p class="mt-1 text-xs text-gray-500">Choose a photo to replace the current one</p>
+            </div>
+            <div id="clubPhotoError" class="hidden text-sm font-semibold text-red-600"></div>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3">
+              <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-brand-600/30 hover:bg-brand-500 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                Update Club Photo
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+      <% } %>
+
       <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <article class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-start gap-4">
           <span class="inline-flex items-center justify-center rounded-2xl bg-brand-600/10 text-brand-600 w-12 h-12">
@@ -304,6 +350,93 @@
             showError(displayError, 'Display name must be at least 3 characters.');
             displayInput?.focus();
             return;
+          }
+        });
+      }
+
+      // Club Photo Form Handler
+      const clubPhotoForm = document.getElementById('clubPhotoForm');
+      if (clubPhotoForm) {
+        const photoError = document.getElementById('clubPhotoError');
+        const photoInput = clubPhotoForm.querySelector('input[name="photo"]');
+        const deleteCheckbox = clubPhotoForm.querySelector('input[name="delete_photo"]');
+        
+        clubPhotoForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          
+          if (photoError) {
+            photoError.classList.add('hidden');
+            photoError.textContent = '';
+          }
+          
+          // Check if either file is selected or delete is checked
+          if (!photoInput.files.length && (!deleteCheckbox || !deleteCheckbox.checked)) {
+            if (photoError) {
+              photoError.textContent = 'Please select a photo to upload or check delete to remove current photo.';
+              photoError.classList.remove('hidden');
+            }
+            return;
+          }
+          
+          // Validate file size (5MB)
+          if (photoInput.files.length > 0) {
+            const file = photoInput.files[0];
+            if (file.size > 5 * 1024 * 1024) {
+              if (photoError) {
+                photoError.textContent = 'File size must be less than 5MB.';
+                photoError.classList.remove('hidden');
+              }
+              return;
+            }
+          }
+          
+          const formData = new FormData(clubPhotoForm);
+          const submitButton = clubPhotoForm.querySelector('button[type="submit"]');
+          const originalText = submitButton.innerHTML;
+          submitButton.disabled = true;
+          submitButton.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Uploading...';
+          
+          try {
+            const response = await fetch('/officer/club/photo', {
+              method: 'POST',
+              body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.success) {
+              // Show success message
+              if (photoError) {
+                photoError.textContent = data.message || 'Club photo updated successfully!';
+                photoError.classList.remove('hidden');
+                photoError.classList.add('text-green-600');
+                photoError.classList.remove('text-red-600');
+              }
+              
+              // Reload page after 1.5 seconds to show updated photo
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+            } else {
+              if (photoError) {
+                photoError.textContent = data.error || 'Failed to update club photo.';
+                photoError.classList.remove('hidden');
+                photoError.classList.add('text-red-600');
+                photoError.classList.remove('text-green-600');
+              }
+              submitButton.disabled = false;
+              submitButton.innerHTML = originalText;
+            }
+          } catch (error) {
+            console.error('Error updating club photo:', error);
+            if (photoError) {
+              photoError.textContent = 'Failed to update club photo. Please try again.';
+              photoError.classList.remove('hidden');
+              photoError.classList.add('text-red-600');
+              photoError.classList.remove('text-green-600');
+            }
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalText;
           }
         });
       }

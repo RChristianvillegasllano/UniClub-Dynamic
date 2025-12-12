@@ -161,6 +161,24 @@
         background-color: #e2e8f0;
         color: #475569;
       }
+
+      /* Officer report badge - matching reports page */
+      .officer-report-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 9999px;
+        padding: 0.2rem 0.75rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        background: #e2e8f0;
+        color: #475569;
+      }
+
+      .officer-report-badge.gray {
+        background: #e2e8f0;
+        color: #475569;
+      }
     </style>
   </head>
   <body class="bg-gray-50 font-sans text-slate-800">
@@ -235,13 +253,10 @@
               <table class="w-full border-collapse text-sm">
               <thead class="bg-amber-100 text-amber-900">
                 <tr class="text-left">
-                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Name</th>
+                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Officer</th>
                   <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Student ID</th>
                   <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Club/Organization</th>
                   <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Position</th>
-                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Department</th>
-                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Program</th>
-                  <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Username</th>
                   <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide">Registered</th>
                   <th class="px-4 py-3 text-xs font-bold uppercase tracking-wide text-center">Actions</th>
                 </tr>
@@ -256,13 +271,32 @@
                         data-officer-role="<%= o.role || '—' %>">
                       <td class="px-4 py-2.5">
                         <div class="flex items-center gap-3">
-                          <div class="officer-avatar">
-                            <%= (o.first_name || o.name || '?').charAt(0) %><%= (o.last_name || '').charAt(0) %>
+                          <% 
+                            const firstName = o.first_name || '';
+                            const lastName = o.last_name || '';
+                            const displayName = o.name || [firstName, lastName].filter(Boolean).join(' ') || '—';
+                            const initials = (firstName || displayName).charAt(0).toUpperCase() + (lastName ? lastName.charAt(0).toUpperCase() : '');
+                          %>
+                          <% if (o.profile_picture) { %>
+                            <img src="<%= o.profile_picture %>" alt="<%= displayName %>" class="w-10 h-10 rounded-full object-cover border-2 border-slate-200" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="officer-avatar hidden">
+                              <%= initials %>
+                            </div>
+                          <% } else { %>
+                            <div class="officer-avatar">
+                              <%= initials %>
+                            </div>
+                          <% } %>
+                          <div class="space-y-1">
+                            <p class="font-semibold text-slate-800 leading-tight"><%= displayName %></p>
+                            <% if (o.program) { %>
+                              <span class="officer-report-badge gray text-xs"><%= o.program %></span>
+                            <% } %>
+                            <p class="text-xs text-slate-500"><%= o.department || '—' %></p>
                           </div>
-                          <div class="font-semibold text-slate-800 text-sm"><%= o.name %></div>
                         </div>
                       </td>
-                      <td class="px-4 py-2.5 text-slate-700 text-sm"><%= o.studentid || '—' %></td>
+                      <td class="px-4 py-2.5 text-slate-700 text-sm font-semibold"><%= o.studentid || '—' %></td>
                       <td class="px-4 py-2.5">
                         <span class="badge badge-blue" title="<%= o.club_name || 'Unassigned' %>">
                           <i data-lucide="shield" class="w-3 h-3"></i><%= o.club_name || 'Unassigned' %>
@@ -273,23 +307,24 @@
                           <i data-lucide="award" class="w-3 h-3"></i><%= o.role || '—' %>
                         </span>
                       </td>
-                      <td class="px-4 py-2.5 text-slate-600 text-sm"><%= o.department || '—' %></td>
-                      <td class="px-4 py-2.5 text-slate-600 text-sm"><%= o.program || '—' %></td>
-                      <td class="px-4 py-2.5 text-slate-600 font-mono text-xs"><%= o.username || '—' %></td>
                       <td class="px-4 py-2.5 text-slate-500 text-xs">
                         <%= o.created_at ? new Date(o.created_at).toLocaleDateString() : '—' %>
                       </td>
                       <td class="px-4 py-2.5">
                         <div class="flex items-center justify-center gap-2">
-                          <button 
-                            onclick="handleApproval(<%= o.id %>, 'approved')"
-                            class="px-3 py-1.5 rounded-md bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition shadow-sm flex items-center gap-1.5"
+                          <button
+                            type="button"
+                            class="approval-action px-3 py-1.5 rounded-md bg-green-600 text-white text-xs font-medium hover:bg-green-700 transition shadow-sm flex items-center gap-1.5"
+                            data-officer-id="<%= o.id %>"
+                            data-action="approved"
                             title="Approve officer">
                             <i data-lucide="check" class="w-3 h-3"></i> Approve
                           </button>
-                          <button 
-                            onclick="handleApproval(<%= o.id %>, 'rejected')"
-                            class="px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition shadow-sm flex items-center gap-1.5"
+                          <button
+                            type="button"
+                            class="approval-action px-3 py-1.5 rounded-md bg-red-600 text-white text-xs font-medium hover:bg-red-700 transition shadow-sm flex items-center gap-1.5"
+                            data-officer-id="<%= o.id %>"
+                            data-action="rejected"
                             title="Reject officer">
                             <i data-lucide="x" class="w-3 h-3"></i> Reject
                           </button>
@@ -314,61 +349,303 @@
           <% } %>
         </section>
 
-        <!-- Other Approvals Section -->
-        <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-          <div class="mb-4 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center">
-              <i data-lucide="file-check" class="w-5 h-5 text-white"></i>
-            </div>
-            <div>
-              <h2 class="text-lg font-semibold text-gray-900">Other Approvals</h2>
-              <p class="text-sm text-gray-600">Club registrations, activities, and general requests</p>
+        <!-- Event Approvals Section -->
+        <% const hasPendingEvents = typeof pendingEvents !== 'undefined' && pendingEvents && pendingEvents.length > 0; %>
+        <section class="<%= hasPendingEvents ? 'bg-purple-50 border-2 border-purple-200' : 'bg-gray-50 border-2 border-gray-200' %> rounded-xl shadow-sm p-6 mt-6">
+          <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-full <%= hasPendingEvents ? 'bg-purple-500' : 'bg-gray-400' %> flex items-center justify-center">
+                <i data-lucide="calendar" class="w-5 h-5 text-white"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold <%= hasPendingEvents ? 'text-purple-900' : 'text-gray-900' %>">
+                  Pending Event Approvals
+                  <% if (hasPendingEvents) { %>
+                    <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-200 text-purple-800">
+                      <%= pendingEvents.length %>
+                    </span>
+                  <% } %>
+                </h2>
+                <p class="text-sm <%= hasPendingEvents ? 'text-purple-700' : 'text-gray-600' %>">
+                  <% if (hasPendingEvents) { %>
+                    <%= pendingEvents.length %> event<%= pendingEvents.length !== 1 ? 's' : '' %> waiting for approval
+                  <% } else { %>
+                    No pending event approvals
+                  <% } %>
+                </p>
+              </div>
             </div>
           </div>
 
-          <!-- Tabs for different approval types -->
-          <div class="mb-4 flex gap-2 border-b border-gray-200">
-            <button class="px-4 py-2 text-sm font-medium text-gray-700 border-b-2 border-blue-600 pb-2 transition-colors">
-              Club Registrations
-            </button>
-            <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
-              Activity Approvals
-            </button>
-            <button class="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors">
-              General Requests
-            </button>
-          </div>
+          <% if (hasPendingEvents) { %>
+            <div class="space-y-4">
+              <% pendingEvents.forEach(function(event) { %>
+                <% 
+                  const startDate = new Date(event.date);
+                  const endDate = event.end_date ? new Date(event.end_date) : startDate;
+                  const isMultiDay = endDate.getTime() !== startDate.getTime();
+                  let dateStr = '';
+                  if (isMultiDay) {
+                    dateStr = startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' - ' + endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                  } else {
+                    dateStr = startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                  }
+                %>
+                <div class="bg-white rounded-xl border border-purple-200 shadow-sm p-6 hover:shadow-md transition-shadow" 
+                     data-event-id="<%= event.id %>"
+                     data-event-name="<%= event.name %>"
+                     data-event-club="<%= event.club_name || 'Unknown Club' %>"
+                     data-event-date="<%= dateStr %>">
+                  <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-3 mb-2">
+                        <h3 class="text-xl font-bold text-gray-900"><%= event.name %></h3>
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                          Pending Approval
+                        </span>
+                      </div>
+                      <div class="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                        <span class="flex items-center gap-1">
+                          <i data-lucide="calendar" class="w-4 h-4"></i>
+                          <%= dateStr %>
+                        </span>
+                        <% if (event.location) { %>
+                          <span class="flex items-center gap-1">
+                            <i data-lucide="map-pin" class="w-4 h-4"></i>
+                            <%= event.location %>
+                          </span>
+                        <% } %>
+                        <span class="flex items-center gap-1">
+                          <i data-lucide="users" class="w-4 h-4"></i>
+                          <%= event.club_name || 'Unknown Club' %>
+                        </span>
+                        <span class="flex items-center gap-1">
+                          <i data-lucide="user" class="w-4 h-4"></i>
+                          Created by: <%= event.created_by_name || 'Unknown' %> (<%= event.created_by_role || 'Officer' %>)
+                        </span>
+                      </div>
+                      <% if (event.description) { %>
+                        <p class="text-sm text-gray-700 mb-3"><%= event.description %></p>
+                      <% } %>
+                      <p class="text-xs text-gray-500">
+                        Submitted: <%= new Date(event.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) %>
+                      </p>
+                    </div>
+                  </div>
 
-          <!-- Search/Filter Toolbar -->
-          <div class="mb-4 flex flex-wrap items-center gap-3">
-            <div class="flex-1 min-w-[200px]">
-              <input 
-                type="text" 
-                placeholder="Search approvals..." 
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-              />
-            </div>
-            <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+                  <!-- Event Documents Section -->
+                  <div class="mt-4 pt-4 border-t border-gray-200">
+                    <h4 class="text-sm font-bold text-gray-900 mb-3">Event Documents</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <% if (event.activity_proposal) { %>
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <h5 class="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            Activity Proposal
+                          </h5>
+                          <div class="flex gap-2">
+                            <button onclick="viewDocument('<%= event.activity_proposal %>', 'Activity Proposal')" class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                              <i data-lucide="eye" class="w-4 h-4"></i>
+                              View
+                            </button>
+                            <a href="<%= event.activity_proposal %>" download class="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-500 text-white text-sm font-semibold rounded-lg hover:bg-blue-600 transition-colors" title="Download">
+                              <i data-lucide="download" class="w-4 h-4"></i>
+                            </a>
+                          </div>
+                        </div>
+                      <% } %>
+                      
+                      <% if (event.letter_of_intent) { %>
+                        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <h5 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+                            <i data-lucide="file-text" class="w-4 h-4"></i>
+                            Letter of Intent
+                          </h5>
+                          <div class="flex gap-2">
+                            <button onclick="viewDocument('<%= event.letter_of_intent %>', 'Letter of Intent')" class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors">
+                              <i data-lucide="eye" class="w-4 h-4"></i>
+                              View
+                            </button>
+                            <a href="<%= event.letter_of_intent %>" download class="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-green-500 text-white text-sm font-semibold rounded-lg hover:bg-green-600 transition-colors" title="Download">
+                              <i data-lucide="download" class="w-4 h-4"></i>
+                            </a>
+                          </div>
+                        </div>
+                      <% } %>
+                      
+                      <% if (event.budgetary_requirement) { %>
+                        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                          <h5 class="text-sm font-semibold text-purple-900 mb-3 flex items-center gap-2">
+                            <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                            Budgetary Requirement
+                          </h5>
+                          <div class="flex gap-2">
+                            <button onclick="viewDocument('<%= event.budgetary_requirement %>', 'Budgetary Requirement')" class="flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+                              <i data-lucide="eye" class="w-4 h-4"></i>
+                              View
+                            </button>
+                            <a href="<%= event.budgetary_requirement %>" download class="inline-flex items-center justify-center gap-2 px-3 py-1.5 bg-purple-500 text-white text-sm font-semibold rounded-lg hover:bg-purple-600 transition-colors" title="Download">
+                              <i data-lucide="download" class="w-4 h-4"></i>
+                            </a>
+                          </div>
+                        </div>
+                      <% } %>
+                    </div>
+                  </div>
 
-          <!-- Empty State -->
-          <div class="text-center py-8">
-            <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-              <i data-lucide="inbox" class="w-7 h-7 text-gray-400"></i>
+                  <!-- Approval Actions -->
+                  <div class="mt-6 pt-4 border-t border-gray-200 flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      class="event-approval-action px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition shadow-sm flex items-center gap-2"
+                      data-event-id="<%= event.id %>"
+                      data-action="reject"
+                      title="Reject event">
+                      <i data-lucide="x" class="w-4 h-4"></i> Reject
+                    </button>
+                    <button
+                      type="button"
+                      class="event-approval-action px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition shadow-sm flex items-center gap-2"
+                      data-event-id="<%= event.id %>"
+                      data-action="approve"
+                      title="Approve event">
+                      <i data-lucide="check" class="w-4 h-4"></i> Approve
+                    </button>
+                  </div>
+                </div>
+              <% }); %>
             </div>
-            <p class="text-sm font-medium text-gray-700 mb-1">No pending approvals</p>
-            <p class="text-xs text-gray-500 mb-3">Additional approval requests will appear here when submitted.</p>
-            <a href="/admin/approvals/history" class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-              View approval history →
-            </a>
-          </div>
+          <% } else { %>
+            <div class="text-center py-6 bg-white rounded-lg border <%= hasPendingEvents ? 'border-purple-200' : 'border-gray-200' %>">
+              <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-green-100 flex items-center justify-center">
+                <i data-lucide="check-circle" class="w-7 h-7 text-green-600"></i>
+              </div>
+              <h3 class="text-sm font-semibold text-gray-900 mb-1">No Pending Event Approvals</h3>
+              <p class="text-xs text-gray-600 mb-2">All event requests have been processed.</p>
+            </div>
+          <% } %>
         </section>
       </main>
+    </div>
+
+    <!-- Document Viewer Modal -->
+    <div id="documentViewerModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-75">
+      <div class="bg-white rounded-xl shadow-2xl max-w-6xl w-full mx-4 max-h-[90vh] flex flex-col transform transition-all">
+        <div class="flex items-center justify-between p-6 border-b border-gray-200">
+          <h3 id="documentViewerTitle" class="text-xl font-semibold text-gray-900">Document Viewer</h3>
+          <button onclick="closeDocumentViewer()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+          </button>
+        </div>
+        <div class="flex-1 overflow-hidden p-6 relative">
+          <iframe id="documentViewerFrame" src="" class="w-full h-full border border-gray-200 rounded-lg" style="min-height: 600px;" onerror="console.error('Iframe load error')" onload="console.log('Iframe loaded successfully')"></iframe>
+          <div id="iframeError" class="hidden absolute inset-0 flex items-center justify-center bg-gray-50 border border-gray-200 rounded-lg">
+            <div class="text-center p-8">
+              <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+                <i data-lucide="alert-circle" class="w-8 h-8 text-red-600"></i>
+              </div>
+              <h4 class="text-lg font-semibold text-gray-900 mb-2">Unable to Load Document</h4>
+              <p class="text-sm text-gray-600 mb-4">The document could not be loaded. Please try downloading it instead.</p>
+              <button onclick="document.getElementById('documentDownloadLink').click()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Download Document
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+          <a id="documentDownloadLink" href="" download class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center gap-2">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Download
+          </a>
+          <button onclick="closeDocumentViewer()" class="px-4 py-2 bg-gray-600 text-white rounded-lg font-medium hover:bg-gray-700 transition-colors">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Approval/Rejection Modal -->
+    <div id="eventApprovalModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black bg-opacity-50">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+        <div class="p-6">
+          <!-- Icon -->
+          <div class="flex justify-center mb-4">
+            <div id="eventApprovalModalIcon" class="w-16 h-16 rounded-full flex items-center justify-center">
+              <i data-lucide="alert-circle" class="w-10 h-10"></i>
+            </div>
+          </div>
+          
+          <!-- Title -->
+          <h3 id="eventApprovalModalTitle" class="text-xl font-semibold text-gray-900 text-center mb-2">
+            Confirm Action
+          </h3>
+          
+          <!-- Message -->
+          <p id="eventApprovalModalMessage" class="text-gray-600 text-center mb-4">
+            Are you sure you want to perform this action?
+          </p>
+          
+          <!-- Event Details -->
+          <div id="eventApprovalModalDetails" class="bg-gray-50 rounded-lg p-4 mb-4 space-y-2">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 font-medium">Event Name:</span>
+              <span id="modalEventName" class="text-gray-900 font-semibold"></span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 font-medium">Club:</span>
+              <span id="modalEventClub" class="text-gray-900"></span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-600 font-medium">Date:</span>
+              <span id="modalEventDate" class="text-gray-900"></span>
+            </div>
+          </div>
+          
+          <!-- Requirements Input (for approval) -->
+          <div id="eventRequirementsInput" class="hidden mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Requirements or Notes (Optional)
+            </label>
+            <textarea 
+              id="eventRequirementsTextarea" 
+              rows="3" 
+              placeholder="Enter any requirements, conditions, or notes for this event approval..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+            ></textarea>
+          </div>
+          
+          <!-- Rejection Reason Input (for rejection) -->
+          <div id="eventRejectionInput" class="hidden mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Rejection Reason <span class="text-red-600">*</span>
+            </label>
+            <textarea 
+              id="eventRejectionTextarea" 
+              rows="3" 
+              placeholder="Please provide a reason for rejecting this event..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+              required
+            ></textarea>
+            <p class="text-xs text-gray-500 mt-1">This reason will be sent to the event creator.</p>
+          </div>
+          
+          <!-- Buttons -->
+          <div class="flex gap-3">
+            <button 
+              id="eventApprovalModalCancel" 
+              class="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button 
+              id="eventApprovalModalConfirm" 
+              class="flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-colors"
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Custom Confirmation Modal -->
@@ -530,6 +807,222 @@
         showApprovalModal(officerId, action);
       }
 
+      // Bind approval buttons
+      document.querySelectorAll('.approval-action').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const officerId = btn.getAttribute('data-officer-id');
+          const action = btn.getAttribute('data-action');
+          handleApproval(officerId, action);
+        });
+      });
+
+      // Event Approval Modal Elements
+      const eventApprovalModal = document.getElementById('eventApprovalModal');
+      const eventApprovalModalIcon = document.getElementById('eventApprovalModalIcon');
+      const eventApprovalModalTitle = document.getElementById('eventApprovalModalTitle');
+      const eventApprovalModalMessage = document.getElementById('eventApprovalModalMessage');
+      const modalEventName = document.getElementById('modalEventName');
+      const modalEventClub = document.getElementById('modalEventClub');
+      const modalEventDate = document.getElementById('modalEventDate');
+      const eventRequirementsInput = document.getElementById('eventRequirementsInput');
+      const eventRequirementsTextarea = document.getElementById('eventRequirementsTextarea');
+      const eventRejectionInput = document.getElementById('eventRejectionInput');
+      const eventRejectionTextarea = document.getElementById('eventRejectionTextarea');
+      const eventApprovalModalCancel = document.getElementById('eventApprovalModalCancel');
+      const eventApprovalModalConfirm = document.getElementById('eventApprovalModalConfirm');
+      
+      let pendingEventAction = null;
+
+      function showEventApprovalModal(eventId, action) {
+        const eventCard = document.querySelector(`div[data-event-id="${eventId}"]`);
+        if (!eventCard) return;
+
+        // Extract event details from data attributes (most reliable)
+        const eventName = eventCard.getAttribute('data-event-name')?.trim() || 
+                         eventCard.querySelector('h3')?.textContent?.trim() || 
+                         'Unknown Event';
+        const eventClub = eventCard.getAttribute('data-event-club')?.trim() || 'Unknown Club';
+        const eventDate = eventCard.getAttribute('data-event-date')?.trim() || 'TBA';
+        
+        const isApprove = action === 'approve';
+
+        // Set modal content
+        eventApprovalModalTitle.textContent = isApprove ? 'Approve Event' : 'Reject Event';
+        eventApprovalModalMessage.textContent = isApprove 
+          ? 'Are you sure you want to approve this event? Once approved, the club president will be notified to review and post it to students.'
+          : 'Are you sure you want to reject this event? This action cannot be undone. The event creator will be notified of the rejection.';
+        
+        modalEventName.textContent = eventName;
+        modalEventClub.textContent = eventClub;
+        modalEventDate.textContent = eventDate;
+
+        // Show/hide appropriate input fields
+        if (isApprove) {
+          eventRequirementsInput.classList.remove('hidden');
+          eventRejectionInput.classList.add('hidden');
+          eventRequirementsTextarea.value = '';
+        } else {
+          eventRequirementsInput.classList.add('hidden');
+          eventRejectionInput.classList.remove('hidden');
+          eventRejectionTextarea.value = '';
+        }
+
+        // Set icon and button colors
+        if (isApprove) {
+          eventApprovalModalIcon.className = 'w-16 h-16 rounded-full flex items-center justify-center bg-green-100';
+          eventApprovalModalIcon.innerHTML = '<i data-lucide="check-circle" class="w-10 h-10 text-green-600"></i>';
+          eventApprovalModalConfirm.className = 'flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-colors bg-green-600 hover:bg-green-700';
+          eventApprovalModalConfirm.textContent = 'Approve Event';
+        } else {
+          eventApprovalModalIcon.className = 'w-16 h-16 rounded-full flex items-center justify-center bg-red-100';
+          eventApprovalModalIcon.innerHTML = '<i data-lucide="x-circle" class="w-10 h-10 text-red-600"></i>';
+          eventApprovalModalConfirm.className = 'flex-1 px-4 py-2.5 rounded-lg font-medium text-white transition-colors bg-red-600 hover:bg-red-700';
+          eventApprovalModalConfirm.textContent = 'Reject Event';
+        }
+
+        // Store pending action
+        pendingEventAction = { eventId, action };
+
+        // Show modal
+        eventApprovalModal.classList.remove('hidden');
+        eventApprovalModal.classList.add('flex');
+        lucide.createIcons();
+      }
+
+      function hideEventApprovalModal() {
+        eventApprovalModal.classList.add('hidden');
+        eventApprovalModal.classList.remove('flex');
+        pendingEventAction = null;
+        eventRequirementsTextarea.value = '';
+        eventRejectionTextarea.value = '';
+      }
+
+      // Modal event listeners
+      eventApprovalModalCancel.addEventListener('click', hideEventApprovalModal);
+      eventApprovalModalConfirm.addEventListener('click', async () => {
+        if (!pendingEventAction) return;
+        
+        const { eventId, action } = pendingEventAction;
+        
+        // Validate rejection reason if rejecting
+        if (action === 'reject') {
+          const reason = eventRejectionTextarea.value.trim();
+          if (!reason) {
+            showToast('Please provide a reason for rejecting this event.', 'error', 'Reason Required');
+            eventRejectionTextarea.focus();
+            return;
+          }
+        }
+        
+        hideEventApprovalModal();
+        await processEventApproval(eventId, action);
+      });
+
+      // Close modal on background click
+      eventApprovalModal.addEventListener('click', (e) => {
+        if (e.target === eventApprovalModal) {
+          hideEventApprovalModal();
+        }
+      });
+
+      async function handleEventApproval(eventId, action) {
+        showEventApprovalModal(eventId, action);
+      }
+
+      // Handle event approvals/rejections
+      document.querySelectorAll('.event-approval-action').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const eventId = btn.getAttribute('data-event-id');
+          const action = btn.getAttribute('data-action');
+          await handleEventApproval(eventId, action);
+        });
+      });
+
+      async function processEventApproval(eventId, action) {
+        try {
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+          
+          if (!csrfToken) {
+            throw new Error('CSRF token not found. Please refresh the page and try again.');
+          }
+
+          if (action === 'approve') {
+            const requirements = eventRequirementsTextarea.value.trim();
+            
+            const endpoint = `/admin/event-approvals/${eventId}/approve`;
+            const params = new URLSearchParams();
+            params.append('_csrf', csrfToken);
+            params.append('requirements', requirements || '');
+            
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: params,
+              credentials: 'same-origin',
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || 'Failed to approve event');
+            }
+
+            showToast(data.message || 'Event approved successfully. The president will be notified to review and post it.', 'success', 'Event Approved');
+          } else if (action === 'reject') {
+            const reason = eventRejectionTextarea.value.trim();
+            if (!reason) {
+              showToast('Please provide a reason for rejecting this event.', 'error', 'Reason Required');
+              return;
+            }
+
+            const endpoint = `/admin/event-approvals/${eventId}/reject`;
+            const params = new URLSearchParams();
+            params.append('_csrf', csrfToken);
+            params.append('reason', reason);
+            
+            const response = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded',
+              },
+              body: params,
+              credentials: 'same-origin',
+            });
+
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+              throw new Error(data.error || 'Failed to reject event');
+            }
+
+            showToast(data.message || 'Event rejected successfully. The event creator has been notified.', 'success', 'Event Rejected');
+          }
+
+          // Remove the event card from the page
+          const eventCard = document.querySelector(`div[data-event-id="${eventId}"]`);
+          if (eventCard) {
+            eventCard.style.opacity = '0';
+            eventCard.style.transform = 'translateX(-20px)';
+            setTimeout(() => {
+              eventCard.remove();
+              updatePendingCount();
+              // Reload if no more events
+              const remainingEvents = document.querySelectorAll('div[data-event-id]');
+              if (remainingEvents.length === 0) {
+                setTimeout(() => window.location.reload(), 500);
+              }
+            }, 300);
+          } else {
+            setTimeout(() => window.location.reload(), 1000);
+          }
+        } catch (error) {
+          console.error('Error processing event approval:', error);
+          showToast(error.message || 'Unable to process the request. Please try again.', 'error', 'Action Failed');
+        }
+      }
+
       async function processApproval(officerId, action) {
         try {
           const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -593,11 +1086,12 @@
 
       // Update pending count and container colors
       function updatePendingCount() {
-        const rows = document.querySelectorAll('tr[data-officer-id]');
-        const count = rows.length;
+        const officerRows = document.querySelectorAll('tr[data-officer-id]');
+        const eventCards = document.querySelectorAll('div[data-event-id]');
+        const totalCount = officerRows.length + eventCards.length;
         const countElement = document.getElementById('pendingCount');
         if (countElement) {
-          countElement.textContent = count;
+          countElement.textContent = totalCount;
         }
         
         // Update badge in header
@@ -624,48 +1118,92 @@
           }
         }
 
-        // Update section container colors
-        const section = document.querySelector('section.bg-amber-50, section.bg-gray-50');
-        if (section) {
-          if (count === 0) {
-            section.className = section.className.replace('bg-amber-50 border-amber-200', 'bg-gray-50 border-gray-200');
-            const icon = section.querySelector('.w-10.h-10');
+        // Update officer section container colors
+        const officerSection = document.querySelector('section.bg-amber-50, section.bg-gray-50');
+        if (officerSection && officerSection.querySelector('tr[data-officer-id]')) {
+          const officerCount = officerRows.length;
+          if (officerCount === 0) {
+            officerSection.className = officerSection.className.replace('bg-amber-50 border-amber-200', 'bg-gray-50 border-gray-200');
+            const icon = officerSection.querySelector('.w-10.h-10');
             if (icon) {
               icon.className = icon.className.replace('bg-amber-500', 'bg-gray-400');
             }
-            const title = section.querySelector('h2');
+            const title = officerSection.querySelector('h2');
             if (title) {
               title.className = title.className.replace('text-amber-900', 'text-gray-900');
-              // Remove count badge from title
               const countBadge = title.querySelector('span');
               if (countBadge) countBadge.remove();
             }
-            const subtitle = section.querySelector('p');
+            const subtitle = officerSection.querySelector('p');
             if (subtitle) {
               subtitle.className = subtitle.className.replace('text-amber-700', 'text-gray-600');
             }
           } else {
-            section.className = section.className.replace('bg-gray-50 border-gray-200', 'bg-amber-50 border-amber-200');
-            const icon = section.querySelector('.w-10.h-10');
+            officerSection.className = officerSection.className.replace('bg-gray-50 border-gray-200', 'bg-amber-50 border-amber-200');
+            const icon = officerSection.querySelector('.w-10.h-10');
             if (icon) {
               icon.className = icon.className.replace('bg-gray-400', 'bg-amber-500');
             }
-            const title = section.querySelector('h2');
+            const title = officerSection.querySelector('h2');
             if (title) {
               title.className = title.className.replace('text-gray-900', 'text-amber-900');
-              // Add count badge to title if not present
               if (!title.querySelector('span')) {
                 const badge = document.createElement('span');
                 badge.className = 'ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-200 text-amber-800';
-                badge.textContent = count;
+                badge.textContent = officerCount;
                 title.appendChild(badge);
               } else {
-                title.querySelector('span').textContent = count;
+                title.querySelector('span').textContent = officerCount;
               }
             }
-            const subtitle = section.querySelector('p');
+            const subtitle = officerSection.querySelector('p');
             if (subtitle) {
               subtitle.className = subtitle.className.replace('text-gray-600', 'text-amber-700');
+            }
+          }
+        }
+
+        // Update event section container colors
+        const eventSection = document.querySelector('section.bg-purple-50, section.bg-gray-50');
+        if (eventSection && eventSection.querySelector('div[data-event-id]')) {
+          const eventCount = eventCards.length;
+          if (eventCount === 0) {
+            eventSection.className = eventSection.className.replace('bg-purple-50 border-purple-200', 'bg-gray-50 border-gray-200');
+            const icon = eventSection.querySelector('.w-10.h-10');
+            if (icon) {
+              icon.className = icon.className.replace('bg-purple-500', 'bg-gray-400');
+            }
+            const title = eventSection.querySelector('h2');
+            if (title) {
+              title.className = title.className.replace('text-purple-900', 'text-gray-900');
+              const countBadge = title.querySelector('span');
+              if (countBadge) countBadge.remove();
+            }
+            const subtitle = eventSection.querySelector('p');
+            if (subtitle) {
+              subtitle.className = subtitle.className.replace('text-purple-700', 'text-gray-600');
+            }
+          } else {
+            eventSection.className = eventSection.className.replace('bg-gray-50 border-gray-200', 'bg-purple-50 border-purple-200');
+            const icon = eventSection.querySelector('.w-10.h-10');
+            if (icon) {
+              icon.className = icon.className.replace('bg-gray-400', 'bg-purple-500');
+            }
+            const title = eventSection.querySelector('h2');
+            if (title) {
+              title.className = title.className.replace('text-gray-900', 'text-purple-900');
+              if (!title.querySelector('span')) {
+                const badge = document.createElement('span');
+                badge.className = 'ml-2 px-2 py-0.5 rounded-full text-xs font-semibold bg-purple-200 text-purple-800';
+                badge.textContent = eventCount;
+                title.appendChild(badge);
+              } else {
+                title.querySelector('span').textContent = eventCount;
+              }
+            }
+            const subtitle = eventSection.querySelector('p');
+            if (subtitle) {
+              subtitle.className = subtitle.className.replace('text-gray-600', 'text-purple-700');
             }
           }
         }
@@ -676,7 +1214,7 @@
           if (tableBody) {
             tableBody.innerHTML = `
               <tr>
-                <td colspan="9" class="py-6 text-center">
+                <td colspan="8" class="py-6 text-center">
                   <div class="w-12 h-12 mx-auto mb-2 rounded-full bg-green-100 flex items-center justify-center">
                     <i data-lucide="check-circle" class="w-7 h-7 text-green-600"></i>
                   </div>
@@ -692,6 +1230,135 @@
           }
         }
       }
+
+      // Document Viewer Functions
+      function viewDocument(filePath, documentTitle) {
+        const modal = document.getElementById('documentViewerModal');
+        const frame = document.getElementById('documentViewerFrame');
+        const title = document.getElementById('documentViewerTitle');
+        const downloadLink = document.getElementById('documentDownloadLink');
+        const errorDiv = document.getElementById('iframeError');
+        const frameContainer = frame.parentElement;
+        
+        // Set title
+        title.textContent = documentTitle;
+        
+        // Normalize file path - ensure it starts with /
+        const fullPath = filePath.startsWith('/') ? filePath : '/' + filePath;
+        
+        // Get file extension
+        const fileExtension = fullPath.split('.').pop()?.toLowerCase() || '';
+        
+        // Check if file can be displayed in iframe (PDF, images, text files)
+        const viewableInIframe = ['pdf', 'txt', 'jpg', 'jpeg', 'png', 'gif', 'webp'];
+        
+        // Hide error message
+        if (errorDiv) errorDiv.classList.add('hidden');
+        
+        // Remove any existing message div
+        const existingMessage = frameContainer.querySelector('.document-message');
+        if (existingMessage) existingMessage.remove();
+        
+        if (viewableInIframe.includes(fileExtension)) {
+          // Show iframe for viewable files
+          frame.style.display = 'block';
+          
+          // Set iframe source with error handling
+          frame.onload = () => {
+            console.log('Document loaded successfully:', fullPath);
+            if (errorDiv) errorDiv.classList.add('hidden');
+          };
+          
+          frame.onerror = () => {
+            console.error('Failed to load document:', fullPath);
+            frame.style.display = 'none';
+            if (errorDiv) {
+              errorDiv.classList.remove('hidden');
+              lucide.createIcons({ container: errorDiv });
+            }
+          };
+          
+          // Set iframe source
+          frame.src = fullPath;
+          console.log('Loading document in iframe:', fullPath);
+        } else {
+          // For non-viewable files (DOC, DOCX, etc.), show message
+          frame.style.display = 'none';
+          
+          // Create message div
+          const messageDiv = document.createElement('div');
+          messageDiv.className = 'document-message flex flex-col items-center justify-center h-full text-center p-8';
+          messageDiv.innerHTML = `
+            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+              <i data-lucide="file-text" class="w-8 h-8 text-blue-600"></i>
+            </div>
+            <h4 class="text-lg font-semibold text-gray-900 mb-2">Document Preview Not Available</h4>
+            <p class="text-sm text-gray-600 mb-4">This file type (${fileExtension.toUpperCase()}) cannot be previewed in the browser.</p>
+            <a href="${fullPath}" target="_blank" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+              Open in New Tab
+            </a>
+          `;
+          frameContainer.appendChild(messageDiv);
+          lucide.createIcons({ container: messageDiv });
+        }
+        
+        // Set download link
+        downloadLink.href = fullPath;
+        downloadLink.download = filePath.split('/').pop();
+        downloadLink.style.display = 'flex';
+        
+        // Show modal
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        lucide.createIcons();
+        
+        // Prevent body scroll
+        document.body.style.overflow = 'hidden';
+      }
+      
+      function closeDocumentViewer() {
+        const modal = document.getElementById('documentViewerModal');
+        const frame = document.getElementById('documentViewerFrame');
+        const frameContainer = frame.parentElement;
+        
+        // Clear iframe source
+        frame.src = '';
+        frame.style.display = 'block';
+        
+        // Remove message div if it exists
+        const messageDiv = frameContainer.querySelector('.document-message');
+        if (messageDiv) {
+          messageDiv.remove();
+        }
+        
+        // Hide modal
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // Restore body scroll
+        document.body.style.overflow = '';
+      }
+      
+      // Close modal on background click
+      document.getElementById('documentViewerModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'documentViewerModal') {
+          closeDocumentViewer();
+        }
+      });
+      
+      // Close modals on Escape key
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const documentModal = document.getElementById('documentViewerModal');
+          const eventModal = document.getElementById('eventApprovalModal');
+          if (documentModal && !documentModal.classList.contains('hidden')) {
+            closeDocumentViewer();
+          } else if (eventModal && !eventModal.classList.contains('hidden')) {
+            hideEventApprovalModal();
+          }
+        }
+      });
 
       // Enhanced Toast helper with icons and better design
       function showToast(message, type = 'success', title = null) {

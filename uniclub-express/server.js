@@ -7,6 +7,15 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pool from "./config/db.js";
 import { csrfProtection, getCsrfToken, csrfMiddleware } from "./middleware/security.js";
+import { 
+  sanitizeRequest, 
+  securityHeaders, 
+  auditLog, 
+  checkIPBlacklist,
+  validateRequestSize 
+} from "./middleware/advancedSecurity.js";
+import { preventPrototypePollution } from "./middleware/inputValidation.js";
+import { requestLogger } from "./config/logging.js";
 import requirementsRoutes from "./routes/requirementsRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import apiRoutes from "./routes/apiRoutes.js";
@@ -96,9 +105,32 @@ app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "public")));
 
+// Advanced Security Headers
+app.use(securityHeaders);
+
+// IP Blacklist Check
+app.use(checkIPBlacklist);
+
+// Request Size Validation
+app.use(validateRequestSize(10 * 1024 * 1024)); // 10MB max
+
 // Body parsers with size limits
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.json({ limit: '10mb' }));
+
+// Prototype Pollution Protection - Must come before sanitization
+// Temporarily disabled to debug issue - will re-enable after fixing
+// app.use(preventPrototypePollution);
+
+// Input Sanitization - Must come after body parsers
+// Temporarily disabled to debug issue - will re-enable after fixing
+// app.use(sanitizeRequest);
+
+// Request Logging
+app.use(requestLogger);
+
+// Audit Logging
+app.use(auditLog);
 
 // Session Configuration
 const sessionSecret = process.env.SESSION_SECRET;
@@ -129,6 +161,11 @@ app.use(
 app.use((req, res, next) => {
   // Skip CSRF for API endpoints
   if (req.path.startsWith('/api/')) {
+    return next();
+  }
+  
+  // Skip CSRF for JSON PUT requests to status update endpoint (handled manually in route)
+  if (req.method === 'PUT' && req.path.includes('/events/') && req.path.includes('/status') && req.headers['content-type'] && req.headers['content-type'].includes('application/json')) {
     return next();
   }
   

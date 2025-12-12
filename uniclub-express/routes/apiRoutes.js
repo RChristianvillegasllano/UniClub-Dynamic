@@ -634,19 +634,28 @@ router.get("/events", async (req, res) => {
     const { page = 1, limit = 50, search = "", status } = req.query;
     const offset = (page - 1) * limit;
 
-    let query = "SELECT * FROM events";
+    // Determine if we need to join with clubs table (for search by club name)
+    const needsJoin = !!search;
+    
+    let query = needsJoin 
+      ? "SELECT events.* FROM events LEFT JOIN clubs ON clubs.id = events.club_id"
+      : "SELECT * FROM events";
     let params = [];
-    let paramCount = 0;
     const conditions = [];
+
+    // Exclude pending and rejected events by default (unless explicitly requested)
+    if (!status || (status !== 'pending_approval' && status !== 'rejected')) {
+      conditions.push(`(COALESCE(events.status, 'pending_approval') != 'pending_approval' AND COALESCE(events.status, 'pending_approval') != 'rejected')`);
+    }
 
     if (search) {
       const searchLower = `%${search.toLowerCase()}%`;
-      conditions.push(`(LOWER(name) LIKE ? OR LOWER(club) LIKE ?)`);
+      conditions.push(`(LOWER(events.name) LIKE ? OR LOWER(clubs.name) LIKE ?)`);
       params.push(searchLower, searchLower);
     }
 
     if (status) {
-      conditions.push(`status = ?`);
+      conditions.push(`COALESCE(events.status, 'pending_approval') = ?`);
       params.push(status);
     }
 
@@ -654,24 +663,31 @@ router.get("/events", async (req, res) => {
       query += " WHERE " + conditions.join(" AND ");
     }
 
-    query += ` ORDER BY date DESC LIMIT ? OFFSET ?`;
+    query += ` ORDER BY events.date DESC LIMIT ? OFFSET ?`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
     
     // Build count query with same conditions
-    let countQuery = "SELECT COUNT(*) FROM events";
+    let countQuery = needsJoin
+      ? "SELECT COUNT(*) FROM events LEFT JOIN clubs ON clubs.id = events.club_id"
+      : "SELECT COUNT(*) FROM events";
     const countParams = [];
     const countConditions = [];
     
+    // Exclude pending and rejected events by default (unless explicitly requested)
+    if (!status || (status !== 'pending_approval' && status !== 'rejected')) {
+      countConditions.push(`(COALESCE(events.status, 'pending_approval') != 'pending_approval' AND COALESCE(events.status, 'pending_approval') != 'rejected')`);
+    }
+    
     if (search) {
       const searchLower = `%${search.toLowerCase()}%`;
-      countConditions.push(`(LOWER(name) LIKE ? OR LOWER(club) LIKE ?)`);
+      countConditions.push(`(LOWER(events.name) LIKE ? OR LOWER(clubs.name) LIKE ?)`);
       countParams.push(searchLower, searchLower);
     }
     
     if (status) {
-      countConditions.push(`status = ?`);
+      countConditions.push(`COALESCE(events.status, 'pending_approval') = ?`);
       countParams.push(status);
     }
     

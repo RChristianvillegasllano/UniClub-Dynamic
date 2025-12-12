@@ -73,10 +73,15 @@
                   <p class="text-sm font-bold text-gray-900 leading-tight"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
                   <p class="text-xs text-gray-600 mt-0.5"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
                 </div>
-                <% if (typeof officer !== 'undefined' && officer && officer.photo_url) { %>
-                  <img src="<%= officer.photo_url %>" alt="Profile" class="w-10 h-10 rounded-full ring ring-red-600 object-cover">
+                <% if (typeof officer !== 'undefined' && officer && officer.profile_picture) { %>
+                  <img src="<%= officer.profile_picture %>" alt="Profile" class="w-10 h-10 rounded-full ring ring-red-600 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden w-10 h-10 rounded-full ring ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } else { %>
-                  <div class="w-10 h-10 rounded-full ring ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">UC</div>
+                  <div class="w-10 h-10 rounded-full ring ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } %>
               </button>
               <div id="profileMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
@@ -238,22 +243,26 @@
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <% if (!app.status || app.status.toLowerCase() === 'pending') { %>
-                          <div class="flex gap-2">
-                            <button 
-                              onclick="handleApproval(<%= app.id %>, 'approved')"
-                              class="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 hover:scale-105 transition-all duration-200 shadow-sm flex items-center gap-1"
-                            >
-                              <i data-lucide="check" class="w-4 h-4"></i>
-                              Approve
-                            </button>
-                            <button 
-                              onclick="handleApproval(<%= app.id %>, 'rejected')"
-                              class="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 hover:scale-105 transition-all duration-200 shadow-sm flex items-center gap-1"
-                            >
-                              <i data-lucide="x" class="w-4 h-4"></i>
-                              Reject
-                            </button>
-                          </div>
+                          <% if (typeof canApproveApplications !== 'undefined' && canApproveApplications) { %>
+                            <div class="flex gap-2">
+                              <button 
+                                onclick="handleApproval(<%= app.id %>, 'approved')"
+                                class="px-4 py-2 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 hover:scale-105 transition-all duration-200 shadow-sm flex items-center gap-1"
+                              >
+                                <i data-lucide="check" class="w-4 h-4"></i>
+                                Approve
+                              </button>
+                              <button 
+                                onclick="handleApproval(<%= app.id %>, 'rejected')"
+                                class="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 hover:scale-105 transition-all duration-200 shadow-sm flex items-center gap-1"
+                              >
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                                Reject
+                              </button>
+                            </div>
+                          <% } else { %>
+                            <span class="text-sm text-gray-400 italic">View only</span>
+                          <% } %>
                         <% } else { %>
                           <span class="text-sm text-gray-400 italic">No action needed</span>
                         <% } %>

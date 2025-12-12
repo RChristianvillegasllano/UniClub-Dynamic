@@ -46,34 +46,69 @@
       </header>
 
       <section class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-        <form action="<%= title.includes('Schedule') ? '/admin/events/create' : '/admin/events/add' %>" method="POST" class="space-y-5">
+        <form action="<%= title.includes('Schedule') ? '/admin/events/create' : '/admin/events/add' %>" method="POST" enctype="multipart/form-data" class="space-y-4">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+          
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Event Name</label>
-            <input type="text" name="name" required class="w-full border border-slate-300 rounded-lg px-3 py-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Event Name *</label>
+            <input type="text" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1]">
           </div>
+          
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Club</label>
-            <select name="club_id" required class="w-full border border-slate-300 rounded-lg px-3 py-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Club *</label>
+            <select name="club_id" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1]">
               <% clubs.forEach(c => { %>
                 <option value="<%= c.id %>"><%= c.name %></option>
               <% }) %>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
-            <input type="date" name="date" required class="w-full border border-slate-300 rounded-lg px-3 py-2">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">Start Date *</label>
+              <input type="date" id="startDate" name="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1]" onchange="validateDateRange()">
+            </div>
+            <div>
+              <label class="block text-sm font-semibold text-gray-700 mb-2">End Date *</label>
+              <input type="date" id="endDate" name="end_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1]" onchange="validateDateRange()">
+              <p class="text-xs text-gray-500 mt-1">Leave same as start date for single-day events</p>
+              <p id="dateRangeError" class="text-xs text-red-600 mt-1 hidden">End date must be on or after start date</p>
+            </div>
           </div>
+          
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Location</label>
-            <input type="text" name="location" class="w-full border border-slate-300 rounded-lg px-3 py-2">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Location</label>
+            <input type="text" name="location" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1]">
           </div>
+          
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Description</label>
-            <textarea name="description" rows="4" class="w-full border border-slate-300 rounded-lg px-3 py-2"></textarea>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+            <textarea name="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1]"></textarea>
           </div>
-          <div class="flex justify-end">
-            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition shadow-sm">
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Activity Proposal *</label>
+            <input type="file" name="activity_proposal" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+            <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX, TXT, RTF, ODT (Max 10MB)</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Letter of Intent *</label>
+            <input type="file" name="letter_of_intent" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+            <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX, TXT, RTF, ODT (Max 10MB)</p>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Budgetary Requirement *</label>
+            <input type="file" name="budgetary_requirement" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#a10109d1] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+            <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX, TXT, RTF, ODT (Max 10MB)</p>
+          </div>
+          
+          <div class="flex justify-end gap-3 pt-4">
+            <a href="<%= title.includes('Schedule') ? '/admin/requirements' : '/admin/events' %>" class="px-4 py-2 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+              Cancel
+            </a>
+            <button type="submit" class="px-6 py-2 bg-[#a10109d1] text-white rounded-lg hover:bg-[#8a0108] transition shadow-sm">
               <i data-lucide="save" class="inline w-4 h-4 mr-1"></i> <%= title.includes('Schedule') ? 'Schedule Activity' : 'Save Event' %>
             </button>
           </div>
@@ -97,6 +132,27 @@
     }
     document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
     document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+    
+    // Date range validation
+    function validateDateRange() {
+      const startDate = document.getElementById('startDate');
+      const endDate = document.getElementById('endDate');
+      const errorMsg = document.getElementById('dateRangeError');
+      
+      if (startDate && endDate && startDate.value && endDate.value) {
+        const start = new Date(startDate.value);
+        const end = new Date(endDate.value);
+        
+        if (end < start) {
+          errorMsg.classList.remove('hidden');
+          endDate.setCustomValidity('End date must be on or after start date');
+        } else {
+          errorMsg.classList.add('hidden');
+          endDate.setCustomValidity('');
+        }
+      }
+    }
+    
     window.lucide && window.lucide.replace();
   </script>
 </body>

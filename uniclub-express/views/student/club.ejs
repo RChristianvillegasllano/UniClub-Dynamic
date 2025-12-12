@@ -353,6 +353,29 @@
       font-size: 64px;
       color: white;
       border: 4px solid rgba(255, 255, 255, 0.2);
+      overflow: hidden;
+      position: relative;
+    }
+
+    .officer-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .officer-initial {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
 
     /* Join Button */
@@ -1014,10 +1037,10 @@
           <% } %>
           <div class="flex gap-4">
             <% if (isMember) { %>
-              <a href="/student/my-clubs" class="join-button text-white inline-flex items-center gap-2">
-                <i class="fas fa-check"></i>
-                View My Dashboard →
-              </a>
+              <button id="leaveClubBtn" class="px-6 py-3 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white transition-colors inline-flex items-center gap-2">
+                <i class="fas fa-check-circle"></i>
+                Joined
+              </button>
             <% } else { %>
               <button id="joinClubBtn" class="join-button text-white inline-flex items-center gap-2">
                 Join →
@@ -1041,7 +1064,17 @@
           <% if (club.next_event_date) { %>
             <p class="text-white/70 text-sm mb-2"><%= new Date(club.next_event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %></p>
           <% } %>
-          <button class="text-red-400 hover:text-red-300 text-sm font-medium">RSVP →</button>
+          <% if (club.next_event_id) { %>
+            <% if (club.next_event_rsvp_status === 'going') { %>
+              <button onclick="handleRSVP(<%= club.next_event_id %>, 'cancel')" class="text-green-400 hover:text-green-300 text-sm font-medium transition-colors cursor-pointer">
+                <i class="fas fa-check-circle mr-1"></i>RSVPed
+              </button>
+            <% } else { %>
+              <button onclick="handleRSVP(<%= club.next_event_id %>, 'going')" class="text-red-400 hover:text-red-300 text-sm font-medium transition-colors cursor-pointer">RSVP →</button>
+            <% } %>
+          <% } else { %>
+            <button disabled class="text-gray-400 text-sm font-medium cursor-not-allowed">RSVP →</button>
+          <% } %>
         </div>
       <% } %>
       
@@ -1111,12 +1144,18 @@
                 <p class="text-white/70 mb-4"><%= event.description.substring(0, 150) %><%= event.description.length > 150 ? '...' : '' %></p>
               <% } %>
               <div class="flex gap-3">
-                <button class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white text-sm font-medium transition-colors">
-                  RSVP
-                </button>
-                <button class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white text-sm font-medium transition-colors">
+                <% if (event.rsvp_status === 'going') { %>
+                  <button onclick="handleRSVP(<%= event.id %>, 'cancel')" class="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-white text-sm font-medium transition-colors cursor-pointer">
+                    <i class="fas fa-check-circle mr-1"></i>RSVPed
+                  </button>
+                <% } else { %>
+                  <button onclick="handleRSVP(<%= event.id %>, 'going')" class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white text-sm font-medium transition-colors cursor-pointer">
+                    RSVP
+                  </button>
+                <% } %>
+                <a href="/student/events" class="px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 rounded-lg text-white text-sm font-medium transition-colors inline-block text-center">
                   View Details →
-                </button>
+                </a>
               </div>
             </div>
           <% }) %>
@@ -1150,7 +1189,12 @@
           <% officers.forEach((officer, index) => { %>
             <a href="/student/profile?officer_id=<%= officer.id %>" class="officer-card block cursor-pointer">
               <div class="officer-photo">
-                <%= (officer.first_name || 'O')[0].toUpperCase() %>
+                <% if (officer.profile_picture) { %>
+                  <img src="<%= officer.profile_picture %>" alt="<%= officer.name %>" onerror="this.style.display='none'; this.parentElement.querySelector('.officer-initial').style.display='flex';">
+                  <span class="officer-initial" style="display: none;"><%= (officer.first_name || 'O')[0].toUpperCase() %></span>
+                <% } else { %>
+                  <span class="officer-initial"><%= (officer.first_name || 'O')[0].toUpperCase() %></span>
+                <% } %>
               </div>
               <h3 class="text-2xl font-bold text-white mb-1"><%= officer.name %></h3>
               <p class="text-white/80 font-medium mb-2"><%= officer.position || 'Officer' %> • <%= officer.department || 'N/A' %></p>
@@ -1235,6 +1279,32 @@
     <!-- Modal content will be loaded from discover page structure -->
   </div>
 
+  <!-- Leave Club Modal -->
+  <% if (isMember) { %>
+    <div id="leaveClubModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6 transform transition-all">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-xl font-bold text-gray-900 dark:text-white">Leave Club</h3>
+          <button id="closeLeaveModal" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        <p class="text-gray-600 dark:text-gray-300 mb-6">
+          Are you sure you want to leave <strong class="text-gray-900 dark:text-white"><%= club.name %></strong>? 
+          You'll lose access to club events and activities. The club president will be notified of your departure.
+        </p>
+        <div class="flex gap-3">
+          <button id="confirmLeaveClub" class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors">
+            Yes, Leave Club
+          </button>
+          <button id="cancelLeaveClub" class="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg font-semibold transition-colors">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  <% } %>
+
   <script>
     // Store club data for terms modal
     const modalElement = document.getElementById('termsModal');
@@ -1253,6 +1323,76 @@
         });
       }
     });
+
+    // Leave Club Modal handlers
+    <% if (isMember) { %>
+      const leaveClubBtn = document.getElementById('leaveClubBtn');
+      const leaveClubModal = document.getElementById('leaveClubModal');
+      const closeLeaveModal = document.getElementById('closeLeaveModal');
+      const cancelLeaveClub = document.getElementById('cancelLeaveClub');
+      const confirmLeaveClub = document.getElementById('confirmLeaveClub');
+
+      if (leaveClubBtn && leaveClubModal) {
+        leaveClubBtn.addEventListener('click', () => {
+          leaveClubModal.classList.remove('hidden');
+        });
+
+        const closeModal = () => {
+          leaveClubModal.classList.add('hidden');
+        };
+
+        if (closeLeaveModal) closeLeaveModal.addEventListener('click', closeModal);
+        if (cancelLeaveClub) cancelLeaveClub.addEventListener('click', closeModal);
+
+        // Close on backdrop click
+        leaveClubModal.addEventListener('click', (e) => {
+          if (e.target === leaveClubModal) {
+            closeModal();
+          }
+        });
+
+        if (confirmLeaveClub) {
+          confirmLeaveClub.addEventListener('click', async () => {
+            try {
+              confirmLeaveClub.disabled = true;
+              confirmLeaveClub.textContent = 'Leaving...';
+              
+              const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+              const response = await fetch('/student/clubs/leave', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({
+                  club_id: <%= club.id %>,
+                  _csrf: csrfToken
+                })
+              });
+
+              const data = await response.json();
+
+              if (data.success) {
+                showRSVPNotification(data.message || 'You have successfully left the club.', 'success');
+                setTimeout(() => {
+                  window.location.href = '/student/discover';
+                }, 1500);
+              } else {
+                showRSVPNotification(data.error || 'Failed to leave the club. Please try again.', 'error');
+                confirmLeaveClub.disabled = false;
+                confirmLeaveClub.textContent = 'Yes, Leave Club';
+              }
+            } catch (error) {
+              console.error('Error leaving club:', error);
+              showRSVPNotification('An error occurred. Please try again.', 'error');
+              confirmLeaveClub.disabled = false;
+              confirmLeaveClub.textContent = 'Yes, Leave Club';
+            }
+          });
+        }
+      }
+    <% } %>
 
     // Officer cards - prevent button from triggering card link
     document.querySelectorAll('.officer-card button').forEach(button => {
@@ -1361,20 +1501,7 @@
       }
     });
 
-    // Mobile menu toggle
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const mobileMenu = document.getElementById('mobile-menu');
-
-    mobileMenuBtn?.addEventListener('click', () => {
-      mobileMenu?.classList.toggle('active');
-    });
-
-    // Close mobile menu when clicking outside
-    document.addEventListener('click', (e) => {
-      if (mobileMenu && !mobileMenuBtn?.contains(e.target) && !mobileMenu.contains(e.target)) {
-        mobileMenu.classList.remove('active');
-      }
-    });
+    // Mobile menu functionality is handled by the shared navbar component (studentNav.ejs)
 
     // Navbar scroll effect
     const navbar = document.getElementById('navbar');
@@ -1446,6 +1573,226 @@
       const theme = localStorage.getItem('theme') || 'light';
       updateThemeUI(theme === 'light');
     });
+
+    // RSVP Handler Function
+    async function handleRSVP(eventId, action) {
+      try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        if (!csrfToken) {
+          alert('Security token not found. Please refresh the page and try again.');
+          return;
+        }
+
+        // Disable button during request
+        const button = event.target;
+        const originalText = button.textContent.trim();
+        button.disabled = true;
+        button.setAttribute('data-original-text', originalText);
+        button.textContent = 'Processing...';
+
+        const response = await fetch(`/student/events/${eventId}/rsvp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: action,
+            status: action === 'going' ? 'going' : 'interested',
+            _csrf: csrfToken
+          })
+        });
+
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            data = await response.json();
+          } catch (jsonError) {
+            const textResponse = await response.text();
+            console.error('Failed to parse JSON response:', textResponse.substring(0, 200));
+            throw new Error('The server returned an unexpected response. Please refresh the page and try again.');
+          }
+        } else {
+          const textResponse = await response.text();
+          console.error('Non-JSON response received:', textResponse.substring(0, 200));
+          
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Your session has expired. Please refresh the page and log in again.');
+          } else if (response.status === 404) {
+            throw new Error('Event not found. It may have been removed.');
+          } else if (response.status >= 500) {
+            throw new Error('Server error occurred. Please try again later.');
+          } else {
+            throw new Error('Unable to process your RSVP request. Please refresh the page and try again.');
+          }
+        }
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to process RSVP');
+        }
+
+        // Update button state
+        button.disabled = false;
+        if (action === 'cancel') {
+          button.textContent = originalText.replace('✓ ', '').replace('Going', 'RSVP');
+          button.classList.remove('going');
+        } else {
+          button.textContent = '✓ Going';
+          button.classList.add('going');
+          button.setAttribute('onclick', `handleRSVP(${eventId}, 'cancel')`);
+        }
+
+        // Show success message
+        showRSVPNotification(data.message || 'RSVP updated successfully!', 'success');
+      } catch (error) {
+        console.error('RSVP error:', error);
+        
+        // Re-enable button
+        const button = event.target;
+        button.disabled = false;
+        button.textContent = button.getAttribute('data-original-text') || 'RSVP';
+        
+        // Show error message
+        showRSVPNotification(error.message || 'An error occurred while processing your RSVP. Please try again.', 'error');
+      }
+    }
+
+    // Show RSVP notification
+    function showRSVPNotification(message, type = 'info') {
+      // Remove existing notification if any
+      const existing = document.getElementById('rsvp-notification');
+      if (existing) {
+        existing.remove();
+      }
+
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.id = 'rsvp-notification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        max-width: 400px;
+        animation: slideIn 0.3s ease-out;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      `;
+
+      // Set colors based on type and theme
+      const isLightMode = document.body.classList.contains('light-mode');
+      
+      if (type === 'error') {
+        if (isLightMode) {
+          notification.style.backgroundColor = '#fee2e2';
+          notification.style.color = '#991b1b';
+          notification.style.borderLeft = '4px solid #dc2626';
+        } else {
+          notification.style.backgroundColor = '#7f1d1d';
+          notification.style.color = '#fecaca';
+          notification.style.borderLeft = '4px solid #ef4444';
+        }
+        notification.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink: 0;">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <span>${message}</span>
+        `;
+      } else if (type === 'success') {
+        if (isLightMode) {
+          notification.style.backgroundColor = '#d1fae5';
+          notification.style.color = '#065f46';
+          notification.style.borderLeft = '4px solid #10b981';
+        } else {
+          notification.style.backgroundColor = '#064e3b';
+          notification.style.color = '#6ee7b7';
+          notification.style.borderLeft = '4px solid #10b981';
+        }
+        notification.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink: 0;">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span>${message}</span>
+        `;
+      } else {
+        if (isLightMode) {
+          notification.style.backgroundColor = '#dbeafe';
+          notification.style.color = '#1e40af';
+          notification.style.borderLeft = '4px solid #3b82f6';
+        } else {
+          notification.style.backgroundColor = '#1e3a8a';
+          notification.style.color = '#93c5fd';
+          notification.style.borderLeft = '4px solid #3b82f6';
+        }
+        notification.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink: 0;">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+          </svg>
+          <span>${message}</span>
+        `;
+      }
+
+      // Add animation styles if not already added
+      if (!document.getElementById('rsvp-notification-styles')) {
+        const style = document.createElement('style');
+        style.id = 'rsvp-notification-styles';
+        style.textContent = `
+          @keyframes slideIn {
+            from {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+            to {
+              transform: translateX(0);
+              opacity: 1;
+            }
+          }
+          @keyframes slideOut {
+            from {
+              transform: translateX(0);
+              opacity: 1;
+            }
+            to {
+              transform: translateX(100%);
+              opacity: 0;
+            }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+
+      // Add to page
+      document.body.appendChild(notification);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
+      }, 5000);
+
+      // Allow manual close on click
+      notification.addEventListener('click', () => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
+      });
+    }
   </script>
 </body>
 </html>

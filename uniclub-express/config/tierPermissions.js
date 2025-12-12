@@ -47,6 +47,13 @@ const TIER_1_PERMISSIONS = [
   'approve_officer_accounts',
   'manage_officer_roles',
   
+  // Members (full access)
+  'view_members',
+  'add_members',
+  'edit_members',
+  'remove_members',
+  'approve_applications',
+  
   // Events
   'view_events',
   'create_events',
@@ -63,6 +70,7 @@ const TIER_1_PERMISSIONS = [
   'generate_financial_reports',
   'manage_budget',
   'delete_financial_records',
+  'audit_finances',
   
   // Attendance
   'view_attendance',
@@ -222,6 +230,7 @@ const TIER_2_PERMISSIONS = [
 ];
 
 const TIER_2_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'announcements',
   'events',
   'committees',
@@ -273,6 +282,7 @@ const TIER_3A_PERMISSIONS = [
 ];
 
 const TIER_3A_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'meeting_minutes',
   'documents',
   'events', // view only
@@ -318,6 +328,7 @@ const TIER_3B_TREASURER_PERMISSIONS = [
 ];
 
 const TIER_3B_TREASURER_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'finance',
   'expense_reports',
   'members', // view
@@ -348,6 +359,7 @@ const TIER_3B_AUDITOR_PERMISSIONS = [
 ];
 
 const TIER_3B_AUDITOR_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'audit_logs',
   'finance', // view/comment only
   'members', // view
@@ -381,7 +393,30 @@ const TIER_3C_PERMISSIONS = [
 ];
 
 const TIER_3C_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'announcement_drafts',
+  'events' // view only
+];
+
+// TIER 3G — Press/Media Roles (Very Limited Access)
+const TIER_3G_ROLES = [
+  'press',
+  'media',
+  'press officer',
+  'media officer',
+  'journalist',
+  'reporter'
+];
+
+const TIER_3G_PERMISSIONS = [
+  'view_dashboard',
+  'view_events', // view only, no create/edit
+  'view_announcements', // view only, no create/edit
+  // Note: Press can only VIEW content, cannot modify anything
+];
+
+const TIER_3G_DASHBOARD_PAGES = [
+  'home', // dashboard home only
   'events' // view only
 ];
 
@@ -418,6 +453,7 @@ const TIER_3D_PERMISSIONS = [
 ];
 
 const TIER_3D_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'inventory',
   'event_materials',
   'events' // view only
@@ -452,6 +488,7 @@ const TIER_3E_PERMISSIONS = [
 ];
 
 const TIER_3E_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'events', // view only
   'attendance', // view only
   'submissions'
@@ -485,6 +522,7 @@ const TIER_3F_PERMISSIONS = [
 ];
 
 const TIER_3F_DASHBOARD_PAGES = [
+  'home', // dashboard home (required for all officers)
   'committee',
   'events', // view only
   'submissions'
@@ -549,6 +587,9 @@ const ROLE_TO_TIER = {
   // Tier 3F
   ...Object.fromEntries(TIER_3F_ROLES.map(role => [role.toLowerCase(), '3F'])),
   
+  // Tier 3G - Press/Media
+  ...Object.fromEntries(TIER_3G_ROLES.map(role => [role.toLowerCase(), '3G'])),
+  
   // Tier 4
   ...Object.fromEntries(TIER_4_ROLES.map(role => [role.toLowerCase(), 4]))
 };
@@ -567,6 +608,7 @@ const TIER_PERMISSIONS = {
   '3D': TIER_3D_PERMISSIONS,
   '3E': TIER_3E_PERMISSIONS,
   '3F': TIER_3F_PERMISSIONS,
+  '3G': TIER_3G_PERMISSIONS,
   4: TIER_4_PERMISSIONS
 };
 
@@ -584,6 +626,7 @@ const TIER_DASHBOARD_PAGES = {
   '3D': TIER_3D_DASHBOARD_PAGES,
   '3E': TIER_3E_DASHBOARD_PAGES,
   '3F': TIER_3F_DASHBOARD_PAGES,
+  '3G': TIER_3G_DASHBOARD_PAGES,
   4: TIER_4_DASHBOARD_PAGES
 };
 
@@ -595,7 +638,38 @@ const TIER_DASHBOARD_PAGES = {
 export function getTierForRole(role) {
   if (!role) return null;
   const normalizedRole = role.toLowerCase().trim();
-  return ROLE_TO_TIER[normalizedRole] || null;
+  
+  // Exact match first
+  const exact = ROLE_TO_TIER[normalizedRole];
+  if (exact) return exact;
+
+  // Fuzzy match for common president variants to avoid misclassification/403
+  // Use word boundary checks to prevent matching "Vice President" as Tier 1
+  if (isPresidentRole(role)) {
+    return 1; // Treat president variants as Tier 1 (full access)
+  }
+
+  return null;
+}
+
+/**
+ * Check if a role is a president-level role (Tier 1)
+ * Uses word boundary checks to prevent matching "Vice President" as president
+ * @param {string} role - The role name
+ * @returns {boolean} - True if the role is a president-level role
+ */
+export function isPresidentRole(role) {
+  if (!role) return false;
+  const normalizedRole = role.toLowerCase().trim();
+  
+  // If role contains "vice", it's not a president role
+  if (normalizedRole.includes('vice')) {
+    return false;
+  }
+  
+  // Check if "president" appears as a word (not part of another word)
+  const presidentPattern = /\bpresident\b/;
+  return presidentPattern.test(normalizedRole);
 }
 
 /**
@@ -671,6 +745,7 @@ export function getRolesInTier(tier) {
     '3D': TIER_3D_ROLES,
     '3E': TIER_3E_ROLES,
     '3F': TIER_3F_ROLES,
+    '3G': TIER_3G_ROLES,
     4: TIER_4_ROLES
   };
   
@@ -703,6 +778,7 @@ export {
   TIER_3D_ROLES,
   TIER_3E_ROLES,
   TIER_3F_ROLES,
+  TIER_3G_ROLES,
   TIER_4_ROLES,
   ROLE_TO_TIER,
   TIER_PERMISSIONS,

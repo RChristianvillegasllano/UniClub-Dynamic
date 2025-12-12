@@ -4,16 +4,99 @@ import bcrypt from "bcryptjs";
 import { body, validationResult } from "express-validator";
 import pool, { adminPool } from "../config/db.js";
 import { loginLimiter, csrfProtection, writeLimiter, csrfMiddleware } from "../middleware/security.js";
-import { uploadClubPhoto } from "../middleware/upload.js";
-import { getPermissionsForRole } from "../config/tierPermissions.js";
+import { 
+  strictAuthLimiter,
+  validatePasswordStrength,
+  recordFailedAttempt,
+  clearFailedAttempts,
+  isAccountLocked,
+  getLockoutTimeRemaining,
+  logSecurityEvent
+} from "../middleware/advancedSecurity.js";
+import { uploadClubPhoto, uploadStudentPhoto, uploadEventDocuments } from "../middleware/upload.js";
+import { getPermissionsForRole, isPresidentRole } from "../config/tierPermissions.js";
+import { updateEventStatuses } from "../utils/eventStatus.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
+import Tokens from "csrf";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Helper function to clean up uploaded student photo on validation errors
+const cleanupStudentPhoto = (req) => {
+  if (req.file) {
+    // Use req.file.path if available (set by multer), otherwise construct path
+    const filePath = req.file.path || path.join(__dirname, '../public/img/students', req.file.filename);
+    fs.unlink(filePath, (err) => {
+      if (err && err.code !== 'ENOENT') {
+        console.error('Error deleting uploaded student photo:', err);
+      }
+    });
+  }
+};
+
 const router = express.Router();
+
+// Update Event Status (API endpoint for inline updates) - must be before CSRF protection
+router.put("/events/:id/status", writeLimiter, async (req, res) => {
+  if (!req.session?.admin) {
+    return res.status(403).json({ success: false, error: "Admin access required" });
+  }
+
+  try {
+    // Manual CSRF validation for PUT requests with JSON
+    const csrfToken = req.body?._csrf;
+    if (!csrfToken) {
+      return res.status(403).json({ success: false, error: "CSRF token is required" });
+    }
+
+    // Validate CSRF token manually using the csrf library
+    // Compare against the stored secret in the session, not by generating a new token
+    const tokens = new Tokens();
+    const secret = req.session?.csrfSecret;
+    
+    if (!secret) {
+      return res.status(403).json({ success: false, error: "CSRF session not found. Please refresh the page and try again." });
+    }
+    
+    if (!tokens.verify(secret, csrfToken)) {
+      return res.status(403).json({ success: false, error: "Invalid security token. Please refresh the page and try again." });
+    }
+
+    const { status } = req.body;
+    const eventId = parseInt(req.params.id);
+
+    if (!eventId || isNaN(eventId)) {
+      return res.status(400).json({ success: false, error: "Invalid event ID" });
+    }
+
+    // Validate status
+    const validStatuses = ['Scheduled', 'Ongoing', 'Completed', 'Cancelled', 'scheduled', 'ongoing', 'completed', 'cancelled'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ success: false, error: "Invalid status. Must be one of: Scheduled, Ongoing, Completed, Cancelled" });
+    }
+
+    // Normalize status (capitalize first letter)
+    const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+
+    // Update event status
+    await pool.query(
+      "UPDATE events SET status = ? WHERE id = ?",
+      [normalizedStatus, eventId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: `Event status updated to ${normalizedStatus}`,
+      status: normalizedStatus
+    });
+  } catch (error) {
+    console.error("Error updating event status:", error);
+    res.status(500).json({ success: false, error: "Failed to update event status: " + error.message });
+  }
+});
 
 // Apply CSRF protection to all POST/PUT/DELETE routes in this router
 router.use(csrfProtection);
@@ -97,6 +180,29 @@ function getProgramValue(programArray) {
   return "";
 }
 
+// Ensure students.profile_picture exists and can store large paths/base64
+async function ensureStudentProfilePictureColumn() {
+  try {
+    const colCheck = await pool.query(
+      `SELECT DATA_TYPE 
+         FROM information_schema.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME = 'students' 
+          AND COLUMN_NAME = 'profile_picture'`
+    );
+    if (!colCheck.rows.length) {
+      await pool.query(`ALTER TABLE students ADD COLUMN profile_picture MEDIUMTEXT`);
+    } else {
+      const dataType = (colCheck.rows[0]?.DATA_TYPE || '').toLowerCase();
+      if (dataType !== 'mediumtext') {
+        await pool.query(`ALTER TABLE students MODIFY COLUMN profile_picture MEDIUMTEXT`);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to ensure students.profile_picture column:", err.message);
+  }
+}
+
 // Name validation helper: only letters, spaces, hyphens, and apostrophes
 function validateName(name, fieldName = "Name") {
   if (!name || typeof name !== 'string') {
@@ -147,6 +253,7 @@ router.get("/login", (req, res) => {
 
 // Handle Login
 router.post("/login", 
+  strictAuthLimiter,
   loginLimiter,
   body('username').trim().notEmpty().withMessage('Username is required'),
   body('password').notEmpty().withMessage('Password is required'),
@@ -160,16 +267,44 @@ router.post("/login",
   }
 
   const { username, password } = req.body;
+  const clientIP = req.ip || req.connection.remoteAddress;
 
   try {
+    // Check if account is locked
+    if (isAccountLocked(username, clientIP)) {
+      const remainingTime = getLockoutTimeRemaining(username, clientIP);
+      logSecurityEvent('LOCKED_ACCOUNT_ACCESS_ATTEMPT', { username, ip: clientIP }, req);
+      return res.render("admin/login", { 
+        title: "Admin Login | UniClub", 
+        error: `Account temporarily locked due to multiple failed attempts. Please try again in ${Math.ceil(remainingTime / 60)} minutes.` 
+      });
+    }
+
     const result = await adminPool.query("SELECT * FROM admins WHERE username = ?", [username]);
-    if (result.rows.length === 0)
+    if (result.rows.length === 0) {
+      recordFailedAttempt(username, clientIP);
+      logSecurityEvent('FAILED_LOGIN', { username, reason: 'User not found', ip: clientIP }, req);
       return res.render("admin/login", { title: "Admin Login | UniClub", error: "Invalid username or password" });
+    }
 
     const admin = result.rows[0];
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch)
+    // Use password_hash if available (new schema), fallback to password (legacy schema)
+    const adminPassword = admin.password_hash || admin.password;
+    if (!adminPassword) {
+      recordFailedAttempt(username, clientIP);
+      logSecurityEvent('FAILED_LOGIN', { username, reason: 'No password set', ip: clientIP }, req);
       return res.render("admin/login", { title: "Admin Login | UniClub", error: "Invalid username or password" });
+    }
+    const isMatch = await bcrypt.compare(password, adminPassword);
+    if (!isMatch) {
+      recordFailedAttempt(username, clientIP);
+      logSecurityEvent('FAILED_LOGIN', { username, reason: 'Invalid password', ip: clientIP }, req);
+      return res.render("admin/login", { title: "Admin Login | UniClub", error: "Invalid username or password" });
+    }
+
+    // Clear failed attempts on successful login
+    clearFailedAttempts(username, clientIP);
+    logSecurityEvent('SUCCESSFUL_LOGIN', { username, ip: clientIP }, req);
 
     // Save session before setting admin to ensure CSRF secret persists
     req.session.save((err) => {
@@ -184,6 +319,7 @@ router.post("/login",
     });
   } catch (error) {
     console.error("Login error:", error);
+    logSecurityEvent('LOGIN_ERROR', { username, error: error.message, ip: clientIP }, req);
     res.render("admin/login", { title: "Admin Login | UniClub", error: "Server error" });
   }
 });
@@ -192,22 +328,175 @@ router.get("/officers/edit/:id", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
   try {
+    const id = req.params.id;
+    
+    // Ensure profile_picture column exists
+    try {
+      const colCheck = await pool.query(
+        `SELECT DATA_TYPE 
+           FROM information_schema.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'officers' 
+            AND COLUMN_NAME = 'profile_picture'`
+      );
+      if (!colCheck.rows.length) {
+        await pool.query(`ALTER TABLE officers ADD COLUMN profile_picture MEDIUMTEXT`);
+      }
+    } catch (err) {
+      console.error('Column check failed for profile_picture:', err.message);
+    }
+    
     const [officerR, clubsR] = await Promise.all([
-      pool.query("SELECT * FROM officers WHERE id = ?", [req.params.id]),
+      pool.query("SELECT * FROM officers WHERE id = ?", [id]),
       pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
     ]);
     if (officerR.rows.length === 0) return res.redirect("/admin/officers");
     const officer = officerR.rows[0];
     // Try to derive club_name for select comparison
     const clubName = (await pool.query("SELECT name FROM clubs WHERE id = ?", [officer.club_id]).catch(()=>({rows:[]}))).rows[0]?.name || null;
-    let permissions = null; try { permissions = officer.permissions; } catch(_) { permissions = null; }
+    
+    // Parse permissions from database
+    let permissions = null;
+    try {
+      if (officer.permissions) {
+        // If permissions is a string, parse it; if it's already an object, use it
+        if (typeof officer.permissions === 'string') {
+          const parsed = JSON.parse(officer.permissions);
+          // Handle both old format (array) and new format (object with permissions array)
+          if (Array.isArray(parsed)) {
+            permissions = { permissions: parsed };
+          } else if (parsed && typeof parsed === 'object' && parsed.permissions) {
+            permissions = parsed;
+          } else {
+            permissions = { permissions: [] };
+          }
+        } else if (typeof officer.permissions === 'object') {
+          if (Array.isArray(officer.permissions)) {
+            permissions = { permissions: officer.permissions };
+          } else if (officer.permissions.permissions) {
+            permissions = officer.permissions;
+          } else {
+            permissions = { permissions: [] };
+          }
+        }
+      }
+    } catch(err) {
+      console.warn("Error parsing permissions:", err);
+      permissions = null;
+    }
+    
+    // Get expected permissions for this role
+    const rolePermissions = getPermissionsForRole(officer.role || '');
+    const isPresident = isPresidentRole(officer.role || '');
+    
+    // For President and other Tier 1 roles, always ensure all permissions are present
+    // This ensures that if permissions were saved before new permissions were added, they get updated
+    if (isPresident || rolePermissions.length > 0) {
+      if (!permissions || !permissions.permissions || !Array.isArray(permissions.permissions) || permissions.permissions.length === 0) {
+        // No permissions exist, use role permissions
+        permissions = { permissions: rolePermissions };
+        console.log(`[Admin Edit Officer] Auto-loaded ${rolePermissions.length} permissions for role: "${officer.role}"`);
+      } else {
+        // Permissions exist, but for President/Tier 1, ensure all role permissions are included
+        // Merge existing permissions with role permissions to ensure completeness
+        const existingPermsSet = new Set(permissions.permissions);
+        const rolePermsSet = new Set(rolePermissions);
+        
+        // Add any missing permissions from the role
+        rolePermissions.forEach(perm => {
+          if (!existingPermsSet.has(perm)) {
+            permissions.permissions.push(perm);
+            console.log(`[Admin Edit Officer] Added missing permission "${perm}" for role "${officer.role}"`);
+          }
+        });
+        
+        // For President, ensure we have ALL tier permissions (no missing ones)
+        if (isPresident && permissions.permissions.length < rolePermissions.length) {
+          console.log(`[Admin Edit Officer] Updating permissions for President: had ${permissions.permissions.length}, ensuring all ${rolePermissions.length} are present`);
+          permissions = { permissions: rolePermissions };
+        } else {
+          console.log(`[Admin Edit Officer] Loaded ${permissions.permissions.length} existing permissions from database for role: "${officer.role}"`);
+        }
+      }
+      
+      if (rolePermissions.length === 0) {
+        console.warn(`[Admin Edit Officer] WARNING: No permissions found for role "${officer.role}" - role may not be recognized`);
+      }
+    } else {
+      // For other roles, use existing permissions or role permissions if empty
+      if (!permissions || !permissions.permissions || !Array.isArray(permissions.permissions) || permissions.permissions.length === 0) {
+        permissions = { permissions: rolePermissions };
+        console.log(`[Admin Edit Officer] Auto-loaded ${rolePermissions.length} permissions for role: "${officer.role}"`);
+      } else {
+        console.log(`[Admin Edit Officer] Loaded ${permissions.permissions.length} existing permissions from database for role: "${officer.role}"`);
+      }
+    }
+    
+    // Fetch activity logs for this officer
+    let activityLogs = [];
+    try {
+      // Try to fetch from audit_logs table if it exists
+      const auditLogsResult = await pool.query(
+        `SELECT 
+          id,
+          action_type as type,
+          entity_type,
+          description as title,
+          created_at as timestamp,
+          (SELECT CONCAT(first_name, ' ', last_name) FROM officers WHERE id = performed_by) as actor,
+          TIMESTAMPDIFF(HOUR, created_at, NOW()) as hours_ago
+        FROM audit_logs
+        WHERE performed_by = ? OR entity_id = ?
+        ORDER BY created_at DESC
+        LIMIT 50`,
+        [id, id]
+      ).catch(() => ({ rows: [] }));
+      
+      // Format the logs
+      activityLogs = auditLogsResult.rows.map(log => {
+        const hoursAgo = log.hours_ago || 0;
+        let timeAgo = '';
+        if (hoursAgo < 1) {
+          timeAgo = 'Just now';
+        } else if (hoursAgo < 24) {
+          timeAgo = `${hoursAgo} hour${hoursAgo > 1 ? 's' : ''} ago`;
+        } else {
+          const daysAgo = Math.floor(hoursAgo / 24);
+          timeAgo = `${daysAgo} day${daysAgo > 1 ? 's' : ''} ago`;
+        }
+        
+        // Determine type based on entity_type or action_type
+        let logType = 'system';
+        if (log.entity_type) {
+          const entity = log.entity_type.toLowerCase();
+          if (entity.includes('event')) logType = 'events';
+          else if (entity.includes('document')) logType = 'documents';
+          else if (entity.includes('financial') || entity.includes('expense') || entity.includes('budget')) logType = 'financial';
+          else if (entity.includes('permission') || entity.includes('officer')) logType = 'system';
+        }
+        
+        return {
+          type: logType,
+          title: log.title || log.action_type || 'Activity',
+          actor: log.actor || 'System',
+          time_ago: timeAgo,
+          timestamp: log.timestamp
+        };
+      });
+    } catch (err) {
+      console.warn("Error fetching activity logs:", err);
+      activityLogs = [];
+    }
+    
     res.render("admin/editOfficer", {
       title: "Edit Officer",
       officer: { ...officer, club_name: clubName, permissions },
       clubs: clubsR.rows || [],
+      activityLogs,
       currentPath: "/admin/officers",
       messages: [],
       error: null,
+      csrfToken: res.locals.csrfToken || req.csrfToken?.() || '',
     });
   } catch (error) {
     console.error("Error loading officer:", error);
@@ -217,7 +506,7 @@ router.get("/officers/edit/:id", async (req, res) => {
 
 // Handle Edit Officer
 router.post("/officers/edit/:id", writeLimiter, async (req, res) => {
-  const { first_name, last_name, studentid, email, club_id, role, department, program, permissions, username, password, photo_url } = req.body;
+  const { first_name, last_name, studentid, email, club_id, role, department, program, permissions, current_password, password, confirm_password } = req.body;
   const id = req.params.id;
   try {
     // Name validation
@@ -389,22 +678,94 @@ router.post("/officers/edit/:id", writeLimiter, async (req, res) => {
       }
     }
 
-    if (!username || !username.trim()) {
-      const [officerR, clubsR] = await Promise.all([
-        pool.query("SELECT * FROM officers WHERE id = ?", [id]),
-        pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
-      ]);
-      const officer = officerR.rows[0];
-      const clubName = (await pool.query("SELECT name FROM clubs WHERE id = ?", [officer.club_id]).catch(()=>({rows:[]}))).rows[0]?.name || null;
-      let permsExisting = null; try { permsExisting = officer.permissions; } catch(_) { permsExisting = null; }
-      return res.render("admin/editOfficer", {
-        title: "Edit Officer",
-        officer: { ...officer, club_name: clubName, permissions: permsExisting },
-        clubs: clubsR.rows || [],
-        currentPath: "/admin/officers",
-        messages: [],
-        error: "Username is required",
-      });
+    // Validate password change if new password is provided
+    if (password && password.trim().length > 0) {
+      // Check if officer has an existing password
+      const currentOfficerCheck = await pool.query("SELECT password_hash FROM officers WHERE id = ?", [id]);
+      if (currentOfficerCheck.rows.length === 0) {
+        return res.redirect("/admin/officers");
+      }
+      
+      const hasExistingPassword = currentOfficerCheck.rows[0].password_hash && currentOfficerCheck.rows[0].password_hash.trim().length > 0;
+      
+      // If officer has an existing password, current password is required
+      if (hasExistingPassword) {
+        if (!current_password || current_password.trim().length === 0) {
+          const [officerR, clubsR] = await Promise.all([
+            pool.query("SELECT * FROM officers WHERE id = ?", [id]),
+            pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
+          ]);
+          const officer = officerR.rows[0];
+          const clubName = (await pool.query("SELECT name FROM clubs WHERE id = ?", [officer.club_id]).catch(()=>({rows:[]}))).rows[0]?.name || null;
+          let permsExisting = null; try { permsExisting = officer.permissions; } catch(_) { permsExisting = null; }
+          return res.render("admin/editOfficer", {
+            title: "Edit Officer",
+            officer: { ...officer, club_name: clubName, permissions: permsExisting },
+            clubs: clubsR.rows || [],
+            currentPath: "/admin/officers",
+            messages: [],
+            error: "Current password is required to change password",
+          });
+        }
+
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(current_password, currentOfficerCheck.rows[0].password_hash);
+        if (!isValidPassword) {
+          const [officerR, clubsR] = await Promise.all([
+            pool.query("SELECT * FROM officers WHERE id = ?", [id]),
+            pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
+          ]);
+          const officer = officerR.rows[0];
+          const clubName = (await pool.query("SELECT name FROM clubs WHERE id = ?", [officer.club_id]).catch(()=>({rows:[]}))).rows[0]?.name || null;
+          let permsExisting = null; try { permsExisting = officer.permissions; } catch(_) { permsExisting = null; }
+          return res.render("admin/editOfficer", {
+            title: "Edit Officer",
+            officer: { ...officer, club_name: clubName, permissions: permsExisting },
+            clubs: clubsR.rows || [],
+            currentPath: "/admin/officers",
+            messages: [],
+            error: "Current password is incorrect",
+          });
+        }
+      }
+      // If officer doesn't have a password, allow setting it without current_password
+
+      // Validate password confirmation
+      if (!confirm_password || confirm_password.trim().length === 0) {
+        const [officerR, clubsR] = await Promise.all([
+          pool.query("SELECT * FROM officers WHERE id = ?", [id]),
+          pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
+        ]);
+        const officer = officerR.rows[0];
+        const clubName = (await pool.query("SELECT name FROM clubs WHERE id = ?", [officer.club_id]).catch(()=>({rows:[]}))).rows[0]?.name || null;
+        let permsExisting = null; try { permsExisting = officer.permissions; } catch(_) { permsExisting = null; }
+        return res.render("admin/editOfficer", {
+          title: "Edit Officer",
+          officer: { ...officer, club_name: clubName, permissions: permsExisting },
+          clubs: clubsR.rows || [],
+          currentPath: "/admin/officers",
+          messages: [],
+          error: "Please confirm your new password",
+        });
+      }
+      
+      if (password !== confirm_password) {
+        const [officerR, clubsR] = await Promise.all([
+          pool.query("SELECT * FROM officers WHERE id = ?", [id]),
+          pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
+        ]);
+        const officer = officerR.rows[0];
+        const clubName = (await pool.query("SELECT name FROM clubs WHERE id = ?", [officer.club_id]).catch(()=>({rows:[]}))).rows[0]?.name || null;
+        let permsExisting = null; try { permsExisting = officer.permissions; } catch(_) { permsExisting = null; }
+        return res.render("admin/editOfficer", {
+          title: "Edit Officer",
+          officer: { ...officer, club_name: clubName, permissions: permsExisting },
+          clubs: clubsR.rows || [],
+          currentPath: "/admin/officers",
+          messages: [],
+          error: "New passwords do not match",
+        });
+      }
     }
 
     let passwordHash = null;
@@ -412,37 +773,62 @@ router.post("/officers/edit/:id", writeLimiter, async (req, res) => {
       passwordHash = await bcrypt.hash(password, 10);
     }
 
-    await pool.query(
-      `UPDATE officers
-          SET first_name=?,
-              last_name=?,
-              studentid=?,
-              email=?,
-              club_id=?,
-              role=?,
-              department=?,
-              program=?,
-              permissions=?,
-              username=?,
-              photo_url=?,
-              password_hash = COALESCE(?, password_hash)
-        WHERE id=?`,
-      [
-        firstNameValidation.value,
-        lastNameValidation.value,
-        studentid,
-        email ? email.trim() : null,
-        resolvedClubId,
-        role,
-        department,
-        program,
-        perms ? JSON.stringify(perms) : null,
-        username.trim(),
-        photo_url || null,
-        passwordHash,
-        id,
-      ]
-    );
+    // Build update query - always update password_hash if provided (to allow setting password for accounts without one)
+    if (passwordHash) {
+      await pool.query(
+        `UPDATE officers
+            SET first_name=?,
+                last_name=?,
+                studentid=?,
+                email=?,
+                club_id=?,
+                role=?,
+                department=?,
+                program=?,
+                permissions=?,
+                password_hash=?
+          WHERE id=?`,
+        [
+          firstNameValidation.value,
+          lastNameValidation.value,
+          studentid,
+          email ? email.trim().toLowerCase() : null,
+          resolvedClubId,
+          role,
+          department,
+          program,
+          perms ? JSON.stringify(perms) : null,
+          passwordHash,
+          id,
+        ]
+      );
+    } else {
+      await pool.query(
+        `UPDATE officers
+            SET first_name=?,
+                last_name=?,
+                studentid=?,
+                email=?,
+                club_id=?,
+                role=?,
+                department=?,
+                program=?,
+                permissions=?
+          WHERE id=?`,
+        [
+          firstNameValidation.value,
+          lastNameValidation.value,
+          studentid,
+          email ? email.trim().toLowerCase() : null,
+          resolvedClubId,
+          role,
+          department,
+          program,
+          perms ? JSON.stringify(perms) : null,
+          id,
+        ]
+      );
+    }
     res.redirect("/admin/officers");
   } catch (error) {
     console.error("Error updating officer:", error);
@@ -458,6 +844,71 @@ router.get("/dashboard", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
   try {
+    // Auto-update event statuses before loading dashboard
+    await updateEventStatuses();
+    
+    // Fetch admin's officer profile if they exist as an officer
+    let adminOfficer = null;
+    try {
+      // Ensure profile_picture column exists
+      const colCheck = await pool.query(
+        `SELECT DATA_TYPE 
+           FROM information_schema.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'officers' 
+            AND COLUMN_NAME = 'profile_picture'`
+      );
+      if (!colCheck.rows.length) {
+        await pool.query(`ALTER TABLE officers ADD COLUMN profile_picture MEDIUMTEXT`);
+      }
+      
+      // Try to find officer by admin username or email
+      if (req.session.admin?.username) {
+        const officerResult = await pool.query(
+          `SELECT id, first_name, last_name, profile_picture, role, email 
+           FROM officers 
+           WHERE username = ? OR email = ? 
+           LIMIT 1`,
+          [req.session.admin.username, req.session.admin.username]
+        );
+        if (officerResult.rows.length > 0) {
+          adminOfficer = officerResult.rows[0];
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching admin officer profile:', err.message);
+    }
+    
+    // Auto-migrate officer emails (normalize existing emails - safe to run multiple times)
+    try {
+      const { rows: officersToFix } = await pool.query(
+        "SELECT id, email FROM officers WHERE email IS NOT NULL AND email != '' AND (email != LOWER(TRIM(email)) OR email != TRIM(email))"
+      );
+      
+      if (officersToFix.length > 0) {
+        let fixed = 0;
+        for (const officer of officersToFix) {
+          const normalizedEmail = officer.email.trim().toLowerCase();
+          // Check for duplicates before updating
+          const existingCheck = await pool.query(
+            "SELECT id FROM officers WHERE LOWER(TRIM(email)) = ? AND id != ? LIMIT 1",
+            [normalizedEmail, officer.id]
+          );
+          
+          if (existingCheck.rows.length === 0) {
+            await pool.query("UPDATE officers SET email = ? WHERE id = ?", [normalizedEmail, officer.id]);
+            fixed++;
+          }
+        }
+        if (fixed > 0) {
+          console.log(`[Auto-Migration] Normalized ${fixed} officer email(s) on dashboard load`);
+        }
+      }
+    } catch (migrationErr) {
+      // Don't block dashboard if migration fails
+      console.warn("[Auto-Migration] Email normalization warning:", migrationErr.message);
+    }
+
     // Parallel queries
     const studentsQ = pool.query("SELECT COUNT(*) AS count FROM students").catch(() => ({ rows: [{ count: 0 }] }));
     const clubsQ = pool.query("SELECT COUNT(*) AS count FROM clubs").catch(() => ({ rows: [{ count: 0 }] }));
@@ -585,6 +1036,7 @@ router.get("/dashboard", async (req, res) => {
     res.render("admin/dashboard", {
       title: "Admin Dashboard | UniClub",
       admin: req.session.admin,
+      adminOfficer: adminOfficer,
       currentPath: "/admin/dashboard",
       studentsCount: Number(studentsR.rows[0]?.count || 0),
       clubsCount: totalClubs,
@@ -671,15 +1123,15 @@ router.get("/analytics", async (req, res) => {
   try {
     // Parallel queries with safe fallbacks
     const totalClubsQ = pool
-      .query(`SELECT COUNT(*)::int AS total_clubs FROM clubs`)
+      .query(`SELECT COUNT(*) AS total_clubs FROM clubs`)
       .catch(() => ({ rows: [{ total_clubs: 0 }] }));
 
     const activeDeptsQ = pool
-      .query(`SELECT COUNT(DISTINCT department)::int AS active_depts FROM clubs WHERE department IS NOT NULL AND department <> ''`)
+      .query(`SELECT COUNT(DISTINCT department) AS active_depts FROM clubs WHERE department IS NOT NULL AND department <> ''`)
       .catch(() => ({ rows: [{ active_depts: 0 }] }));
 
     const uniqueRolesQ = pool
-      .query(`SELECT COUNT(DISTINCT role)::int AS unique_roles FROM officers WHERE role IS NOT NULL AND role <> ''`)
+      .query(`SELECT COUNT(DISTINCT role) AS unique_roles FROM officers WHERE role IS NOT NULL AND role <> ''`)
       .catch(() => ({ rows: [{ unique_roles: 0 }] }));
 
     // Growth rate (month-over-month officers created)
@@ -711,7 +1163,7 @@ router.get("/analytics", async (req, res) => {
         SELECT COUNT(*) AS c FROM clubs 
         WHERE created_at >= DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m-01')
           AND created_at < DATE_FORMAT(NOW(), '%Y-%m-01')
-      ) lm;
+      ) lm
     `).catch(() => ({ rows: [{ this_month: 0, last_month: 0, change: 0 }] }));
 
     const deptsTrendQ = pool.query(`
@@ -729,7 +1181,7 @@ router.get("/analytics", async (req, res) => {
         WHERE department IS NOT NULL AND department <> ''
           AND created_at >= DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m-01')
           AND created_at < DATE_FORMAT(NOW(), '%Y-%m-01')
-      ) lm;
+      ) lm
     `).catch(() => ({ rows: [{ this_month: 0, last_month: 0, change: 0 }] }));
 
     const rolesTrendQ = pool.query(`
@@ -747,7 +1199,7 @@ router.get("/analytics", async (req, res) => {
         WHERE role IS NOT NULL AND role <> ''
           AND created_at >= DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m-01')
           AND created_at < DATE_FORMAT(NOW(), '%Y-%m-01')
-      ) lm;
+      ) lm
     `).catch(() => ({ rows: [{ this_month: 0, last_month: 0, change: 0 }] }));
 
     // Clubs by department (use category if department is missing)
@@ -777,13 +1229,14 @@ router.get("/analytics", async (req, res) => {
       LIMIT 12;
     `).catch(() => ({ rows: [] }));
 
-    // Monthly activity (events), use created_at if date is NULL
+    // Monthly activity (events), use created_at if date is NULL - last 6 months
     const monthlyActQ = pool.query(`
       SELECT DATE_FORMAT(COALESCE(date, created_at), '%Y-%m') AS ym, COUNT(*) AS count
       FROM events
+      WHERE COALESCE(date, created_at) >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
       GROUP BY DATE_FORMAT(COALESCE(date, created_at), '%Y-%m')
-      ORDER BY ym
-      LIMIT 24;
+      ORDER BY ym DESC
+      LIMIT 6
     `).catch(() => ({ rows: [] }));
 
     // Department analytics: officers & clubs per department (use category if department is missing)
@@ -830,8 +1283,14 @@ router.get("/analytics", async (req, res) => {
     const roleLabels = rolesDistR.rows.map(r => r.role);
     const roleCounts = rolesDistR.rows.map(r => r.count);
 
-    const monthlyLabels = monthlyActR.rows.map(r => r.ym);
-    const monthlyCounts = monthlyActR.rows.map(r => r.count);
+    // Format monthly labels and reverse to show oldest to newest (since we ordered DESC)
+    const monthlyLabels = monthlyActR.rows.map(r => {
+      // Format as "Jan 2024" style
+      const [year, month] = r.ym.split('-');
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${monthNames[parseInt(month) - 1]} ${year}`;
+    }).reverse();
+    const monthlyCounts = monthlyActR.rows.map(r => r.count).reverse();
 
     // Department analytics + derived "activityScore" & trend string
     const deptAnalytics = (deptAggR.rows || []).map(r => {
@@ -903,42 +1362,57 @@ router.get("/students", async (req, res) => {
 
     // Build base query with filters
     const params = [];
-    let paramCount = 0;
     const conditions = [];
 
     // Search filter
     if (search) {
       const searchParam = `%${search}%`;
-      conditions.push(`(s.first_name ILIKE $${++paramCount} OR s.last_name ILIKE $${++paramCount} OR CONCAT(s.first_name, ' ', s.last_name) ILIKE $${++paramCount} OR s.email ILIKE $${++paramCount} OR s.studentid ILIKE $${++paramCount})`);
+      conditions.push(`(LOWER(s.first_name) LIKE LOWER(?) OR LOWER(s.last_name) LIKE LOWER(?) OR LOWER(CONCAT(s.first_name, ' ', s.last_name)) LIKE LOWER(?) OR LOWER(s.email) LIKE LOWER(?) OR LOWER(s.studentid) LIKE LOWER(?))`);
       params.push(searchParam, searchParam, searchParam, searchParam, searchParam);
     }
 
     // Program filter
     if (program) {
-      conditions.push(`s.program = $${++paramCount}`);
+      conditions.push(`s.program = ?`);
       params.push(program);
     }
 
     // Year level filter
     if (year_level) {
-      conditions.push(`s.year_level = $${++paramCount}`);
+      conditions.push(`s.year_level = ?`);
       params.push(year_level);
     }
 
     // Department filter
     if (department) {
-      conditions.push(`s.department = $${++paramCount}`);
+      conditions.push(`s.department = ?`);
       params.push(department);
     }
 
-    // Status filter
+    // Status filter - handle NULL statuses as 'Active'
     if (status) {
-      conditions.push(`COALESCE(s.status, 'Active') = $${++paramCount}`);
-      params.push(status);
+      if (status === 'Active') {
+        // Include both 'Active' status and NULL statuses (which default to Active)
+        conditions.push(`(COALESCE(s.status, 'Active') = ? OR s.status IS NULL)`);
+        params.push(status);
+      } else {
+        conditions.push(`COALESCE(s.status, 'Active') = ?`);
+        params.push(status);
+      }
     }
 
     // Ensure status column exists
-    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active'`);
+    try {
+      await pool.query(`ALTER TABLE students ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`);
+    } catch (err) {
+      // Column already exists, ignore error
+      if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+        console.error('Error adding status column:', err);
+      }
+    }
+    
+    // Update any students with NULL status to 'Active'
+    await pool.query(`UPDATE students SET status = 'Active' WHERE status IS NULL OR status = ''`).catch(() => {});
 
     // Get all students sorted by program, year_level, first_name
     const allStudentsQuery = `
@@ -1072,12 +1546,23 @@ router.get("/students/add", (req, res) => {
   res.render("admin/addStudent", { title: "Add Student | UniClub", error: null, currentPath: "/admin/students", messages: [] });
 });
 
-router.post("/students/add", writeLimiter, async (req, res) => {
-  const { first_name, last_name, email, program, year_level, department, studentid, birthdate } = req.body;
+router.post("/students/add", writeLimiter, (req, res, next) => {
+  uploadStudentPhoto.single('photo')(req, res, (err) => {
+    if (err) {
+      const errorMessage = err.code === 'LIMIT_FILE_SIZE'
+        ? "Photo too large (max 5MB)."
+        : (err.message || "Failed to upload photo");
+      return res.render("admin/addStudent", { title: "Add Student | UniClub", error: errorMessage, currentPath: "/admin/students", messages: [] });
+    }
+    next();
+  });
+}, async (req, res) => {
+  const { first_name, last_name, email, program, year_level, department, studentid, birthdate, password, confirmPassword } = req.body;
   try {
     // Name validation
     const firstNameValidation = validateName(first_name, "First name");
     if (!firstNameValidation.valid) {
+      cleanupStudentPhoto(req);
       return res.render("admin/addStudent", {
         title: "Add Student | UniClub",
         error: firstNameValidation.error,
@@ -1088,6 +1573,7 @@ router.post("/students/add", writeLimiter, async (req, res) => {
     
     const lastNameValidation = validateName(last_name, "Last name");
     if (!lastNameValidation.valid) {
+      cleanupStudentPhoto(req);
       return res.render("admin/addStudent", {
         title: "Add Student | UniClub",
         error: lastNameValidation.error,
@@ -1099,6 +1585,7 @@ router.post("/students/add", writeLimiter, async (req, res) => {
     // Email format validation: firstinitial.lastname.6digits.tc@umindanao.edu.ph
     const emailPattern = /^[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph$/i;
     if (!emailPattern.test(email)) {
+      cleanupStudentPhoto(req);
       return res.render("admin/addStudent", {
         title: "Add Student | UniClub",
         error: "Email must follow format: firstinitial.lastname.6digitid.tc@umindanao.edu.ph (e.g., j.delacruz.111222.tc@umindanao.edu.ph or r.llano.141429.tc@umindanao.edu.ph)",
@@ -1107,8 +1594,26 @@ router.post("/students/add", writeLimiter, async (req, res) => {
       });
     }
 
+    // Check if email already exists (normalize email for comparison)
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailCheck = await pool.query(
+      "SELECT id, studentid FROM students WHERE LOWER(TRIM(email)) = ?",
+      [normalizedEmail]
+    );
+    if (emailCheck.rows.length > 0) {
+      cleanupStudentPhoto(req);
+      const existingStudent = emailCheck.rows[0];
+      return res.render("admin/addStudent", {
+        title: "Add Student | UniClub",
+        error: `A student with this email already exists (Student ID: ${existingStudent.studentid || 'N/A'}). Email must be unique.`,
+        currentPath: "/admin/students",
+        messages: [],
+      });
+    }
+
     // Student ID validation: exactly 6 digits (required)
     if (!studentid || !/^\d{6}$/.test(studentid)) {
+      cleanupStudentPhoto(req);
       return res.render("admin/addStudent", {
         title: "Add Student | UniClub",
         error: "Student ID is required and must be exactly 6 digits",
@@ -1123,6 +1628,7 @@ router.post("/students/add", writeLimiter, async (req, res) => {
       [studentid]
     );
     if (studentIdCheck.rows.length > 0) {
+      cleanupStudentPhoto(req);
       return res.render("admin/addStudent", {
         title: "Add Student | UniClub",
         error: "A student with this Student ID already exists. Student ID must be unique.",
@@ -1141,6 +1647,7 @@ router.post("/students/add", writeLimiter, async (req, res) => {
       [firstNameValidation.value, lastNameValidation.value]
     );
     if (nameCheck.rows.length > 0) {
+      cleanupStudentPhoto(req);
       const existingStudent = nameCheck.rows[0];
       return res.render("admin/addStudent", {
         title: "Add Student | UniClub",
@@ -1150,18 +1657,64 @@ router.post("/students/add", writeLimiter, async (req, res) => {
       });
     }
 
+    // Password validation
+    if (!password || password.trim().length < 8) {
+      cleanupStudentPhoto(req);
+      return res.render("admin/addStudent", {
+        title: "Add Student | UniClub",
+        error: "Password is required and must be at least 8 characters",
+        currentPath: "/admin/students",
+        messages: [],
+      });
+    }
+
+    if (!confirmPassword || confirmPassword.trim().length === 0) {
+      cleanupStudentPhoto(req);
+      return res.render("admin/addStudent", {
+        title: "Add Student | UniClub",
+        error: "Please confirm your password",
+        currentPath: "/admin/students",
+        messages: [],
+      });
+    }
+
+    if (password !== confirmPassword) {
+      cleanupStudentPhoto(req);
+      return res.render("admin/addStudent", {
+        title: "Add Student | UniClub",
+        error: "Passwords do not match",
+        currentPath: "/admin/students",
+        messages: [],
+      });
+    }
+
+    // Hash password
+    const passwordHash = await bcrypt.hash(password, 10);
+
     // Ensure optional columns exist
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS department VARCHAR(100)`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS studentid VARCHAR(50)`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS birthdate DATE`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS password VARCHAR(255)`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active'`);
+
+    // Ensure photo column exists and can store larger data
+    await ensureStudentProfilePictureColumn();
+
+    // Handle photo
+    let photoPath = null;
+    if (req.file) {
+      photoPath = `/img/students/${req.file.filename}`;
+    }
 
     await pool.query(
-      "INSERT INTO students (first_name, last_name, email, program, year_level, department, studentid, birthdate, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
-      [firstNameValidation.value, lastNameValidation.value, email, program, year_level, department || null, studentid || null, birthdate || null]
+      "INSERT INTO students (first_name, last_name, email, program, year_level, department, studentid, birthdate, profile_picture, password, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())",
+      [firstNameValidation.value, lastNameValidation.value, normalizedEmail, program, year_level, department || null, studentid || null, birthdate || null, photoPath, passwordHash]
     );
     res.redirect("/admin/students");
   } catch (error) {
     console.error("Error adding student:", error);
+    cleanupStudentPhoto(req);
     res.render("admin/addStudent", { title: "Add Student | UniClub", error: "Failed to add student", currentPath: "/admin/students", messages: [] });
   }
 });
@@ -1188,14 +1741,25 @@ router.get("/students/edit/:id", async (req, res) => {
 });
 
 // ✅ Handle Edit Student
-router.post("/students/edit/:id", writeLimiter, async (req, res) => {
-  const { first_name, last_name, email, program, year_level, department, studentid, status, birthdate } = req.body;
+router.post("/students/edit/:id", writeLimiter, (req, res, next) => {
+  uploadStudentPhoto.single('photo')(req, res, (err) => {
+    if (err) {
+      const errorMessage = err.code === 'LIMIT_FILE_SIZE'
+        ? "Photo too large (max 5MB)."
+        : (err.message || "Failed to upload photo");
+      return res.render("admin/editStudent", { title: "Edit Student | UniClub", student: req.body, error: errorMessage, currentPath: "/admin/students", messages: [] });
+    }
+    next();
+  });
+}, async (req, res) => {
+  const { first_name, last_name, email, program, year_level, department, studentid, status, birthdate, delete_photo, current_password, password, confirmPassword } = req.body;
   const id = req.params.id;
 
   try {
     // Name validation
     const firstNameValidation = validateName(first_name, "First name");
     if (!firstNameValidation.valid) {
+      cleanupStudentPhoto(req);
       const result = await pool.query("SELECT * FROM students WHERE id = ?", [id]);
       const student = result.rows[0] || {};
       return res.render("admin/editStudent", {
@@ -1209,6 +1773,7 @@ router.post("/students/edit/:id", writeLimiter, async (req, res) => {
     
     const lastNameValidation = validateName(last_name, "Last name");
     if (!lastNameValidation.valid) {
+      cleanupStudentPhoto(req);
       const result = await pool.query("SELECT * FROM students WHERE id = ?", [id]);
       const student = result.rows[0] || {};
       return res.render("admin/editStudent", {
@@ -1223,6 +1788,7 @@ router.post("/students/edit/:id", writeLimiter, async (req, res) => {
     // Email format validation: firstinitial.lastname.6digits.tc@umindanao.edu.ph
     const emailPattern = /^[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph$/i;
     if (!emailPattern.test(email)) {
+      cleanupStudentPhoto(req);
       return res.render("admin/editStudent", {
         title: "Edit Student | UniClub",
         student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
@@ -1232,8 +1798,27 @@ router.post("/students/edit/:id", writeLimiter, async (req, res) => {
       });
     }
 
+    // Check if email already exists (excluding current student)
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailCheck = await pool.query(
+      "SELECT id, studentid FROM students WHERE LOWER(TRIM(email)) = ? AND id != ?",
+      [normalizedEmail, id]
+    );
+    if (emailCheck.rows.length > 0) {
+      cleanupStudentPhoto(req);
+      const existingStudent = emailCheck.rows[0];
+      return res.render("admin/editStudent", {
+        title: "Edit Student | UniClub",
+        student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
+        error: `A student with this email already exists (Student ID: ${existingStudent.studentid || 'N/A'}). Email must be unique.`,
+        currentPath: "/admin/students",
+        messages: [],
+      });
+    }
+
     // Student ID validation: exactly 6 digits (required)
     if (!studentid || !/^\d{6}$/.test(studentid)) {
+      cleanupStudentPhoto(req);
       return res.render("admin/editStudent", {
         title: "Edit Student | UniClub",
         student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
@@ -1249,6 +1834,7 @@ router.post("/students/edit/:id", writeLimiter, async (req, res) => {
       [studentid, id]
     );
     if (studentIdCheck.rows.length > 0) {
+      cleanupStudentPhoto(req);
       return res.render("admin/editStudent", {
         title: "Edit Student | UniClub",
         student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
@@ -1268,6 +1854,7 @@ router.post("/students/edit/:id", writeLimiter, async (req, res) => {
       [firstNameValidation.value, lastNameValidation.value, id]
     );
     if (nameCheck.rows.length > 0) {
+      cleanupStudentPhoto(req);
       const existingStudent = nameCheck.rows[0];
       return res.render("admin/editStudent", {
         title: "Edit Student | UniClub",
@@ -1278,25 +1865,153 @@ router.post("/students/edit/:id", writeLimiter, async (req, res) => {
       });
     }
 
+    // Handle password change if new password is provided
+    let passwordHash = null;
+    if (password && password.trim().length > 0) {
+      // Check if student has an existing password
+      const currentStudent = await pool.query("SELECT password FROM students WHERE id = ?", [id]);
+      if (currentStudent.rows.length === 0) {
+        return res.redirect("/admin/students");
+      }
+      
+      const hasExistingPassword = currentStudent.rows[0].password && currentStudent.rows[0].password.trim().length > 0;
+      
+      // If student has an existing password, current password is required
+      if (hasExistingPassword) {
+        if (!current_password || current_password.trim().length === 0) {
+          cleanupStudentPhoto(req);
+          const result = await pool.query("SELECT * FROM students WHERE id = ?", [id]);
+          const student = result.rows[0] || {};
+          return res.render("admin/editStudent", {
+            title: "Edit Student | UniClub",
+            student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
+            error: "Current password is required to change password",
+            currentPath: "/admin/students",
+            messages: [],
+          });
+        }
+
+        // Verify current password
+        const isValidPassword = await bcrypt.compare(current_password, currentStudent.rows[0].password);
+        if (!isValidPassword) {
+          cleanupStudentPhoto(req);
+          const result = await pool.query("SELECT * FROM students WHERE id = ?", [id]);
+          const student = result.rows[0] || {};
+          return res.render("admin/editStudent", {
+            title: "Edit Student | UniClub",
+            student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
+            error: "Current password is incorrect",
+            currentPath: "/admin/students",
+            messages: [],
+          });
+        }
+      }
+      // If student doesn't have a password, allow setting it without current_password
+
+      // Validate password confirmation
+      if (!confirmPassword || confirmPassword.trim().length === 0) {
+        cleanupStudentPhoto(req);
+        const result = await pool.query("SELECT * FROM students WHERE id = ?", [id]);
+        const student = result.rows[0] || {};
+        return res.render("admin/editStudent", {
+          title: "Edit Student | UniClub",
+          student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
+          error: "Please confirm your new password",
+          currentPath: "/admin/students",
+          messages: [],
+        });
+      }
+      
+      if (password !== confirmPassword) {
+        cleanupStudentPhoto(req);
+        const result = await pool.query("SELECT * FROM students WHERE id = ?", [id]);
+        const student = result.rows[0] || {};
+        return res.render("admin/editStudent", {
+          title: "Edit Student | UniClub",
+          student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
+          error: "New passwords do not match",
+          currentPath: "/admin/students",
+          messages: [],
+        });
+      }
+
+      // Trim password before validation and hashing for consistency
+      const trimmedPassword = password.trim();
+      if (trimmedPassword.length < 8) {
+        cleanupStudentPhoto(req);
+        const result = await pool.query("SELECT * FROM students WHERE id = ?", [id]);
+        const student = result.rows[0] || {};
+        return res.render("admin/editStudent", {
+          title: "Edit Student | UniClub",
+          student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
+          error: "New password must be at least 8 characters",
+          currentPath: "/admin/students",
+          messages: [],
+        });
+      }
+
+      passwordHash = await bcrypt.hash(trimmedPassword, 10);
+    }
+
     // Ensure optional columns exist
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS department VARCHAR(100)`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS studentid VARCHAR(50)`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Active'`);
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS birthdate DATE`);
+    await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS password VARCHAR(255)`);
+    await ensureStudentProfilePictureColumn();
 
     // Validate status
     const validStatuses = ["Active", "Graduated", "Inactive"];
     const studentStatus = validStatuses.includes(status) ? status : "Active";
 
-    await pool.query(
-      `UPDATE students
-       SET first_name = ?, last_name = ?, email = ?, program = ?, year_level = ?, department = ?, studentid = ?, status = ?, birthdate = ?
-       WHERE id = ?`,
-      [firstNameValidation.value, lastNameValidation.value, email, program, year_level, department || null, studentid || null, studentStatus, birthdate || null, id]
-    );
+    // Get current photo
+    const currentStudent = await pool.query("SELECT profile_picture FROM students WHERE id = ?", [id]);
+    const currentPhoto = currentStudent.rows[0]?.profile_picture || null;
+    let photoPath = currentPhoto;
+
+    // Delete photo
+    if (delete_photo === 'on' || delete_photo === 'true') {
+      if (currentPhoto) {
+        const filePath = path.join(process.cwd(), 'public', currentPhoto);
+        fs.unlink(filePath, (err) => {
+          if (err && err.code !== 'ENOENT') console.error('Error deleting old student photo:', err);
+        });
+      }
+      photoPath = null;
+    }
+
+    // New upload
+    if (req.file) {
+      if (currentPhoto) {
+        const oldPath = path.join(process.cwd(), 'public', currentPhoto);
+        fs.unlink(oldPath, (err) => {
+          if (err && err.code !== 'ENOENT') console.error('Error deleting old student photo:', err);
+        });
+      }
+      photoPath = `/img/students/${req.file.filename}`;
+    }
+
+    // Build update query - include password only if it's being changed
+    if (passwordHash) {
+      await pool.query(
+        `UPDATE students
+         SET first_name = ?, last_name = ?, email = ?, program = ?, year_level = ?, department = ?, studentid = ?, status = ?, birthdate = ?, profile_picture = ?, password = ?
+         WHERE id = ?`,
+        [firstNameValidation.value, lastNameValidation.value, normalizedEmail, program, year_level, department || null, studentid || null, studentStatus, birthdate || null, photoPath, passwordHash, id]
+      );
+    } else {
+      await pool.query(
+        `UPDATE students
+         SET first_name = ?, last_name = ?, email = ?, program = ?, year_level = ?, department = ?, studentid = ?, status = ?, birthdate = ?, profile_picture = ?
+         WHERE id = ?`,
+        [firstNameValidation.value, lastNameValidation.value, normalizedEmail, program, year_level, department || null, studentid || null, studentStatus, birthdate || null, photoPath, id]
+      );
+    }
     res.redirect("/admin/students");
   } catch (error) {
     console.error("Error updating student:", error);
+    cleanupStudentPhoto(req);
     res.render("admin/editStudent", {
       title: "Edit Student | UniClub",
       student: { id, first_name, last_name, email, program, year_level, department, studentid, status, birthdate },
@@ -1329,8 +2044,8 @@ router.post("/students/delete/:id", writeLimiter, async (req, res) => {
     }
 
     // Check if student exists
-    const [checkResult] = await pool.query("SELECT id FROM students WHERE id = ?", [studentId]);
-    if (checkResult.length === 0) {
+    const checkResult = await pool.query("SELECT id FROM students WHERE id = ?", [studentId]);
+    if (checkResult.rows.length === 0) {
       const errorMsg = "Student not found";
       if (req.headers.accept && req.headers.accept.includes('application/json')) {
         return res.status(404).json({ success: false, error: errorMsg });
@@ -1401,23 +2116,23 @@ router.get("/students/export", async (req, res) => {
 
     if (search) {
       const searchParam = `%${search}%`;
-      conditions.push(`(s.first_name ILIKE $${++paramCount} OR s.last_name ILIKE $${++paramCount} OR CONCAT(s.first_name, ' ', s.last_name) ILIKE $${++paramCount} OR s.email ILIKE $${++paramCount} OR s.studentid ILIKE $${++paramCount})`);
+      conditions.push(`(LOWER(s.first_name) LIKE LOWER(?) OR LOWER(s.last_name) LIKE LOWER(?) OR LOWER(CONCAT(s.first_name, ' ', s.last_name)) LIKE LOWER(?) OR LOWER(s.email) LIKE LOWER(?) OR LOWER(s.studentid) LIKE LOWER(?))`);
       params.push(searchParam, searchParam, searchParam, searchParam, searchParam);
     }
     if (program) {
-      conditions.push(`s.program = $${++paramCount}`);
+      conditions.push(`s.program = ?`);
       params.push(program);
     }
     if (year_level) {
-      conditions.push(`s.year_level = $${++paramCount}`);
+      conditions.push(`s.year_level = ?`);
       params.push(year_level);
     }
     if (department) {
-      conditions.push(`s.department = $${++paramCount}`);
+      conditions.push(`s.department = ?`);
       params.push(department);
     }
     if (status) {
-      conditions.push(`COALESCE(s.status, 'Active') = $${++paramCount}`);
+      conditions.push(`COALESCE(s.status, 'Active') = ?`);
       params.push(status);
     }
 
@@ -1586,7 +2301,7 @@ router.get("/officers", async (req, res) => {
       }
       
       if (!isNaN(clubIdInt) && clubIdInt > 0) {
-        conditions.push(`o.club_id = $${++paramCount}`);
+        conditions.push(`o.club_id = ?`);
         params.push(clubIdInt);
         console.log(`DEBUG: Using club_id = ${clubIdInt} (type: ${typeof clubIdInt})`);
       } else {
@@ -1600,7 +2315,7 @@ router.get("/officers", async (req, res) => {
 
     if (search) {
       const searchParam = `%${search}%`;
-      conditions.push(`(o.first_name ILIKE $${++paramCount} OR o.last_name ILIKE $${++paramCount} OR CONCAT(o.first_name, ' ', o.last_name) ILIKE $${++paramCount} OR o.studentid ILIKE $${++paramCount})`);
+      conditions.push(`(LOWER(o.first_name) LIKE LOWER(?) OR LOWER(o.last_name) LIKE LOWER(?) OR LOWER(CONCAT(o.first_name, ' ', o.last_name)) LIKE LOWER(?) OR LOWER(o.studentid) LIKE LOWER(?))`);
       params.push(searchParam, searchParam, searchParam, searchParam);
     }
     
@@ -1635,6 +2350,22 @@ router.get("/officers", async (req, res) => {
       END
     `;
 
+    // Ensure profile_picture column exists
+    try {
+      const colCheck = await pool.query(
+        `SELECT DATA_TYPE 
+           FROM information_schema.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'officers' 
+            AND COLUMN_NAME = 'profile_picture'`
+      );
+      if (!colCheck.rows.length) {
+        await pool.query(`ALTER TABLE officers ADD COLUMN profile_picture MEDIUMTEXT`);
+      }
+    } catch (err) {
+      console.error('Column check failed for profile_picture:', err.message);
+    }
+
     const listQuery = `
       SELECT 
         o.id, 
@@ -1647,6 +2378,7 @@ router.get("/officers", async (req, res) => {
         o.department, 
         o.program, 
         o.club_id,
+        o.profile_picture,
         COALESCE(o.status, 'Active') AS status,
         ${roleOrderCase} as role_priority
       FROM officers o
@@ -1681,8 +2413,8 @@ router.get("/officers", async (req, res) => {
         o.role, 
         o.department, 
         o.program,
-        o.username,
         o.club_id,
+        o.profile_picture,
         c.name AS club_name,
         o.created_at,
         COALESCE(o.status, 'Pending') AS status
@@ -1883,8 +2615,8 @@ router.get("/approvals", async (req, res) => {
         o.role, 
         o.department, 
         o.program,
-        o.username,
         o.club_id,
+        o.profile_picture,
         c.name AS club_name,
         o.created_at,
         COALESCE(o.status, 'Pending') AS status
@@ -1895,12 +2627,96 @@ router.get("/approvals", async (req, res) => {
     `;
     const pendingOfficersR = await pool.query(pendingOfficersQuery).catch(() => ({ rows: [] }));
 
-    // Get pending count for dashboard badge
-    const pendingCount = pendingOfficersR.rows?.length || 0;
+    // Ensure events table has status and approval columns
+    const eventColumnsToAdd = [
+      { name: 'status', def: "VARCHAR(50) DEFAULT 'pending_approval'" },
+      { name: 'admin_requirements', def: 'TEXT' },
+      { name: 'approved_by', def: 'INT' },
+      { name: 'approved_at', def: 'TIMESTAMP NULL' },
+      { name: 'posted_to_students', def: 'TINYINT(1) DEFAULT 0' },
+      { name: 'created_by', def: 'INT' },
+      { name: 'end_date', def: 'DATE' },
+      { name: 'activity_proposal', def: 'VARCHAR(500)' },
+      { name: 'letter_of_intent', def: 'VARCHAR(500)' },
+      { name: 'budgetary_requirement', def: 'VARCHAR(500)' }
+    ];
+    
+    for (const col of eventColumnsToAdd) {
+      try {
+        await pool.query(`ALTER TABLE events ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        // Silently ignore duplicate column errors (MySQL error code 1060)
+        const isDuplicateColumn = 
+          err.code === 'ER_DUP_FIELDNAME' || 
+          err.errno === 1060 || 
+          err.message?.includes('Duplicate column name') || 
+          err.sqlMessage?.includes('Duplicate column name');
+        
+        if (!isDuplicateColumn) {
+          console.warn(`Warning: Could not add column ${col.name} to events table:`, err.message);
+        }
+      }
+    }
+
+    // Update any events with NULL status to 'pending_approval' (for existing events)
+    try {
+      await pool.query(
+        `UPDATE events SET status = 'pending_approval' WHERE status IS NULL OR status = ''`
+      );
+    } catch (updateErr) {
+      // Ignore if status column doesn't exist yet (will be created above)
+      if (updateErr.code !== 'ER_BAD_FIELD_ERROR') {
+        console.warn("Could not update NULL status events:", updateErr.message);
+      }
+    }
+
+    // Get pending events
+    let pendingEvents = [];
+    try {
+      const result = await pool.query(
+        `SELECT e.id, e.name, e.date, COALESCE(e.end_date, e.date) as end_date, e.location, e.description, e.created_at, e.admin_requirements,
+                e.activity_proposal, e.letter_of_intent, e.budgetary_requirement,
+                e.club_id, c.name as club_name,
+                o.id as created_by_id, CONCAT(o.first_name, ' ', o.last_name) as created_by_name, o.role as created_by_role,
+                COALESCE(e.status, 'pending_approval') as status
+         FROM events e
+         LEFT JOIN clubs c ON e.club_id = c.id
+         LEFT JOIN officers o ON e.created_by = o.id
+         WHERE COALESCE(e.status, 'pending_approval') = 'pending_approval'
+         ORDER BY e.created_at ASC`
+      );
+      pendingEvents = result.rows || [];
+      console.log(`[Approvals] Found ${pendingEvents.length} pending events for approval`);
+    } catch (err) {
+      console.error("Error fetching pending events:", err);
+      // Try a simpler query without status check as fallback
+      try {
+        const fallbackResult = await pool.query(
+          `SELECT e.id, e.name, e.date, COALESCE(e.end_date, e.date) as end_date, e.location, e.description, e.created_at,
+                  e.activity_proposal, e.letter_of_intent, e.budgetary_requirement,
+                  e.club_id, c.name as club_name,
+                  o.id as created_by_id, CONCAT(o.first_name, ' ', o.last_name) as created_by_name, o.role as created_by_role
+           FROM events e
+           LEFT JOIN clubs c ON e.club_id = c.id
+           LEFT JOIN officers o ON e.created_by = o.id
+           WHERE e.status IS NULL OR e.status = 'pending_approval' OR e.status = ''
+           ORDER BY e.created_at ASC`
+        );
+        pendingEvents = fallbackResult.rows || [];
+        console.log(`[Approvals] Found ${pendingEvents.length} pending events (fallback query)`);
+      } catch (fallbackErr) {
+        console.error("Fallback query also failed:", fallbackErr);
+        pendingEvents = [];
+      }
+    }
+
+    // Get pending count for dashboard badge (officers + events)
+    const pendingCount = (pendingOfficersR.rows?.length || 0) + (pendingEvents?.length || 0);
 
     res.render("admin/approvals", {
       title: "Approvals | UniClub Admin",
       pendingOfficers: pendingOfficersR.rows || [],
+      pendingEvents: pendingEvents || [],
       pendingCount,
       currentPath: "/admin/approvals",
       messages: [],
@@ -2018,7 +2834,7 @@ router.get("/officers/add", async (req, res) => {
 });
 
 router.post("/officers/add", writeLimiter, async (req, res) => {
-  const { first_name, last_name, studentid, club_id, role, department, program, permissions, username, password, photo_url } = req.body;
+  const { first_name, last_name, studentid, email, club_id, role, department, program, permissions, password, confirm_password } = req.body;
 
   try {
     // Name validation
@@ -2054,6 +2870,50 @@ router.post("/officers/add", writeLimiter, async (req, res) => {
       return res.render("admin/addOfficer", {
         title: "Add Officer | UniClub Admin",
         error: "Student ID is required and must be exactly 6 digits",
+        clubs: clubs.rows || [],
+        currentPath: "/admin/officers",
+        messages: [],
+        formData: req.body,
+      });
+    }
+
+    // Email format validation: firstinitial.lastname.6digits.tc@umindanao.edu.ph
+    if (!email || !email.trim()) {
+      const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
+      return res.render("admin/addOfficer", {
+        title: "Add Officer | UniClub Admin",
+        error: "UMindanao email is required",
+        clubs: clubs.rows || [],
+        currentPath: "/admin/officers",
+        messages: [],
+        formData: req.body,
+      });
+    }
+
+    const emailPattern = /^[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph$/i;
+    if (!emailPattern.test(email)) {
+      const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
+      return res.render("admin/addOfficer", {
+        title: "Add Officer | UniClub Admin",
+        error: "Email must follow format: firstinitial.lastname.6digitid.tc@umindanao.edu.ph (e.g., j.delacruz.111222.tc@umindanao.edu.ph)",
+        clubs: clubs.rows || [],
+        currentPath: "/admin/officers",
+        messages: [],
+        formData: req.body,
+      });
+    }
+
+    // Check if email already exists (normalize email for comparison)
+    const normalizedEmail = email.trim().toLowerCase();
+    const emailCheck = await pool.query(
+      "SELECT id FROM officers WHERE LOWER(TRIM(email)) = ?",
+      [normalizedEmail]
+    );
+    if (emailCheck.rows.length > 0) {
+      const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
+      return res.render("admin/addOfficer", {
+        title: "Add Officer | UniClub Admin",
+        error: "An officer with this email already exists. Email must be unique.",
         clubs: clubs.rows || [],
         currentPath: "/admin/officers",
         messages: [],
@@ -2100,11 +2960,12 @@ router.post("/officers/add", writeLimiter, async (req, res) => {
       });
     }
 
-    if (!username || !username.trim()) {
+    // Validate password
+    if (!password || password.trim().length < 6) {
       const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
       return res.render("admin/addOfficer", {
         title: "Add Officer | UniClub Admin",
-        error: "Username is required",
+        error: "Password is required and must be at least 6 characters",
         clubs: clubs.rows || [],
         currentPath: "/admin/officers",
         messages: [],
@@ -2112,11 +2973,24 @@ router.post("/officers/add", writeLimiter, async (req, res) => {
       });
     }
 
-    if (!password || password.trim().length < 6) {
+    // Validate password confirmation
+    if (!confirm_password || confirm_password.trim().length === 0) {
       const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
       return res.render("admin/addOfficer", {
         title: "Add Officer | UniClub Admin",
-        error: "Password is required and must be at least 6 characters",
+        error: "Please confirm your password",
+        clubs: clubs.rows || [],
+        currentPath: "/admin/officers",
+        messages: [],
+        formData: req.body,
+      });
+    }
+
+    if (password !== confirm_password) {
+      const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
+      return res.render("admin/addOfficer", {
+        title: "Add Officer | UniClub Admin",
+        error: "Passwords do not match",
         clubs: clubs.rows || [],
         currentPath: "/admin/officers",
         messages: [],
@@ -2134,9 +3008,8 @@ router.post("/officers/add", writeLimiter, async (req, res) => {
         throw err;
       }
     }
-    await pool.query(`ALTER TABLE officers ADD COLUMN IF NOT EXISTS username TEXT`);
     await pool.query(`ALTER TABLE officers ADD COLUMN IF NOT EXISTS password_hash TEXT`);
-    await pool.query(`ALTER TABLE officers ADD COLUMN IF NOT EXISTS photo_url TEXT`);
+    await pool.query(`ALTER TABLE officers ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
     const clubId = club_id ? Number(club_id) : null;
     const clubExists = clubId
       ? await pool.query("SELECT id FROM clubs WHERE id = ? LIMIT 1", [clubId])
@@ -2168,12 +3041,27 @@ router.post("/officers/add", writeLimiter, async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Debug: Log password hash creation (remove in production)
+    // normalizedEmail is already declared above for email uniqueness check
+    console.log(`[Admin Add Officer] Creating officer with email: ${normalizedEmail}, password_hash length: ${passwordHash ? passwordHash.length : 0}`);
 
     await pool.query(
-      `INSERT INTO officers (first_name, last_name, studentid, club_id, role, department, program, permissions, username, password_hash, photo_url, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [firstNameValidation.value, lastNameValidation.value, studentid, resolvedClubId, role, department, program, JSON.stringify(perms), username.trim(), passwordHash, photo_url || null]
+      `INSERT INTO officers (first_name, last_name, studentid, email, club_id, role, department, program, permissions, password_hash, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [firstNameValidation.value, lastNameValidation.value, studentid, normalizedEmail, resolvedClubId, role, department, program, JSON.stringify(perms), passwordHash]
     );
+    
+    // Verify the officer was created with password
+    const verifyOfficer = await pool.query(
+      "SELECT id, email, password_hash FROM officers WHERE LOWER(TRIM(email)) = ? LIMIT 1",
+      [normalizedEmail]
+    );
+    if (verifyOfficer.rows.length > 0) {
+      const createdOfficer = verifyOfficer.rows[0];
+      console.log(`[Admin Add Officer] Officer created - ID: ${createdOfficer.id}, Email: ${createdOfficer.email}, Has password_hash: ${createdOfficer.password_hash ? 'Yes' : 'No'}`);
+    }
+    
     res.redirect("/admin/officers");
   } catch (error) {
     console.error("Error adding officer:", error);
@@ -2205,25 +3093,25 @@ router.get("/clubs", async (req, res) => {
     // Search filter
     if (search) {
       const searchParam = `%${search}%`;
-      conditions.push(`(c.name ILIKE $${++paramCount} OR c.description ILIKE $${++paramCount} OR c.adviser ILIKE $${++paramCount})`);
+      conditions.push(`(LOWER(c.name) LIKE LOWER(?) OR LOWER(c.description) LIKE LOWER(?) OR LOWER(c.adviser) LIKE LOWER(?))`);
       params.push(searchParam, searchParam, searchParam);
     }
 
     // Department filter
     if (department) {
-      conditions.push(`COALESCE(c.department, '') = $${++paramCount}`);
+      conditions.push(`COALESCE(c.department, '') = ?`);
       params.push(department);
     }
 
     // Category filter
     if (category) {
-      conditions.push(`COALESCE(c.category, '') = $${++paramCount}`);
+      conditions.push(`COALESCE(c.category, '') = ?`);
       params.push(category);
     }
 
     // Status filter
     if (status) {
-      conditions.push(`COALESCE(c.status, 'Active') = $${++paramCount}`);
+      conditions.push(`COALESCE(c.status, 'Active') = ?`);
       params.push(status);
     }
 
@@ -2258,16 +3146,16 @@ router.get("/clubs", async (req, res) => {
         c.status,
         c.photo,
         c.created_at,
-        COALESCE(o_counts.officer_count, 0)::int AS officer_count,
-        COALESCE(e_counts.event_count, 0)::int AS event_count
+        COALESCE(o_counts.officer_count, 0) AS officer_count,
+        COALESCE(e_counts.event_count, 0) AS event_count
       FROM clubs c
       LEFT JOIN (
-        SELECT club_id, COUNT(*)::int AS officer_count
+        SELECT club_id, COUNT(*) AS officer_count
         FROM officers
         GROUP BY club_id
       ) o_counts ON o_counts.club_id = c.id
       LEFT JOIN (
-        SELECT club_id, COUNT(*)::int AS event_count
+        SELECT club_id, COUNT(*) AS event_count
         FROM events
         GROUP BY club_id
       ) e_counts ON e_counts.club_id = c.id
@@ -2310,6 +3198,29 @@ router.get("/clubs/add", (req, res) => {
 
 // ✅ Handle Add Club
 router.post("/clubs/add", writeLimiter, (req, res, next) => {
+  // Log request details for debugging
+  const contentType = req.headers['content-type'] || '';
+  console.log('[Add Club] Request received:', {
+    method: req.method,
+    path: req.path,
+    contentType: contentType,
+    hasBody: !!req.body,
+    bodyKeys: req.body ? Object.keys(req.body) : [],
+    hasFile: !!req.file
+  });
+
+  // Check if request is multipart/form-data
+  if (!contentType.includes('multipart/form-data')) {
+    console.error('[Add Club] Invalid content-type. Expected multipart/form-data, got:', contentType);
+    return res.status(400).render("admin/addClub", {
+      title: "Add Club | UniClub Admin",
+      error: "Invalid request format. Please ensure the form is submitted correctly.",
+      currentPath: "/admin/clubs",
+      messages: [],
+      csrfToken: req.csrfToken?.() || ''
+    });
+  }
+
   uploadClubPhoto.single('photo')(req, res, (err) => {
     if (err) {
       // Handle multer errors
@@ -2330,9 +3241,44 @@ router.post("/clubs/add", writeLimiter, (req, res, next) => {
         csrfToken: req.csrfToken?.() || ''
       });
     }
+
     // After multer parses the form, validate CSRF token manually
+    // Log body state after multer processing
+    console.log('[Add Club] After multer:', {
+      hasBody: !!req.body,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      hasCsrf: !!(req.body && req.body._csrf),
+      hasFile: !!req.file
+    });
+
+    // Check if body was parsed - if not, it might be a content-type issue
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.error('[Add Club] Request body is empty after multer processing');
+      console.error('[Add Club] Content-Type:', req.headers['content-type']);
+      console.error('[Add Club] Request method:', req.method);
+      
+      // Delete uploaded file if any
+      if (req.file) {
+        const filePath = path.join(__dirname, '../public/img/clubs', req.file.filename);
+        fs.unlink(filePath, (unlinkErr) => {
+          if (unlinkErr) console.error('Error deleting uploaded file:', unlinkErr);
+        });
+      }
+      
+      return res.status(400).render("admin/addClub", {
+        title: "Add Club | UniClub Admin",
+        error: "Invalid request format. Please ensure the form is submitted correctly.",
+        currentPath: "/admin/clubs",
+        messages: [],
+        csrfToken: req.csrfToken?.() || ''
+      });
+    }
+
     const csrfToken = req.body?._csrf;
     if (!csrfToken) {
+      console.error('[Add Club] CSRF token missing from request body');
+      console.error('[Add Club] Available body keys:', req.body ? Object.keys(req.body) : 'none');
+      
       // Delete uploaded file if CSRF token is missing
       if (req.file) {
         const filePath = path.join(__dirname, '../public/img/clubs', req.file.filename);
@@ -2340,9 +3286,12 @@ router.post("/clubs/add", writeLimiter, (req, res, next) => {
           if (unlinkErr) console.error('Error deleting uploaded file:', unlinkErr);
         });
       }
-      return res.status(403).render('errors/500', {
-        title: 'Forbidden',
-        error: 'Invalid security token. Please refresh the page and try again.',
+      return res.status(403).render("admin/addClub", {
+        title: "Add Club | UniClub Admin",
+        error: "Invalid security token. Please refresh the page and try again.",
+        currentPath: "/admin/clubs",
+        messages: [],
+        csrfToken: req.csrfToken?.() || ''
       });
     }
     // Validate CSRF token using the same middleware instance
@@ -2662,22 +3611,22 @@ router.get("/clubs/export", async (req, res) => {
 
     if (search) {
       const searchParam = `%${search}%`;
-      conditions.push(`(c.name ILIKE $${++paramCount} OR c.description ILIKE $${++paramCount} OR c.adviser ILIKE $${++paramCount})`);
+      conditions.push(`(LOWER(c.name) LIKE LOWER(?) OR LOWER(c.description) LIKE LOWER(?) OR LOWER(c.adviser) LIKE LOWER(?))`);
       params.push(searchParam, searchParam, searchParam);
     }
 
     if (department) {
-      conditions.push(`COALESCE(c.department, '') = $${++paramCount}`);
+      conditions.push(`COALESCE(c.department, '') = ?`);
       params.push(department);
     }
 
     if (category) {
-      conditions.push(`COALESCE(c.category, '') = $${++paramCount}`);
+      conditions.push(`COALESCE(c.category, '') = ?`);
       params.push(category);
     }
 
     if (status) {
-      conditions.push(`COALESCE(c.status, 'Active') = $${++paramCount}`);
+      conditions.push(`COALESCE(c.status, 'Active') = ?`);
       params.push(status);
     }
 
@@ -2740,6 +3689,9 @@ router.get("/clubs/export", async (req, res) => {
 // View all requirements
 router.get("/requirements", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
+  
+  // Auto-update event statuses before loading requirements
+  await updateEventStatuses();
 
   try {
     // Officer uploads (requirements) – with club name if club_id exists
@@ -2789,18 +3741,26 @@ router.get("/requirements", async (req, res) => {
     }
 
     // Activities list (from events). Handle schema differences for name/status columns
+    // Exclude pending and rejected events from activities list
     let activitiesRows = [];
     try {
       const activitiesWithStatus = await pool.query(`
-        SELECT e.id, e.name AS activity, e.date, e.location, e.description,
+        SELECT e.id, e.name AS activity, e.date, e.end_date, e.location, e.description,
                c.name AS club_name,
                CASE 
+                 -- Use database status if it's a valid final status
+                 WHEN e.status IN ('Ongoing', 'ongoing', 'Completed', 'completed', 'Cancelled', 'cancelled') THEN e.status
+                 -- Otherwise, calculate based on current date
                  WHEN e.date IS NULL THEN 'Scheduled'
-                 WHEN e.date >= CURDATE() THEN 'Upcoming'
-                 ELSE 'Past'
+                 WHEN DATE(e.date) > CURDATE() THEN 'Scheduled'
+                 WHEN DATE(e.date) = CURDATE() OR (DATE(e.date) <= CURDATE() AND COALESCE(DATE(e.end_date), DATE(e.date)) >= CURDATE()) THEN 'Ongoing'
+                 WHEN COALESCE(DATE(e.end_date), DATE(e.date)) < CURDATE() THEN 'Completed'
+                 ELSE COALESCE(e.status, 'Scheduled')
                END AS status
         FROM events e
         LEFT JOIN clubs c ON c.id = e.club_id
+        WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+          AND COALESCE(e.status, 'pending_approval') != 'rejected'
         ORDER BY e.date ASC, e.created_at DESC
       `);
       activitiesRows = activitiesWithStatus.rows || [];
@@ -2814,6 +3774,8 @@ router.get("/requirements", async (req, res) => {
                    'Scheduled' AS status
             FROM events e
             LEFT JOIN clubs c ON c.id = e.club_id
+            WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+              AND COALESCE(e.status, 'pending_approval') != 'rejected'
             ORDER BY e.date ASC NULLS LAST, e.created_at DESC
           `);
           activitiesRows = activitiesNoStatus.rows || [];
@@ -2827,6 +3789,8 @@ router.get("/requirements", async (req, res) => {
                        'Scheduled' AS status
                 FROM events e
                 LEFT JOIN clubs c ON c.id = e.club_id
+                WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+                  AND COALESCE(e.status, 'pending_approval') != 'rejected'
                 ORDER BY e.date ASC NULLS LAST, e.created_at DESC
               `);
               activitiesRows = altName1.rows || [];
@@ -2840,24 +3804,35 @@ router.get("/requirements", async (req, res) => {
                            'Scheduled' AS status
                     FROM events e
                     LEFT JOIN clubs c ON c.id = e.club_id
+                    WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+                      AND COALESCE(e.status, 'pending_approval') != 'rejected'
                     ORDER BY e.date ASC NULLS LAST, e.created_at DESC
                   `);
                   activitiesRows = altName2.rows || [];
                 } catch (err4) {
                   if (err4.code === "42703") {
-                    // Final fallback: minimal columns
-                    const minimal = await pool.query(`
-                      SELECT id FROM events ORDER BY id DESC
-                    `);
-                    activitiesRows = (minimal.rows || []).map(ev => ({
-                      id: ev.id,
-                      activity: `Record #${ev.id}`,
-                      date: null,
-                      location: '',
-                      description: '',
-                      club_name: null,
-                      status: 'Scheduled',
-                    }));
+                    // Final fallback: minimal columns (exclude pending/rejected)
+                    try {
+                      const minimal = await pool.query(`
+                        SELECT id FROM events 
+                        WHERE COALESCE(status, 'pending_approval') != 'pending_approval'
+                          AND COALESCE(status, 'pending_approval') != 'rejected'
+                        ORDER BY id DESC
+                      `);
+                      activitiesRows = (minimal.rows || []).map(ev => ({
+                        id: ev.id,
+                        activity: `Record #${ev.id}`,
+                        date: null,
+                        location: '',
+                        description: '',
+                        club_name: null,
+                        status: 'Scheduled',
+                      }));
+                    } catch (minimalErr) {
+                      // If even the minimal query fails, return empty array
+                      console.error("Error in minimal fallback query:", minimalErr);
+                      activitiesRows = [];
+                    }
                   } else {
                     throw err4;
                   }
@@ -2882,6 +3857,7 @@ router.get("/requirements", async (req, res) => {
       requirements: requirements || [],
       activities: activitiesRows || [],
       messages: [],
+      csrfToken: res.locals.csrfToken || req.csrfToken?.() || '',
     });
   } catch (error) {
     console.error("Error loading requirements:", error);
@@ -3023,8 +3999,13 @@ router.get("/messages", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
   try {
+    // Only show messages that are NOT sent to officers (exclude event approval notifications)
+    // Messages with recipient_type = 'officer' are only for officers, not admins
     const result = await pool.query(
-      "SELECT id, sender_name, sender_email, subject, content, created_at, `read` FROM messages ORDER BY created_at DESC"
+      `SELECT id, sender_name, sender_email, subject, content, created_at, \`read\` 
+       FROM messages 
+       WHERE recipient_type IS NULL OR recipient_type != 'officer'
+       ORDER BY created_at DESC`
     );
     
     // Get students and officers for recipient selection
@@ -3053,7 +4034,11 @@ router.get("/messages/view/:id", async (req, res) => {
 
   try {
     const { id } = req.params;
-    const result = await pool.query("SELECT * FROM messages WHERE id = ?", [id]);
+    // Only allow viewing messages that are not officer-only
+    const result = await pool.query(
+      "SELECT * FROM messages WHERE id = ? AND (recipient_type IS NULL OR recipient_type != 'officer')", 
+      [id]
+    );
 
     if (result.rows.length === 0) return res.redirect("/admin/messages");
 
@@ -3154,6 +4139,60 @@ router.post("/messages/send", writeLimiter, async (req, res) => {
       // For "all officers", create individual message records for each officer
       const officers = await pool.query("SELECT id, CONCAT(first_name, ' ', last_name) AS name, username FROM officers");
       recipients = officers.rows.map(o => ({ type: 'officer', id: o.id, name: o.name, email: o.username }));
+    } else if (recipient_type === 'all_presidents') {
+      // Get all presidents across all clubs
+      const presidents = await pool.query(`
+        SELECT id, CONCAT(first_name, ' ', last_name) AS name, username, role, club_id
+        FROM officers
+        WHERE LOWER(TRIM(role)) LIKE '%president%'
+           OR LOWER(TRIM(role)) LIKE '%supremo%'
+           OR LOWER(TRIM(role)) LIKE '%grand peer%'
+           OR LOWER(TRIM(role)) LIKE '%head%'
+           OR LOWER(TRIM(role)) LIKE '%chairperson%'
+           OR LOWER(TRIM(role)) LIKE '%chief executive%'
+           OR LOWER(TRIM(role)) LIKE '%executive head%'
+      `);
+      recipients = presidents.rows.map(o => ({ type: 'officer', id: o.id, name: o.name, email: o.username }));
+    } else if (recipient_type === 'all_treasurers') {
+      // Get all treasurers across all clubs
+      const treasurers = await pool.query(`
+        SELECT id, CONCAT(first_name, ' ', last_name) AS name, username, role, club_id
+        FROM officers
+        WHERE LOWER(TRIM(role)) LIKE '%treasurer%'
+           OR LOWER(TRIM(role)) LIKE '%finance%'
+           OR LOWER(TRIM(role)) LIKE '%financial officer%'
+           OR LOWER(TRIM(role)) LIKE '%business & finance%'
+           OR LOWER(TRIM(role)) LIKE '%business and finance%'
+      `);
+      recipients = treasurers.rows.map(o => ({ type: 'officer', id: o.id, name: o.name, email: o.username }));
+    } else if (recipient_type === 'all_secretaries') {
+      // Get all secretaries across all clubs
+      const secretaries = await pool.query(`
+        SELECT id, CONCAT(first_name, ' ', last_name) AS name, username, role, club_id
+        FROM officers
+        WHERE LOWER(TRIM(role)) LIKE '%secretary%'
+      `);
+      recipients = secretaries.rows.map(o => ({ type: 'officer', id: o.id, name: o.name, email: o.username }));
+    } else if (recipient_type === 'all_vice_presidents') {
+      // Get all vice presidents across all clubs
+      const vps = await pool.query(`
+        SELECT id, CONCAT(first_name, ' ', last_name) AS name, username, role, club_id
+        FROM officers
+        WHERE LOWER(TRIM(role)) LIKE '%vice president%'
+           OR LOWER(TRIM(role)) LIKE '%vice-president%'
+           OR LOWER(TRIM(role)) LIKE '%vp%'
+           OR LOWER(TRIM(role)) LIKE '%heneral%'
+           OR LOWER(TRIM(role)) LIKE '%konsehal%'
+      `);
+      recipients = vps.rows.map(o => ({ type: 'officer', id: o.id, name: o.name, email: o.username }));
+    } else if (recipient_type === 'all_auditors') {
+      // Get all auditors across all clubs
+      const auditors = await pool.query(`
+        SELECT id, CONCAT(first_name, ' ', last_name) AS name, username, role, club_id
+        FROM officers
+        WHERE LOWER(TRIM(role)) LIKE '%auditor%'
+      `);
+      recipients = auditors.rows.map(o => ({ type: 'officer', id: o.id, name: o.name, email: o.username }));
     } else if (recipient_type === 'specific_student' && recipient_id) {
       const student = await pool.query("SELECT id, CONCAT(first_name, ' ', last_name) AS name, email FROM students WHERE id = ?", [recipient_id]);
       if (student.rows.length > 0) {
@@ -3170,24 +4209,68 @@ router.post("/messages/send", writeLimiter, async (req, res) => {
       return res.redirect("/admin/messages?error=no_recipients");
     }
 
+    // Ensure modern columns exist
+    const modernColumns = [
+      { name: 'sender_id', def: 'INT' },
+      { name: 'receiver_id', def: 'INT' },
+      { name: 'sender_type', def: "VARCHAR(20) DEFAULT 'admin'" },
+      { name: 'receiver_type', def: "VARCHAR(20)" }
+    ];
+
+    for (const col of modernColumns) {
+      try {
+        await pool.query(`ALTER TABLE messages ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+          console.warn(`Warning: Could not add column ${col.name}:`, err.message);
+        }
+      }
+    }
+
     // Insert message for each recipient
     const adminName = req.session.admin.username || 'Admin';
     const adminEmail = 'admin@uniclub.local';
+    const adminId = req.session.admin.id || null; // Use admin ID if available
 
     for (const recipient of recipients) {
-      await pool.query(
-        `INSERT INTO messages (sender_name, sender_email, subject, content, recipient_type, recipient_id, recipient_name, \`read\`, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, false, NOW())`,
-        [
-          adminName,
-          adminEmail,
-          subject,
-          content,
-          recipient.type,
-          recipient.id, // Individual recipient ID (set for each recipient)
-          recipient.name
-        ]
-      );
+      // Use modern structure for students, keep old structure for backward compatibility
+      if (recipient.type === 'student') {
+        await pool.query(
+          `INSERT INTO messages (
+            sender_name, sender_email, subject, content, 
+            recipient_type, recipient_id, recipient_name,
+            sender_id, receiver_id, sender_type, receiver_type,
+            \`read\`, created_at
+          )
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'admin', 'student', false, NOW())`,
+          [
+            adminName,
+            adminEmail,
+            subject,
+            content,
+            recipient.type,
+            recipient.id,
+            recipient.name,
+            adminId, // sender_id (admin)
+            recipient.id, // receiver_id (student)
+          ]
+        );
+      } else {
+        // For officers, use old structure (they might not have modern view yet)
+        await pool.query(
+          `INSERT INTO messages (sender_name, sender_email, subject, content, recipient_type, recipient_id, recipient_name, \`read\`, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, false, NOW())`,
+          [
+            adminName,
+            adminEmail,
+            subject,
+            content,
+            recipient.type,
+            recipient.id,
+            recipient.name
+          ]
+        );
+      }
     }
 
     res.redirect("/admin/messages?success=message_sent&count=" + recipients.length);
@@ -3201,20 +4284,60 @@ router.post("/messages/send", writeLimiter, async (req, res) => {
    🎉 EVENTS MANAGEMENT
 ================================= */
 
-// View all events
+// View all events (exclude pending approval events)
 router.get("/events", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
+  // Auto-update event statuses before loading events
+  await updateEventStatuses();
+
   try {
+    // Ensure status column exists
+    const eventColumnsToAdd = [
+      { name: 'status', def: "VARCHAR(50) DEFAULT 'pending_approval'" }
+    ];
+    
+    for (const col of eventColumnsToAdd) {
+      try {
+        await pool.query(`ALTER TABLE events ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        const isDuplicateColumn = 
+          err.code === 'ER_DUP_FIELDNAME' || 
+          err.errno === 1060 || 
+          err.message?.includes('Duplicate column name') || 
+          err.sqlMessage?.includes('Duplicate column name');
+        if (!isDuplicateColumn) {
+          console.warn(`Warning: Could not add column ${col.name} to events table:`, err.message);
+        }
+      }
+    }
+
     const events = await pool.query(`
-      SELECT e.id, e.name, e.date, e.location, e.description, c.name AS club_name
+      SELECT e.id, e.name, e.date, e.end_date, e.location, e.description, 
+             c.name AS club_name,
+             -- Use database status if it's a valid final status
+             -- Otherwise, calculate based on current date (same logic as requirements page)
+             CASE 
+               WHEN e.status IN ('Ongoing', 'ongoing', 'Completed', 'completed', 'Cancelled', 'cancelled') THEN e.status
+               WHEN e.date IS NULL THEN 'Scheduled'
+               WHEN DATE(e.date) > CURDATE() THEN 'Scheduled'
+               WHEN DATE(e.date) = CURDATE() OR (DATE(e.date) <= CURDATE() AND COALESCE(DATE(e.end_date), DATE(e.date)) >= CURDATE()) THEN 'Ongoing'
+               WHEN COALESCE(DATE(e.end_date), DATE(e.date)) < CURDATE() THEN 'Completed'
+               ELSE COALESCE(e.status, 'Scheduled')
+             END AS status
       FROM events e
       LEFT JOIN clubs c ON e.club_id = c.id
+      WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+         AND COALESCE(e.status, 'pending_approval') != 'rejected'
       ORDER BY e.date DESC
-    `);
+    `).catch(() => ({ rows: [] }));
+    
     res.render("admin/events", {
       title: "Manage Events | UniClub Admin",
       events: events.rows || [],
+      csrfToken: res.locals.csrfToken || req.csrfToken?.() || '',
+      currentPath: "/admin/events",
+      messages: []
     });
   } catch (error) {
     console.error("Error loading events:", error);
@@ -3232,6 +4355,7 @@ router.get("/events/add", async (req, res) => {
       title: "Add Event | UniClub Admin",
       error: null,
       clubs: clubs.rows || [],
+      csrfToken: req.csrfToken ? req.csrfToken() : res.locals.csrfToken || ''
     });
   } catch (error) {
     console.error("Error loading clubs:", error);
@@ -3249,6 +4373,7 @@ router.get("/events/create", async (req, res) => {
       title: "Schedule Activity | UniClub Admin",
       error: null,
       clubs: clubs.rows || [],
+      csrfToken: req.csrfToken ? req.csrfToken() : res.locals.csrfToken || ''
     });
   } catch (error) {
     console.error("Error loading clubs:", error);
@@ -3257,44 +4382,439 @@ router.get("/events/create", async (req, res) => {
 });
 
 // Handle Add Event
-router.post("/events/add", writeLimiter, async (req, res) => {
-  const { name, club_id, date, location, description } = req.body;
-
+router.post("/events/add", writeLimiter, (req, res, next) => {
+  uploadEventDocuments(req, res, (err) => {
+    if (err) {
+      // Handle multer errors
+      let errorMessage = "Failed to upload documents";
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        errorMessage = "File size too large. Maximum size is 10MB per file.";
+      } else if (err.message && err.message.includes('Only document files')) {
+        errorMessage = "Invalid file type. Only document files (PDF, DOC, DOCX, TXT, RTF, ODT) are allowed.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      console.error("Multer error in /events/add:", err);
+      
+      // Fetch clubs for error page
+      pool.query("SELECT id, name FROM clubs ORDER BY name ASC")
+        .then(result => {
+          return res.render("admin/addEvent", {
+            title: "Add Event | UniClub Admin",
+            error: errorMessage,
+            clubs: result.rows || [],
+            csrfToken: req.csrfToken?.() || ''
+          });
+        })
+        .catch(() => {
+          return res.render("admin/addEvent", {
+            title: "Add Event | UniClub Admin",
+            error: errorMessage,
+            clubs: [],
+            csrfToken: req.csrfToken?.() || ''
+          });
+        });
+      return; // Don't call next() on error
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
+    // Initialize req.body if undefined (multer might cause this)
+    if (!req.body) req.body = {};
+    
+    // Manual CSRF validation (after multer processes the form)
+    // Use tokens.verify() since req.csrfToken is undefined for multipart requests
+    const csrfToken = req.body._csrf;
+    if (!csrfToken) {
+      // Clean up uploaded files
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/addEvent", {
+        title: "Add Event | UniClub Admin",
+        error: "CSRF token is required. Please refresh the page and try again.",
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+    
+    const tokens = new Tokens();
+    const secret = req.session?.csrfSecret;
+    if (!secret) {
+      // Clean up uploaded files
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/addEvent", {
+        title: "Add Event | UniClub Admin",
+        error: "CSRF session not found. Please refresh the page and try again.",
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+    
+    if (!tokens.verify(secret, csrfToken)) {
+      // Clean up uploaded files
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/addEvent", {
+        title: "Add Event | UniClub Admin",
+        error: "Invalid security token. Please refresh the page and try again.",
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+
+    const { name, club_id, date, end_date, location, description } = req.body;
+    
+    if (!name || !club_id || !date) {
+      // Clean up uploaded files
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.render("admin/addEvent", {
+        title: "Add Event | UniClub Admin",
+        error: "Event name, club, and date are required.",
+        clubs: [],
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    // Validate end_date
+    if (end_date && new Date(end_date) < new Date(date)) {
+      // Clean up uploaded files
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.render("admin/addEvent", {
+        title: "Add Event | UniClub Admin",
+        error: "End date must be on or after start date.",
+        clubs: [],
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    // Handle file uploads - validate required files
+    const files = req.files || {};
+    
+    // Validate all required files first, then delete only if validation fails
+    let validationError = null;
+    if (!files.activity_proposal || files.activity_proposal.length === 0) {
+      validationError = "Activity proposal file is required.";
+    } else if (!files.letter_of_intent || files.letter_of_intent.length === 0) {
+      validationError = "Letter of intent file is required.";
+    } else if (!files.budgetary_requirement || files.budgetary_requirement.length === 0) {
+      validationError = "Budgetary requirement file is required.";
+    }
+    
+    // Only delete files if validation failed (after all checks)
+    if (validationError) {
+      if (req.files) {
+        // Delete files asynchronously but wait for all deletions to complete
+        const deletePromises = Object.values(req.files).flat().map(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          return new Promise((resolve) => {
+            fs.unlink(filePath, (err) => {
+              if (err && err.code !== 'ENOENT') {
+                console.error(`Error deleting uploaded event file ${file.filename}:`, err);
+              }
+              resolve();
+            });
+          });
+        });
+        // Wait for all file deletions to complete before sending response
+        await Promise.all(deletePromises);
+      }
+      // Fetch clubs before returning error so dropdown is populated
+      const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
+      return res.render("admin/addEvent", {
+        title: "Add Event | UniClub Admin",
+        error: validationError,
+        clubs: clubs.rows || [],
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    const activityProposalPath = `/uploads/events/${files.activity_proposal[0].filename}`;
+    const letterOfIntentPath = `/uploads/events/${files.letter_of_intent[0].filename}`;
+    const budgetaryRequirementPath = `/uploads/events/${files.budgetary_requirement[0].filename}`;
+
+    // Ensure columns exist
+    const columnsToAdd = [
+      { name: 'end_date', def: 'DATE' },
+      { name: 'activity_proposal', def: 'VARCHAR(500)' },
+      { name: 'letter_of_intent', def: 'VARCHAR(500)' },
+      { name: 'budgetary_requirement', def: 'VARCHAR(500)' },
+      { name: 'status', def: "VARCHAR(50) DEFAULT 'approved'" },
+      { name: 'posted_to_students', def: 'TINYINT(1) DEFAULT 1' }
+    ];
+
+    for (const col of columnsToAdd) {
+      try {
+        await pool.query(`ALTER TABLE events ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        // Ignore duplicate column errors
+        if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+          console.warn(`Warning: Could not add column ${col.name}:`, err.message);
+        }
+      }
+    }
+
+    // Insert event
     await pool.query(
-      `INSERT INTO events (name, club_id, date, location, description, created_at)
-       VALUES (?, ?, ?, ?, ?, NOW())`,
-      [name, club_id, date, location, description]
+      `INSERT INTO events (name, club_id, date, end_date, location, description, activity_proposal, letter_of_intent, budgetary_requirement, status, posted_to_students, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', 1, NOW())`,
+      [name, club_id, date, end_date || date, location || null, description || null, activityProposalPath, letterOfIntentPath, budgetaryRequirementPath]
     );
+    
     res.redirect("/admin/events");
   } catch (error) {
+    // Clean up uploaded files on error
+    if (req.files) {
+      Object.values(req.files).flat().forEach(file => {
+        const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+        fs.unlink(filePath, () => {});
+      });
+    }
     console.error("Error adding event:", error);
+    const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
     res.render("admin/addEvent", {
       title: "Add Event | UniClub Admin",
       error: "Failed to add event. Please check your inputs.",
-      clubs: [],
+      clubs: clubs.rows || [],
+      csrfToken: req.csrfToken ? req.csrfToken() : ''
     });
   }
 });
 
 // Handle Schedule Activity (alias for /add)
-router.post("/events/create", writeLimiter, async (req, res) => {
-  const { name, club_id, date, location, description } = req.body;
-
+router.post("/events/create", writeLimiter, (req, res, next) => {
+  uploadEventDocuments(req, res, (err) => {
+    if (err) {
+      // Handle multer errors
+      let errorMessage = "Failed to upload documents";
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        errorMessage = "File size too large. Maximum size is 10MB per file.";
+      } else if (err.message && err.message.includes('Only document files')) {
+        errorMessage = "Invalid file type. Only document files (PDF, DOC, DOCX, TXT, RTF, ODT) are allowed.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      console.error("Multer error in /events/create:", err);
+      
+      // Fetch clubs for error page
+      pool.query("SELECT id, name FROM clubs ORDER BY name ASC")
+        .then(result => {
+          return res.render("admin/addEvent", {
+            title: "Schedule Activity | UniClub Admin",
+            error: errorMessage,
+            clubs: result.rows || [],
+            csrfToken: req.csrfToken?.() || ''
+          });
+        })
+        .catch(() => {
+          return res.render("admin/addEvent", {
+            title: "Schedule Activity | UniClub Admin",
+            error: errorMessage,
+            clubs: [],
+            csrfToken: req.csrfToken?.() || ''
+          });
+        });
+      return; // Don't call next() on error
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
+    // Initialize req.body if undefined
+    if (!req.body) req.body = {};
+    
+    // Manual CSRF validation
+    // Use tokens.verify() since req.csrfToken is undefined for multipart requests
+    const csrfToken = req.body._csrf;
+    if (!csrfToken) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/addEvent", {
+        title: "Schedule Activity | UniClub Admin",
+        error: "CSRF token is required. Please refresh the page and try again.",
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+    
+    const tokens = new Tokens();
+    const secret = req.session?.csrfSecret;
+    if (!secret) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/addEvent", {
+        title: "Schedule Activity | UniClub Admin",
+        error: "CSRF session not found. Please refresh the page and try again.",
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+    
+    if (!tokens.verify(secret, csrfToken)) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/addEvent", {
+        title: "Schedule Activity | UniClub Admin",
+        error: "Invalid security token. Please refresh the page and try again.",
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+
+    const { name, club_id, date, end_date, location, description } = req.body;
+    
+    if (!name || !club_id || !date) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.render("admin/addEvent", {
+        title: "Schedule Activity | UniClub Admin",
+        error: "Event name, club, and date are required.",
+        clubs: [],
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    // Validate end_date
+    if (end_date && new Date(end_date) < new Date(date)) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.render("admin/addEvent", {
+        title: "Schedule Activity | UniClub Admin",
+        error: "End date must be on or after start date.",
+        clubs: [],
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    // Handle file uploads - validate required files
+    const files = req.files || {};
+    
+    // Validate all required files first, then delete only if validation fails
+    let validationError = null;
+    if (!files.activity_proposal || files.activity_proposal.length === 0) {
+      validationError = "Activity proposal file is required.";
+    } else if (!files.letter_of_intent || files.letter_of_intent.length === 0) {
+      validationError = "Letter of intent file is required.";
+    } else if (!files.budgetary_requirement || files.budgetary_requirement.length === 0) {
+      validationError = "Budgetary requirement file is required.";
+    }
+    
+    // Only delete files if validation failed (after all checks)
+    if (validationError) {
+      if (req.files) {
+        // Delete files asynchronously but wait for all deletions to complete
+        const deletePromises = Object.values(req.files).flat().map(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          return new Promise((resolve) => {
+            fs.unlink(filePath, (err) => {
+              if (err && err.code !== 'ENOENT') {
+                console.error(`Error deleting uploaded event file ${file.filename}:`, err);
+              }
+              resolve();
+            });
+          });
+        });
+        // Wait for all file deletions to complete before sending response
+        await Promise.all(deletePromises);
+      }
+      const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
+      return res.render("admin/addEvent", {
+        title: "Schedule Activity | UniClub Admin",
+        error: validationError,
+        clubs: clubs.rows || [],
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    const activityProposalPath = `/uploads/events/${files.activity_proposal[0].filename}`;
+    const letterOfIntentPath = `/uploads/events/${files.letter_of_intent[0].filename}`;
+    const budgetaryRequirementPath = `/uploads/events/${files.budgetary_requirement[0].filename}`;
+
+    // Ensure columns exist
+    const columnsToAdd = [
+      { name: 'end_date', def: 'DATE' },
+      { name: 'activity_proposal', def: 'VARCHAR(500)' },
+      { name: 'letter_of_intent', def: 'VARCHAR(500)' },
+      { name: 'budgetary_requirement', def: 'VARCHAR(500)' },
+      { name: 'status', def: "VARCHAR(50) DEFAULT 'approved'" },
+      { name: 'posted_to_students', def: 'TINYINT(1) DEFAULT 1' }
+    ];
+
+    for (const col of columnsToAdd) {
+      try {
+        await pool.query(`ALTER TABLE events ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+          console.warn(`Warning: Could not add column ${col.name}:`, err.message);
+        }
+      }
+    }
+
+    // Insert event
     await pool.query(
-      `INSERT INTO events (name, club_id, date, location, description, created_at)
-       VALUES (?, ?, ?, ?, ?, NOW())`,
-      [name, club_id, date, location, description]
+      `INSERT INTO events (name, club_id, date, end_date, location, description, activity_proposal, letter_of_intent, budgetary_requirement, status, posted_to_students, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'approved', 1, NOW())`,
+      [name, club_id, date, end_date || date, location || null, description || null, activityProposalPath, letterOfIntentPath, budgetaryRequirementPath]
     );
+    
     res.redirect("/admin/requirements");
   } catch (error) {
+    if (req.files) {
+      Object.values(req.files).flat().forEach(file => {
+        const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+        fs.unlink(filePath, () => {});
+      });
+    }
     console.error("Error scheduling activity:", error);
     const clubs = await pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }));
     res.render("admin/addEvent", {
       title: "Schedule Activity | UniClub Admin",
       error: "Failed to schedule activity. Please check your inputs.",
       clubs: clubs.rows || [],
+      csrfToken: req.csrfToken ? req.csrfToken() : ''
     });
   }
 });
@@ -3303,18 +4823,47 @@ router.post("/events/create", writeLimiter, async (req, res) => {
 router.get("/events/edit/:id", async (req, res) => {
   if (!req.session?.admin) return res.redirect("/admin/login");
 
+  // Auto-update event statuses before loading event for editing
+  await updateEventStatuses();
+
   try {
     const [event, clubs] = await Promise.all([
-      pool.query("SELECT * FROM events WHERE id = ?", [req.params.id]),
+      pool.query(`
+        SELECT *, 
+               COALESCE(end_date, date) as end_date,
+               -- Use database status if it's a valid final status, otherwise calculate based on dates
+               CASE 
+                 WHEN status IN ('Ongoing', 'ongoing', 'Completed', 'completed', 'Cancelled', 'cancelled') THEN status
+                 WHEN date IS NULL THEN 'Scheduled'
+                 WHEN DATE(date) > CURDATE() THEN 'Scheduled'
+                 WHEN DATE(date) = CURDATE() OR (DATE(date) <= CURDATE() AND COALESCE(DATE(end_date), DATE(date)) >= CURDATE()) THEN 'Ongoing'
+                 WHEN COALESCE(DATE(end_date), DATE(date)) < CURDATE() THEN 'Completed'
+                 ELSE COALESCE(status, 'Scheduled')
+               END AS status
+        FROM events 
+        WHERE id = ?
+      `, [req.params.id]),
       pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
     ]);
 
     if (event.rows.length === 0) return res.redirect("/admin/events");
 
+    // Normalize status to ensure it's capitalized properly
+    const eventData = event.rows[0];
+    if (eventData.status) {
+      eventData.status = eventData.status.charAt(0).toUpperCase() + eventData.status.slice(1).toLowerCase();
+    } else {
+      eventData.status = 'Scheduled';
+    }
+
     res.render("admin/editEvent", {
       title: "Edit Event | UniClub Admin",
-      event: event.rows[0],
+      event: eventData,
       clubs: clubs.rows,
+      error: null,
+      csrfToken: req.csrfToken ? req.csrfToken() : res.locals.csrfToken || '',
+      currentPath: "/admin/events",
+      messages: []
     });
   } catch (error) {
     console.error("Error loading event for edit:", error);
@@ -3323,20 +4872,271 @@ router.get("/events/edit/:id", async (req, res) => {
 });
 
 // Handle Edit Event
-router.post("/events/edit/:id", writeLimiter, async (req, res) => {
-  const { name, club_id, date, location, description } = req.body;
-
+router.post("/events/edit/:id", writeLimiter, (req, res, next) => {
+  uploadEventDocuments(req, res, async (err) => {
+    if (err) {
+      // Handle multer errors
+      let errorMessage = "Failed to upload documents";
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        errorMessage = "File size too large. Maximum size is 10MB per file.";
+      } else if (err.message && err.message.includes('Only document files')) {
+        errorMessage = "Invalid file type. Only document files (PDF, DOC, DOCX, TXT, RTF, ODT) are allowed.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      console.error("Multer error in /events/edit:", err);
+      
+      // Fetch event and clubs for error page
+      const eventId = parseInt(req.params.id);
+      try {
+        const [eventResult, clubsResult] = await Promise.all([
+          pool.query("SELECT * FROM events WHERE id = ?", [eventId]).catch(() => ({ rows: [] })),
+          pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }))
+        ]);
+        
+        return res.render("admin/editEvent", {
+          title: "Edit Event | UniClub Admin",
+          error: errorMessage,
+          event: eventResult.rows[0] || {},
+          clubs: clubsResult.rows || [],
+          csrfToken: req.csrfToken?.() || ''
+        });
+      } catch (fetchError) {
+        console.error("Error fetching event/clubs for error page:", fetchError);
+        return res.render("admin/editEvent", {
+          title: "Edit Event | UniClub Admin",
+          error: errorMessage,
+          event: {},
+          clubs: [],
+          csrfToken: req.csrfToken?.() || ''
+        });
+      }
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
+    // Initialize req.body if undefined
+    if (!req.body) req.body = {};
+    
+    // Manual CSRF validation
+    // Use tokens.verify() since req.csrfToken is undefined for multipart requests
+    const csrfToken = req.body._csrf;
+    if (!csrfToken) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/editEvent", {
+        title: "Edit Event | UniClub Admin",
+        error: "CSRF token is required. Please refresh the page and try again.",
+        event: {},
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+    
+    const tokens = new Tokens();
+    const secret = req.session?.csrfSecret;
+    if (!secret) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/editEvent", {
+        title: "Edit Event | UniClub Admin",
+        error: "CSRF session not found. Please refresh the page and try again.",
+        event: {},
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+    
+    if (!tokens.verify(secret, csrfToken)) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.status(403).render("admin/editEvent", {
+        title: "Edit Event | UniClub Admin",
+        error: "Invalid security token. Please refresh the page and try again.",
+        event: {},
+        clubs: [],
+        csrfToken: ''
+      });
+    }
+
+    const { name, club_id, date, end_date, location, description, status } = req.body;
+    const eventId = parseInt(req.params.id);
+    
+    if (!eventId || isNaN(eventId)) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.redirect("/admin/events");
+    }
+
+    // Validate name is provided
+    if (!name || !name.trim()) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      const [event, clubs] = await Promise.all([
+        pool.query("SELECT * FROM events WHERE id = ?", [eventId]),
+        pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
+      ]);
+      return res.render("admin/editEvent", {
+        title: "Edit Event | UniClub Admin",
+        event: event.rows[0] || {},
+        clubs: clubs.rows || [],
+        error: "Event name is required.",
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    // Validate end_date
+    if (end_date && date && new Date(end_date) < new Date(date)) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      const [event, clubs] = await Promise.all([
+        pool.query("SELECT * FROM events WHERE id = ?", [eventId]),
+        pool.query("SELECT id, name FROM clubs ORDER BY name ASC"),
+      ]);
+      return res.render("admin/editEvent", {
+        title: "Edit Event | UniClub Admin",
+        event: event.rows[0] || {},
+        clubs: clubs.rows || [],
+        error: "End date must be on or after start date.",
+        csrfToken: req.csrfToken ? req.csrfToken() : ''
+      });
+    }
+
+    // Get existing event data
+    const { rows: eventRows } = await pool.query(
+      `SELECT id, activity_proposal, letter_of_intent, budgetary_requirement FROM events WHERE id = ?`,
+      [eventId]
+    ).catch(() => ({ rows: [] }));
+
+    if (eventRows.length === 0) {
+      if (req.files) {
+        Object.values(req.files).flat().forEach(file => {
+          const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+          fs.unlink(filePath, () => {});
+        });
+      }
+      return res.redirect("/admin/events");
+    }
+
+    const existingEvent = eventRows[0];
+    const files = req.files || {};
+
+    // Prepare file paths - keep existing if new ones aren't uploaded
+    let activityProposalPath = existingEvent.activity_proposal;
+    let letterOfIntentPath = existingEvent.letter_of_intent;
+    let budgetaryRequirementPath = existingEvent.budgetary_requirement;
+
+    // Delete old files if new ones are uploaded
+    if (files.activity_proposal && files.activity_proposal.length > 0) {
+      if (activityProposalPath) {
+        const oldFilePath = path.join(__dirname, '../public', activityProposalPath);
+        fs.unlink(oldFilePath, () => {});
+      }
+      activityProposalPath = `/uploads/events/${files.activity_proposal[0].filename}`;
+    }
+
+    if (files.letter_of_intent && files.letter_of_intent.length > 0) {
+      if (letterOfIntentPath) {
+        const oldFilePath = path.join(__dirname, '../public', letterOfIntentPath);
+        fs.unlink(oldFilePath, () => {});
+      }
+      letterOfIntentPath = `/uploads/events/${files.letter_of_intent[0].filename}`;
+    }
+
+    if (files.budgetary_requirement && files.budgetary_requirement.length > 0) {
+      if (budgetaryRequirementPath) {
+        const oldFilePath = path.join(__dirname, '../public', budgetaryRequirementPath);
+        fs.unlink(oldFilePath, () => {});
+      }
+      budgetaryRequirementPath = `/uploads/events/${files.budgetary_requirement[0].filename}`;
+    }
+
+    // Ensure columns exist
+    const columnsToAdd = [
+      { name: 'end_date', def: 'DATE' },
+      { name: 'activity_proposal', def: 'VARCHAR(500)' },
+      { name: 'letter_of_intent', def: 'VARCHAR(500)' },
+      { name: 'budgetary_requirement', def: 'VARCHAR(500)' }
+    ];
+
+    for (const col of columnsToAdd) {
+      try {
+        await pool.query(`ALTER TABLE events ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+          console.warn(`Warning: Could not add column ${col.name}:`, err.message);
+        }
+      }
+    }
+
+    // Update event
     await pool.query(
       `UPDATE events 
-       SET name = ?, club_id = ?, date = ?, location = ?, description = ? 
+       SET name = ?, club_id = ?, date = ?, end_date = ?, location = ?, description = ?,
+           activity_proposal = ?, letter_of_intent = ?, budgetary_requirement = ?,
+           status = ?
        WHERE id = ?`,
-      [name, club_id, date, location, description, req.params.id]
+      [
+        name, 
+        club_id, 
+        date, 
+        end_date || date, 
+        location || null, 
+        description || null,
+        activityProposalPath,
+        letterOfIntentPath,
+        budgetaryRequirementPath,
+        status || 'Scheduled',
+        eventId
+      ]
     );
+    
     res.redirect("/admin/events");
   } catch (error) {
+    // Clean up uploaded files on error
+    if (req.files) {
+      Object.values(req.files).flat().forEach(file => {
+        const filePath = path.join(__dirname, '../public/uploads/events', file.filename);
+        fs.unlink(filePath, () => {});
+      });
+    }
     console.error("Error updating event:", error);
-    res.status(500).send("Server error");
+    const [event, clubs] = await Promise.all([
+      pool.query("SELECT *, COALESCE(end_date, date) as end_date FROM events WHERE id = ?", [req.params.id]).catch(() => ({ rows: [] })),
+      pool.query("SELECT id, name FROM clubs ORDER BY name ASC").catch(() => ({ rows: [] }))
+    ]);
+    res.render("admin/editEvent", {
+      title: "Edit Event | UniClub Admin",
+      event: event.rows[0] || {},
+      clubs: clubs.rows || [],
+      error: "Failed to update event. Please check your inputs.",
+      csrfToken: req.csrfToken ? req.csrfToken() : ''
+    });
   }
 });
 
@@ -3370,20 +5170,32 @@ router.get("/reports", async (req, res) => {
 
     // Students Report
     if (type === "students") {
-      let query = "SELECT * FROM students WHERE 1=1";
+      // Build students query and include clubs the student has joined (approved memberships)
+      let query = `
+        SELECT 
+          s.*,
+          (
+            SELECT GROUP_CONCAT(c.name SEPARATOR ', ')
+            FROM membership_applications ma
+            JOIN clubs c ON c.id = ma.club_id
+            WHERE ma.student_id = s.id
+              AND (ma.status = 'approved' OR ma.status = 'Approved')
+          ) AS clubs_joined
+        FROM students s
+        WHERE 1=1
+      `;
       const params = [];
-      let paramCount = 0;
 
       if (startDate) {
-        query += ` AND created_at >= $${++paramCount}`;
+        query += " AND s.created_at >= ?";
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND created_at <= $${++paramCount}`;
+        query += " AND s.created_at <= ?";
         params.push(endDate + " 23:59:59");
       }
 
-      query += " ORDER BY created_at DESC";
+      query += " ORDER BY s.created_at DESC";
       const result = await pool.query(query, params);
       reportData = result.rows;
       reportTitle = "Students Report";
@@ -3401,18 +5213,17 @@ router.get("/reports", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND c.id = $${++paramCount}`;
+        query += ` AND c.id = ?`;
         params.push(club_id);
       }
       if (startDate) {
-        query += ` AND c.created_at >= $${++paramCount}`;
+        query += ` AND c.created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND c.created_at <= $${++paramCount}`;
+        query += ` AND c.created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3431,10 +5242,9 @@ router.get("/reports", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND e.club_id = $${++paramCount}`;
+        query += ` AND e.club_id = ?`;
         params.push(club_id);
       }
       if (status) {
@@ -3448,11 +5258,11 @@ router.get("/reports", async (req, res) => {
         }
       }
       if (startDate) {
-        query += ` AND COALESCE(e.date, e.created_at) >= $${++paramCount}`;
+        query += ` AND COALESCE(e.date, e.created_at) >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND COALESCE(e.date, e.created_at) <= $${++paramCount}`;
+        query += ` AND COALESCE(e.date, e.created_at) <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3471,18 +5281,17 @@ router.get("/reports", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND o.club_id = $${++paramCount}`;
+        query += ` AND o.club_id = ?`;
         params.push(club_id);
       }
       if (startDate) {
-        query += ` AND o.created_at >= $${++paramCount}`;
+        query += ` AND o.created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND o.created_at <= $${++paramCount}`;
+        query += ` AND o.created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3501,22 +5310,21 @@ router.get("/reports", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND r.club_id = $${++paramCount}`;
+        query += ` AND r.club_id = ?`;
         params.push(club_id);
       }
       if (status) {
-        query += ` AND r.status = $${++paramCount}`;
+        query += ` AND r.status = ?`;
         params.push(status);
       }
       if (startDate) {
-        query += ` AND r.created_at >= $${++paramCount}`;
+        query += ` AND r.created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND r.created_at <= $${++paramCount}`;
+        query += ` AND r.created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3530,18 +5338,17 @@ router.get("/reports", async (req, res) => {
     if (type === "activities") {
       let query = "SELECT * FROM activities WHERE 1=1";
       const params = [];
-      let paramCount = 0;
 
       if (status) {
-        query += ` AND status = $${++paramCount}`;
+        query += ` AND status = ?`;
         params.push(status);
       }
       if (startDate) {
-        query += ` AND COALESCE(date, created_at) >= $${++paramCount}`;
+        query += ` AND COALESCE(date, created_at) >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND COALESCE(date, created_at) <= $${++paramCount}`;
+        query += ` AND COALESCE(date, created_at) <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3555,14 +5362,13 @@ router.get("/reports", async (req, res) => {
     if (type === "messages") {
       let query = 'SELECT * FROM messages WHERE 1=1';
       const params = [];
-      let paramCount = 0;
 
       if (startDate) {
-        query += ` AND created_at >= $${++paramCount}`;
+        query += ` AND created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND created_at <= $${++paramCount}`;
+        query += ` AND created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3608,14 +5414,13 @@ router.get("/reports/export", async (req, res) => {
     if (type === "students") {
       let query = "SELECT * FROM students WHERE 1=1";
       const params = [];
-      let paramCount = 0;
 
       if (startDate) {
-        query += ` AND created_at >= $${++paramCount}`;
+        query += ` AND created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND created_at <= $${++paramCount}`;
+        query += ` AND created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3637,18 +5442,17 @@ router.get("/reports/export", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND c.id = $${++paramCount}`;
+        query += ` AND c.id = ?`;
         params.push(club_id);
       }
       if (startDate) {
-        query += ` AND c.created_at >= $${++paramCount}`;
+        query += ` AND c.created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND c.created_at <= $${++paramCount}`;
+        query += ` AND c.created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3667,10 +5471,9 @@ router.get("/reports/export", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND e.club_id = $${++paramCount}`;
+        query += ` AND e.club_id = ?`;
         params.push(club_id);
       }
       if (status) {
@@ -3684,11 +5487,11 @@ router.get("/reports/export", async (req, res) => {
         }
       }
       if (startDate) {
-        query += ` AND COALESCE(e.date, e.created_at) >= $${++paramCount}`;
+        query += ` AND COALESCE(e.date, e.created_at) >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND COALESCE(e.date, e.created_at) <= $${++paramCount}`;
+        query += ` AND COALESCE(e.date, e.created_at) <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3707,18 +5510,17 @@ router.get("/reports/export", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND o.club_id = $${++paramCount}`;
+        query += ` AND o.club_id = ?`;
         params.push(club_id);
       }
       if (startDate) {
-        query += ` AND o.created_at >= $${++paramCount}`;
+        query += ` AND o.created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND o.created_at <= $${++paramCount}`;
+        query += ` AND o.created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3737,22 +5539,21 @@ router.get("/reports/export", async (req, res) => {
         WHERE 1=1
       `;
       const params = [];
-      let paramCount = 0;
 
       if (club_id) {
-        query += ` AND r.club_id = $${++paramCount}`;
+        query += ` AND r.club_id = ?`;
         params.push(club_id);
       }
       if (status) {
-        query += ` AND r.status = $${++paramCount}`;
+        query += ` AND r.status = ?`;
         params.push(status);
       }
       if (startDate) {
-        query += ` AND r.created_at >= $${++paramCount}`;
+        query += ` AND r.created_at >= ?`;
         params.push(startDate);
       }
       if (endDate) {
-        query += ` AND r.created_at <= $${++paramCount}`;
+        query += ` AND r.created_at <= ?`;
         params.push(endDate + " 23:59:59");
       }
 
@@ -3800,13 +5601,269 @@ router.get("/reports/export", async (req, res) => {
 ================================= */
 
 router.post("/logout", (req, res) => {
+  // Properly destroy session server-side
+  const sessionId = req.sessionID;
   if (req.session) {
     req.session.destroy((err) => {
-      if (err) console.error("Session destroy error:", err);
+      if (err) {
+        console.error("Error destroying admin session:", err);
+      } else {
+        console.log(`[LOGOUT] Admin session ${sessionId} destroyed`);
+      }
+      // Clear cookie
+      res.clearCookie('sessionId');
       res.redirect("/admin/login");
     });
   } else {
+    res.clearCookie('sessionId');
     res.redirect("/admin/login");
+  }
+});
+
+// Event Approvals - View Pending Events
+router.get("/event-approvals", async (req, res) => {
+  if (!req.session?.admin) return res.redirect("/admin/login");
+  
+  try {
+    const { rows: pendingEvents } = await pool.query(
+      `SELECT e.id, e.name, e.date, e.location, e.description, e.created_at, e.admin_requirements,
+              e.activity_proposal, e.letter_of_intent, e.budgetary_requirement,
+              e.club_id, c.name as club_name,
+              o.id as created_by_id, CONCAT(o.first_name, ' ', o.last_name) as created_by_name, o.role as created_by_role
+       FROM events e
+       LEFT JOIN clubs c ON e.club_id = c.id
+       LEFT JOIN officers o ON e.created_by = o.id
+       WHERE COALESCE(e.status, 'pending_approval') = 'pending_approval'
+       ORDER BY e.created_at ASC`
+    ).catch(() => ({ rows: [] }));
+    
+    res.render("admin/eventApprovals", {
+      title: "Event Approvals | UniClub Admin",
+      currentPath: "/admin/event-approvals",
+      pendingEvents: pendingEvents || [],
+      messages: []
+    });
+  } catch (err) {
+    console.error("Error fetching pending events:", err);
+    res.status(500).render("errors/500", { title: "Server Error", error: err });
+  }
+});
+
+// Approve Event with Requirements
+router.post("/event-approvals/:id/approve", writeLimiter, async (req, res) => {
+  if (!req.session?.admin) return res.status(403).json({ error: "Unauthorized" });
+  
+  try {
+    const eventId = parseInt(req.params.id);
+    const { requirements } = req.body;
+    const adminId = req.session.admin.id;
+    
+    if (!eventId || isNaN(eventId)) {
+      return res.status(400).json({ error: "Invalid event ID" });
+    }
+    
+    // Update event status to approved_by_admin (not posted yet - needs president approval)
+    await pool.query(
+      `UPDATE events 
+       SET status = 'approved_by_admin', 
+           admin_requirements = ?,
+           approved_by = ?,
+           approved_at = NOW()
+       WHERE id = ?`,
+      [requirements?.trim() || null, adminId, eventId]
+    );
+    
+    // Get event details for notification
+    const { rows: eventRows } = await pool.query(
+      `SELECT e.id, e.name, e.club_id, e.created_by,
+              CONCAT(o.first_name, ' ', o.last_name) as officer_name, o.email as officer_email
+       FROM events e
+       LEFT JOIN clubs c ON e.club_id = c.id
+       LEFT JOIN officers o ON e.created_by = o.id
+       WHERE e.id = ?`,
+      [eventId]
+    );
+    
+    if (eventRows.length > 0) {
+      const event = eventRows[0];
+      
+      // Find president of the club
+      const { rows: presidentRows } = await pool.query(
+        `SELECT id, CONCAT(first_name, ' ', last_name) as president_name, email
+         FROM officers
+         WHERE club_id = ? AND LOWER(role) LIKE '%president%'
+         LIMIT 1`,
+        [event.club_id]
+      ).catch(() => ({ rows: [] }));
+      
+      // Notify president (if found) and officer
+      if (presidentRows.length > 0) {
+        const president = presidentRows[0];
+        try {
+          await pool.query(
+            `INSERT INTO messages (sender_name, sender_email, subject, content, recipient_type, recipient_id, recipient_name, \`read\`)
+             VALUES (?, ?, ?, ?, 'officer', ?, ?, 0)`,
+            [
+              'Admin',
+              'admin@uniclub.edu',
+              `Event Approved - Action Required: ${event.name}`,
+              `An event "${event.name}" has been approved by the administrator and requires your review.\n\nPlease review and post the event from the Calendar page if you approve it.${requirements ? '\n\nAdmin Requirements:\n' + requirements : ''}`,
+              president.id,
+              president.president_name || 'President'
+            ]
+          );
+        } catch (msgErr) {
+          console.error("Error creating notification for president:", msgErr);
+        }
+      }
+      
+      // Also notify the officer who created it
+      try {
+        await pool.query(
+          `INSERT INTO messages (sender_name, sender_email, subject, content, recipient_type, recipient_id, recipient_name, \`read\`)
+           VALUES (?, ?, ?, ?, 'officer', ?, ?, 0)`,
+          [
+            'Admin',
+            'admin@uniclub.edu',
+            `Event Approved: ${event.name}`,
+            `Your event "${event.name}" has been approved by the administrator.${requirements ? '\n\nRequirements:\n' + requirements : ''}\n\nThe president will review and post it to students.`,
+            event.created_by,
+            event.officer_name || 'Officer'
+          ]
+        );
+      } catch (msgErr) {
+        console.error("Error creating notification for officer:", msgErr);
+      }
+    }
+    
+    res.json({ success: true, message: "Event approved successfully" });
+  } catch (err) {
+    console.error("Error approving event:", err);
+    res.status(500).json({ error: "Failed to approve event: " + err.message });
+  }
+});
+
+// Reject Event
+router.post("/event-approvals/:id/reject", writeLimiter, async (req, res) => {
+  if (!req.session?.admin) return res.status(403).json({ error: "Unauthorized" });
+  
+  try {
+    const eventId = parseInt(req.params.id);
+    const { reason } = req.body;
+    const adminId = req.session.admin.id;
+    
+    if (!eventId || isNaN(eventId)) {
+      return res.status(400).json({ error: "Invalid event ID" });
+    }
+    
+    // Update event status to rejected
+    await pool.query(
+      `UPDATE events 
+       SET status = 'rejected', 
+           admin_requirements = ?,
+           approved_by = ?,
+           approved_at = NOW()
+       WHERE id = ?`,
+      [reason?.trim() || 'Event rejected by administrator', adminId, eventId]
+    );
+    
+    // Get event details for notification
+    const { rows: eventRows } = await pool.query(
+      `SELECT e.id, e.name, e.club_id, e.created_by,
+              CONCAT(o.first_name, ' ', o.last_name) as officer_name
+       FROM events e
+       LEFT JOIN officers o ON e.created_by = o.id
+       WHERE e.id = ?`,
+      [eventId]
+    );
+    
+    if (eventRows.length > 0) {
+      const event = eventRows[0];
+      
+      // Create notification message for the officer
+      try {
+        await pool.query(
+          `INSERT INTO messages (sender_name, sender_email, subject, content, recipient_type, recipient_id, recipient_name, \`read\`)
+           VALUES (?, ?, ?, ?, 'officer', ?, ?, 0)`,
+          [
+            'Admin',
+            'admin@uniclub.edu',
+            `Event Rejected: ${event.name}`,
+            `Your event "${event.name}" has been rejected by the administrator.${reason ? '\n\nReason: ' + reason : ''}`,
+            event.created_by,
+            event.officer_name || 'Officer'
+          ]
+        );
+      } catch (msgErr) {
+        console.error("Error creating notification:", msgErr);
+      }
+    }
+    
+    res.json({ success: true, message: "Event rejected successfully" });
+  } catch (err) {
+    console.error("Error rejecting event:", err);
+    res.status(500).json({ error: "Failed to reject event: " + err.message });
+  }
+});
+
+// Migration: Normalize all officer emails (trim and lowercase)
+// This fixes existing officers created before email normalization was implemented
+router.post("/migrate/officer-emails", writeLimiter, async (req, res) => {
+  if (!req.session?.admin) {
+    return res.status(403).json({ success: false, error: "Admin access required" });
+  }
+
+  try {
+    // Get all officers with emails
+    const { rows: officers } = await pool.query(
+      "SELECT id, email FROM officers WHERE email IS NOT NULL AND email != ''"
+    );
+
+    let updated = 0;
+    let errors = 0;
+
+    for (const officer of officers) {
+      if (!officer.email) continue;
+
+      // Normalize email: trim and lowercase
+      const normalizedEmail = officer.email.trim().toLowerCase();
+
+      // Only update if email changed
+      if (normalizedEmail !== officer.email) {
+        try {
+          // Check if normalized email already exists (duplicate check)
+          const existingCheck = await pool.query(
+            "SELECT id FROM officers WHERE LOWER(TRIM(email)) = ? AND id != ? LIMIT 1",
+            [normalizedEmail, officer.id]
+          );
+
+          if (existingCheck.rows.length > 0) {
+            console.warn(`[Email Migration] Skipping officer ${officer.id}: normalized email "${normalizedEmail}" already exists for another officer`);
+            errors++;
+            continue;
+          }
+
+          // Update email
+          await pool.query(
+            "UPDATE officers SET email = ? WHERE id = ?",
+            [normalizedEmail, officer.id]
+          );
+          updated++;
+          console.log(`[Email Migration] Updated officer ${officer.id}: "${officer.email}" -> "${normalizedEmail}"`);
+        } catch (err) {
+          console.error(`[Email Migration] Error updating officer ${officer.id}:`, err.message);
+          errors++;
+        }
+      }
+    }
+
+    res.json({
+      success: true,
+      message: `Email migration completed. Updated: ${updated}, Errors: ${errors}, Total checked: ${officers.length}`
+    });
+  } catch (err) {
+    console.error("Email migration error:", err);
+    res.status(500).json({ success: false, error: "Migration failed: " + err.message });
   }
 });
 

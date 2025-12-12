@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
   <title><%= title || 'Club Records | UniClub' %></title>
   <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -86,11 +87,15 @@
           <% 
             let cards = [];
             if (isAuditor) {
+              const budgetUsed = typeof budgetUtilization !== 'undefined' ? budgetUtilization : 0;
+              const budgetDisplay = typeof totalBudget !== 'undefined' && totalBudget > 0 
+                ? `₱${Number(totalSpent || 0).toLocaleString()} / ₱${Number(totalBudget).toLocaleString()}`
+                : 'No budget set';
               cards = [
-                { icon: 'file-check', label: 'Pending Reviews', value: 5, hint: 'Awaiting approval', tip: 'Review expenses regularly' },
-                { icon: 'pie-chart', label: 'Budget Used', value: '75%', hint: '₱37,500 / ₱50,000', tip: 'Monitor spending trends' },
-                { icon: 'file-text', label: 'Reports Due', value: 2, hint: 'This month', tip: 'Submit on time' },
-                { icon: 'alert-triangle', label: 'Compliance Flags', value: 1, hint: 'Needs attention', tip: 'Address issues promptly' }
+                { icon: 'file-check', label: 'Pending Reviews', value: typeof pendingReviews !== 'undefined' ? pendingReviews : 0, hint: 'Awaiting approval', tip: 'Review expenses regularly' },
+                { icon: 'pie-chart', label: 'Budget Used', value: `${budgetUsed}%`, hint: budgetDisplay, tip: 'Monitor spending trends' },
+                { icon: 'file-text', label: 'Reports Due', value: typeof reportsDue !== 'undefined' ? reportsDue : 0, hint: 'This month', tip: 'Submit on time' },
+                { icon: 'alert-triangle', label: 'Compliance Flags', value: typeof complianceFlags !== 'undefined' ? complianceFlags : 0, hint: 'Needs attention', tip: 'Address issues promptly' }
               ];
             } else if (isTreasurer) {
               cards = [
@@ -136,64 +141,105 @@
 
         <!-- Filters + search -->
         <section class="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm space-y-4">
-          <form method="GET" action="/officer/records" id="filterForm" class="space-y-4">
+          <% if (isAuditor) { %>
+            <!-- Auditor: Financial Transaction Filters -->
             <div class="flex flex-wrap gap-3 items-center justify-between">
               <div class="flex flex-wrap gap-2">
-                <% const statusFilters = ['All', 'Active', 'Alumni', 'Pending']; %>
-                <% statusFilters.forEach((filter) => { 
-                  const isActive = ((typeof currentStatus !== 'undefined' ? currentStatus : 'All') === filter);
-                %>
-                  <button type="button" onclick="filterByStatus('<%= filter %>')" class="px-3 py-1.5 rounded-full text-sm font-semibold border <%= isActive ? 'border-primary-200 text-primary-800 bg-primary-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50' %>">
-                    <%= filter %>
-                  </button>
-                <% }) %>
-                <input type="hidden" name="status" id="statusFilter" value="<%= typeof currentStatus !== 'undefined' ? currentStatus : 'All' %>">
+                <button type="button" onclick="filterTransactions('all')" class="px-3 py-1.5 rounded-full text-sm font-semibold border border-primary-200 text-primary-800 bg-primary-50 transaction-filter" data-filter="all">
+                  All Transactions
+                </button>
+                <button type="button" onclick="filterTransactions('pending')" class="px-3 py-1.5 rounded-full text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transaction-filter" data-filter="pending">
+                  Pending Review
+                </button>
+                <button type="button" onclick="filterTransactions('approved')" class="px-3 py-1.5 rounded-full text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transaction-filter" data-filter="approved">
+                  Approved
+                </button>
+                <button type="button" onclick="filterTransactions('rejected')" class="px-3 py-1.5 rounded-full text-sm font-semibold border border-gray-200 text-gray-600 hover:bg-gray-50 transaction-filter" data-filter="rejected">
+                  Rejected
+                </button>
               </div>
               <div class="flex flex-wrap gap-2">
                 <div class="relative">
                   <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3.5"></i>
-                  <input type="search" name="search" placeholder="Search name, email, or ID" value="<%= typeof currentSearch !== 'undefined' ? currentSearch : '' %>" class="pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800" id="recordsSearch">
+                  <input type="search" placeholder="Search transactions..." oninput="searchTransactions(this.value)" class="pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800" id="transactionSearch">
                 </div>
-                <select name="role" onchange="document.getElementById('filterForm').submit()" class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800">
-                  <option value="all roles" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'all roles') ? 'selected' : '' %>>All roles</option>
-                  <option value="officer" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'officer') ? 'selected' : '' %>>Officers</option>
-                  <option value="member" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'member') ? 'selected' : '' %>>Members</option>
-                </select>
-                <button type="submit" class="px-4 py-2 bg-red-700 text-white rounded-xl text-sm font-semibold hover:bg-red-800 transition-colors">
-                  Apply Filters
-                </button>
-                <% 
-                  var hasFilters = false;
-                  if (typeof currentStatus !== 'undefined' && currentStatus !== 'All') {
-                    hasFilters = true;
-                  } else if (typeof currentSearch !== 'undefined' && currentSearch) {
-                    hasFilters = true;
-                  } else if (typeof currentRoleFilter !== 'undefined' && currentRoleFilter !== 'all roles') {
-                    hasFilters = true;
-                  }
-                %>
-                <% if (hasFilters) { %>
-                  <a href="/officer/records" class="px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-                    Clear
-                  </a>
-                <% } %>
               </div>
             </div>
-          </form>
-          <div class="flex flex-wrap gap-2 text-xs text-gray-500">
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <%= (typeof activeMembers !== 'undefined' ? activeMembers : 0) %> Active
-            </span>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
-              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-              <%= (typeof pendingMembers !== 'undefined' ? pendingMembers : 0) %> Pending
-            </span>
-            <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
-              <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              <%= (typeof alumniMembers !== 'undefined' ? alumniMembers : 0) %> Alumni
-            </span>
-          </div>
+            <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+              <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <%= (typeof pendingReviews !== 'undefined' ? pendingReviews : 0) %> Pending Review
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                <%= (typeof financialTransactions !== 'undefined' && financialTransactions) ? financialTransactions.filter(t => t.status === 'approved').length : 0 %> Approved
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                <%= (typeof complianceFlags !== 'undefined' ? complianceFlags : 0) %> Compliance Issues
+              </span>
+            </div>
+          <% } else { %>
+            <!-- Default: Member Filters -->
+            <form method="GET" action="/officer/records" id="filterForm" class="space-y-4">
+              <div class="flex flex-wrap gap-3 items-center justify-between">
+                <div class="flex flex-wrap gap-2">
+                  <% const statusFilters = ['All', 'Active', 'Alumni', 'Pending']; %>
+                  <% statusFilters.forEach((filter) => { 
+                    const isActive = ((typeof currentStatus !== 'undefined' ? currentStatus : 'All') === filter);
+                  %>
+                    <button type="button" onclick="filterByStatus('<%= filter %>')" class="px-3 py-1.5 rounded-full text-sm font-semibold border <%= isActive ? 'border-primary-200 text-primary-800 bg-primary-50' : 'border-gray-200 text-gray-600 hover:bg-gray-50' %>">
+                      <%= filter %>
+                    </button>
+                  <% }) %>
+                  <input type="hidden" name="status" id="statusFilter" value="<%= typeof currentStatus !== 'undefined' ? currentStatus : 'All' %>">
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 text-gray-400 absolute left-3 top-3.5"></i>
+                    <input type="search" name="search" placeholder="Search name, email, or ID" value="<%= typeof currentSearch !== 'undefined' ? currentSearch : '' %>" class="pl-9 pr-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800" id="recordsSearch">
+                  </div>
+                  <select name="role" onchange="document.getElementById('filterForm').submit()" class="px-3 py-2 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary-800">
+                    <option value="all roles" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'all roles') ? 'selected' : '' %>>All roles</option>
+                    <option value="officer" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'officer') ? 'selected' : '' %>>Officers</option>
+                    <option value="member" <%= (typeof currentRoleFilter !== 'undefined' && currentRoleFilter === 'member') ? 'selected' : '' %>>Members</option>
+                  </select>
+                  <button type="submit" class="px-4 py-2 bg-red-700 text-white rounded-xl text-sm font-semibold hover:bg-red-800 transition-colors">
+                    Apply Filters
+                  </button>
+                  <% 
+                    var hasFilters = false;
+                    if (typeof currentStatus !== 'undefined' && currentStatus !== 'All') {
+                      hasFilters = true;
+                    } else if (typeof currentSearch !== 'undefined' && currentSearch) {
+                      hasFilters = true;
+                    } else if (typeof currentRoleFilter !== 'undefined' && currentRoleFilter !== 'all roles') {
+                      hasFilters = true;
+                    }
+                  %>
+                  <% if (hasFilters) { %>
+                    <a href="/officer/records" class="px-4 py-2 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+                      Clear
+                    </a>
+                  <% } %>
+                </div>
+              </div>
+            </form>
+            <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+              <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <%= (typeof activeMembers !== 'undefined' ? activeMembers : 0) %> Active
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                <%= (typeof pendingMembers !== 'undefined' ? pendingMembers : 0) %> Pending
+              </span>
+              <span class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                <%= (typeof alumniMembers !== 'undefined' ? alumniMembers : 0) %> Alumni
+              </span>
+            </div>
+          <% } %>
         </section>
 
         <!-- Directory table - Role-specific content -->
@@ -201,7 +247,7 @@
           <div class="overflow-x-auto">
             <% if (isAuditor) { %>
             <!-- Auditor: Financial Transactions Table -->
-            <table class="min-w-full divide-y divide-gray-100">
+            <table id="transactionsTable" class="min-w-full divide-y divide-gray-100">
               <thead class="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wide">
                 <tr>
                   <th class="px-6 py-3 text-left">Transaction</th>
@@ -212,43 +258,85 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100 text-sm text-gray-700">
-                <tr class="hover:bg-gray-50 transition">
-                  <td class="px-6 py-4">
-                    <div>
-                      <p class="font-semibold text-gray-900">Event expenses</p>
-                      <p class="text-xs text-gray-500">Submitted by Treasurer</p>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">Dec 5, 2024</td>
-                  <td class="px-6 py-4"><span class="font-bold text-gray-900">₱5,000</span></td>
-                  <td class="px-6 py-4">
-                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                      Pending Review
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-right space-x-2">
-                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">Review</button>
-                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">Approve</button>
-                  </td>
-                </tr>
-                <tr class="hover:bg-gray-50 transition">
-                  <td class="px-6 py-4">
-                    <div>
-                      <p class="font-semibold text-gray-900">Office supplies</p>
-                      <p class="text-xs text-gray-500">Submitted by Treasurer</p>
-                    </div>
-                  </td>
-                  <td class="px-6 py-4">Dec 4, 2024</td>
-                  <td class="px-6 py-4"><span class="font-bold text-gray-900">₱1,200</span></td>
-                  <td class="px-6 py-4">
-                    <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700">
-                      Approved
-                    </span>
-                  </td>
-                  <td class="px-6 py-4 text-right space-x-2">
-                    <button class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50">View</button>
-                  </td>
-                </tr>
+                <% if (typeof financialTransactions !== 'undefined' && financialTransactions && financialTransactions.length > 0) { %>
+                  <% financialTransactions.forEach(function(transaction) { %>
+                    <tr class="hover:bg-gray-50 transition">
+                      <td class="px-6 py-4">
+                        <div>
+                          <p class="font-semibold text-gray-900"><%= transaction.title || 'Untitled Transaction' %></p>
+                          <p class="text-xs text-gray-500">
+                            <% if (transaction.submitted_by_name) { %>
+                              Submitted by <%= transaction.submitted_by_name %>
+                            <% } else { %>
+                              Submitted by Treasurer
+                            <% } %>
+                          </p>
+                          <% if (transaction.description) { %>
+                            <p class="text-xs text-gray-400 mt-1"><%= transaction.description.substring(0, 50) %><%= transaction.description.length > 50 ? '...' : '' %></p>
+                          <% } %>
+                        </div>
+                      </td>
+                      <td class="px-6 py-4">
+                        <% if (transaction.created_at) { %>
+                          <%= new Date(transaction.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                        <% } else { %>
+                          —
+                        <% } %>
+                      </td>
+                      <td class="px-6 py-4">
+                        <span class="font-bold text-gray-900">₱<%= Number(transaction.amount || 0).toLocaleString() %></span>
+                        <% if (transaction.category) { %>
+                          <p class="text-xs text-gray-500 mt-1"><%= transaction.category %></p>
+                        <% } %>
+                      </td>
+                      <td class="px-6 py-4">
+                        <% 
+                          const status = (transaction.status || 'pending').toLowerCase();
+                          let statusClass = 'bg-gray-50 text-gray-700';
+                          let statusText = 'Pending';
+                          
+                          if (status === 'approved') {
+                            statusClass = 'bg-green-50 text-green-700';
+                            statusText = 'Approved';
+                          } else if (status === 'rejected') {
+                            statusClass = 'bg-red-50 text-red-700';
+                            statusText = 'Rejected';
+                          } else if (status === 'flagged') {
+                            statusClass = 'bg-orange-50 text-orange-700';
+                            statusText = 'Flagged';
+                          } else {
+                            statusClass = 'bg-amber-50 text-amber-700';
+                            statusText = 'Pending Review';
+                          }
+                        %>
+                        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold <%= statusClass %>">
+                          <%= statusText %>
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 text-right space-x-2">
+                        <% if (status === 'pending') { %>
+                          <button onclick="reviewTransaction(<%= transaction.id %>)" class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50 transition-colors">Review</button>
+                          <button onclick="approveTransaction(<%= transaction.id %>)" class="px-3 py-1.5 text-xs font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">Approve</button>
+                        <% } else { %>
+                          <button onclick="viewTransaction(<%= transaction.id %>)" class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50 transition-colors">View</button>
+                          <% if (transaction.receipt_url) { %>
+                            <a href="<%= transaction.receipt_url %>" target="_blank" class="px-3 py-1.5 text-xs font-semibold border rounded-lg hover:bg-gray-50 transition-colors inline-block">Receipt</a>
+                          <% } %>
+                        <% } %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                <% } else { %>
+                  <tr>
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                      <div class="flex flex-col items-center gap-2">
+                        <i data-lucide="file-text" class="w-12 h-12 text-gray-300"></i>
+                        <p class="font-semibold">No financial transactions found</p>
+                        <p class="text-sm">Financial transactions will appear here once they are submitted.</p>
+                      </div>
+                    </td>
+                  </tr>
+                <% } %>
               </tbody>
             </table>
             <% } else if (isTreasurer) { %>
@@ -407,7 +495,11 @@
             <% } %>
           </div>
           <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between text-sm text-gray-500">
-            <p>Showing <%= members && members.length ? members.length : 0 %> members</p>
+            <% if (isAuditor) { %>
+              <p>Showing <%= typeof financialTransactions !== 'undefined' && financialTransactions ? financialTransactions.length : 0 %> transactions</p>
+            <% } else { %>
+              <p>Showing <%= members && members.length ? members.length : 0 %> members</p>
+            <% } %>
             <div class="flex items-center gap-2">
               <button class="px-2 py-1 rounded-lg border text-xs hover:bg-gray-50">Previous</button>
               <button class="px-2 py-1 rounded-lg border text-xs hover:bg-gray-50">Next</button>
@@ -429,11 +521,11 @@
               </button>
             </div>
             <ul class="space-y-3">
-              <% const activity = activityLog || [
+              <% const activity = (typeof activityLog !== 'undefined' && activityLog) || [
                 { icon: 'shield', text: 'Ana Valdez promoted to Treasurer', meta: '2h ago' },
                 { icon: 'file-plus', text: 'Paperwork uploaded for Liam Cruz', meta: 'Yesterday' },
                 { icon: 'user-check', text: 'Mae Dela Cruz reactivated', meta: '2 days ago' },
-                { icon: 'tag', text: 'Tag “Events” added to 4 members', meta: '3 days ago' }
+                { icon: 'tag', text: 'Tag "Events" added to 4 members', meta: '3 days ago' }
               ]; %>
               <% activity.forEach(function(item) { %>
                 <li class="flex gap-3">
@@ -494,6 +586,209 @@
       // For now, just show an alert. In the future, this could open a modal or navigate to a detail page
       alert('Member details feature coming soon! Member ID: ' + memberId);
     }
+
+    // Financial transaction functions (for auditors)
+    <% if (isAuditor) { %>
+    // Store all transactions for filtering
+    const allTransactions = <%- JSON.stringify(typeof financialTransactions !== 'undefined' ? financialTransactions : []) %>;
+    let currentFilter = 'all';
+
+    function filterTransactions(status) {
+      currentFilter = status;
+      const rows = document.querySelectorAll('#transactionsTable tbody tr');
+      const filterButtons = document.querySelectorAll('.transaction-filter');
+      
+      // Update button styles
+      filterButtons.forEach(btn => {
+        const filter = btn.getAttribute('data-filter');
+        if (filter === status) {
+          btn.classList.add('border-primary-200', 'text-primary-800', 'bg-primary-50');
+          btn.classList.remove('border-gray-200', 'text-gray-600');
+        } else {
+          btn.classList.remove('border-primary-200', 'text-primary-800', 'bg-primary-50');
+          btn.classList.add('border-gray-200', 'text-gray-600');
+        }
+      });
+      
+      // Filter rows
+      rows.forEach(row => {
+        if (status === 'all') {
+          row.style.display = '';
+        } else {
+          const statusCell = row.querySelector('td:nth-child(4)');
+          if (statusCell) {
+            const statusText = statusCell.textContent.toLowerCase();
+            const matches = statusText.includes(status);
+            row.style.display = matches ? '' : 'none';
+          }
+        }
+      });
+    }
+
+    function searchTransactions(query) {
+      const rows = document.querySelectorAll('#transactionsTable tbody tr');
+      const searchTerm = query.toLowerCase();
+      
+      rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const matches = text.includes(searchTerm);
+        
+        // Also check if it matches current filter
+        if (currentFilter !== 'all') {
+          const statusCell = row.querySelector('td:nth-child(4)');
+          if (statusCell) {
+            const statusText = statusCell.textContent.toLowerCase();
+            const matchesFilter = statusText.includes(currentFilter);
+            row.style.display = (matches && matchesFilter) ? '' : 'none';
+          } else {
+            row.style.display = matches ? '' : 'none';
+          }
+        } else {
+          row.style.display = matches ? '' : 'none';
+        }
+      });
+    }
+
+    async function approveTransaction(expenseId) {
+      if (!confirm('Are you sure you want to approve this expense?')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/officer/finance/expense/${expenseId}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('Expense approved successfully!');
+          location.reload();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to approve expense'));
+        }
+      } catch (error) {
+        console.error('Error approving expense:', error);
+        alert('An error occurred while approving the expense.');
+      }
+    }
+
+    async function rejectTransaction(expenseId) {
+      const notes = prompt('Please provide a reason for rejection:');
+      if (!notes) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/officer/finance/expense/${expenseId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || ''
+          },
+          body: JSON.stringify({ notes })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          alert('Expense rejected successfully!');
+          location.reload();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to reject expense'));
+        }
+      } catch (error) {
+        console.error('Error rejecting expense:', error);
+        alert('An error occurred while rejecting the expense.');
+      }
+    }
+
+    function reviewTransaction(expenseId) {
+      const transaction = allTransactions.find(t => t.id === expenseId);
+      if (!transaction) {
+        alert('Transaction not found');
+        return;
+      }
+      
+      // Create a simple modal to show transaction details
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+      modal.innerHTML = `
+        <div class="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Review Transaction</h2>
+            <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+              <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Title</label>
+              <p class="text-gray-900">${transaction.title || 'N/A'}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Amount</label>
+              <p class="text-gray-900">₱${Number(transaction.amount || 0).toLocaleString()}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Category</label>
+              <p class="text-gray-900">${transaction.category || 'N/A'}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Description</label>
+              <p class="text-gray-900">${transaction.description || 'No description provided'}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Submitted By</label>
+              <p class="text-gray-900">${transaction.submitted_by_name || 'Unknown'}</p>
+            </div>
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Date</label>
+              <p class="text-gray-900">${transaction.created_at ? new Date(transaction.created_at).toLocaleString() : 'N/A'}</p>
+            </div>
+            ${transaction.receipt_url ? `
+            <div>
+              <label class="text-sm font-semibold text-gray-700">Receipt</label>
+              <a href="${transaction.receipt_url}" target="_blank" class="text-blue-600 hover:underline">View Receipt</a>
+            </div>
+            ` : ''}
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button onclick="approveTransaction(${expenseId}); this.closest('.fixed').remove();" 
+                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+              Approve
+            </button>
+            <button onclick="rejectTransaction(${expenseId}); this.closest('.fixed').remove();" 
+                    class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+              Reject
+            </button>
+            <button onclick="this.closest('.fixed').remove()" 
+                    class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+              Close
+            </button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+      renderLucideIcons();
+    }
+
+    function viewTransaction(expenseId) {
+      reviewTransaction(expenseId);
+    }
+
+    // Initialize filter on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      const transactionsTable = document.querySelector('table');
+      if (transactionsTable && <%= isAuditor ? 'true' : 'false' %>) {
+        transactionsTable.id = 'transactionsTable';
+      }
+    });
+    <% } %>
 
     // Search on Enter key
     const searchInput = document.getElementById('recordsSearch');

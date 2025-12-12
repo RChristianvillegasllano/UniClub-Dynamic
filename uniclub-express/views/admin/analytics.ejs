@@ -314,13 +314,13 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
     // Data from server
-    const clubDeptLabels = <%- JSON.stringify(clubDeptLabels || []) %>;
-    const clubDeptCounts = <%- JSON.stringify(clubDeptCounts || []) %>;
-    const monthlyLabels  = <%- JSON.stringify(monthlyLabels  || []) %>;
-    const monthlyCounts  = <%- JSON.stringify(monthlyCounts  || []) %>;
+    const clubDeptLabels = JSON.parse('<%- JSON.stringify(clubDeptLabels || []) %>');
+    const clubDeptCounts = JSON.parse('<%- JSON.stringify(clubDeptCounts || []) %>');
+    const monthlyLabels  = JSON.parse('<%- JSON.stringify(monthlyLabels  || []) %>');
+    const monthlyCounts  = JSON.parse('<%- JSON.stringify(monthlyCounts  || []) %>');
 
     // Calculate percentages for donut chart
-    const totalClubs = clubDeptCounts.reduce((a, b) => a + b, 0);
+    const totalClubs = (clubDeptCounts || []).reduce((a, b) => a + Number(b || 0), 0);
     const clubDeptPercentages = clubDeptCounts.map(count => 
       totalClubs > 0 ? Math.round((count / totalClubs) * 100) : 0
     );

@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
   <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <title><%= title || 'Requirements | UniClub' %></title>
   <!-- Tailwind CDN -->
@@ -208,9 +209,17 @@
                       <td class="px-4 py-2.5 text-sm text-gray-600"><%= a.date || '—' %></td>
                       <td class="px-4 py-2.5 text-sm text-gray-600"><%= a.location || '—' %></td>
                       <td class="px-4 py-2.5">
-                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold <%= sClass %>">
-                          <%= a.status || 'Scheduled' %>
-                        </span>
+                        <select 
+                          data-event-id="<%= a.id %>" 
+                          data-original-status="<%= a.status || 'Scheduled' %>"
+                          class="status-select px-2 py-1 rounded-full text-xs font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          style="background-color: <%= s === 'confirmed' || s === 'completed' ? '#dcfce7' : s === 'scheduled' ? '#dbeafe' : s === 'cancelled' || s === 'canceled' ? '#fee2e2' : '#fef3c7' %>; color: <%= s === 'confirmed' || s === 'completed' ? '#166534' : s === 'scheduled' ? '#1e40af' : s === 'cancelled' || s === 'canceled' ? '#991b1b' : '#92400e' %>;"
+                        >
+                          <option value="Scheduled" <%= (a.status || 'Scheduled') === 'Scheduled' ? 'selected' : '' %>>Scheduled</option>
+                          <option value="Ongoing" <%= (a.status || '') === 'Ongoing' ? 'selected' : '' %>>Ongoing</option>
+                          <option value="Completed" <%= (a.status || '') === 'Completed' ? 'selected' : '' %>>Completed</option>
+                          <option value="Cancelled" <%= (a.status || '') === 'Cancelled' ? 'selected' : '' %>>Cancelled</option>
+                        </select>
                       </td>
                       <td class="px-4 py-2.5">
                         <div class="flex items-center gap-2">
@@ -312,6 +321,94 @@
       activityFilter?.addEventListener('change', filterAndSortActivities);
       activitySort?.addEventListener('change', filterAndSortActivities);
     }
+
+    // Handle status updates
+    document.querySelectorAll('.status-select').forEach(select => {
+      select.addEventListener('change', async function() {
+        const eventId = this.dataset.eventId;
+        const newStatus = this.value;
+        const originalStatus = this.getAttribute('data-original-status') || this.value;
+        
+        // Store original status if not already stored
+        if (!this.getAttribute('data-original-status')) {
+          this.setAttribute('data-original-status', originalStatus);
+        }
+
+        // Disable select while updating
+        this.disabled = true;
+        const originalStyle = this.style.cssText;
+        this.style.opacity = '0.6';
+
+        try {
+          // Get CSRF token from meta tag
+          const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+          
+          if (!csrfToken) {
+            throw new Error('CSRF token not found. Please refresh the page and try again.');
+          }
+          
+          const response = await fetch(`/admin/events/${eventId}/status`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus, _csrf: csrfToken }),
+            credentials: 'same-origin'
+          });
+
+          const data = await response.json();
+
+          if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Failed to update status');
+          }
+
+          // Update the select styling based on new status
+          const statusStyles = {
+            'Scheduled': { bg: '#dbeafe', text: '#1e40af' },
+            'Ongoing': { bg: '#fef3c7', text: '#92400e' },
+            'Completed': { bg: '#dcfce7', text: '#166534' },
+            'Cancelled': { bg: '#fee2e2', text: '#991b1b' }
+          };
+          
+          const style = statusStyles[newStatus] || statusStyles['Scheduled'];
+          this.style.backgroundColor = style.bg;
+          this.style.color = style.text;
+          this.style.opacity = '1';
+          this.setAttribute('data-original-status', newStatus);
+          
+          // Update the row's data-status attribute for filtering
+          const row = this.closest('tr');
+          if (row) {
+            row.setAttribute('data-status', newStatus.toLowerCase());
+          }
+          
+          // Show success message
+          const toast = document.createElement('div');
+          toast.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+          toast.textContent = `Status updated to ${newStatus}`;
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 3000);
+
+        } catch (error) {
+          console.error('Error updating status:', error);
+          
+          // Revert to original status
+          this.value = originalStatus;
+          this.style.opacity = '1';
+          
+          // Show error message
+          const toast = document.createElement('div');
+          toast.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+          toast.textContent = error.message || 'Failed to update status. Please try again.';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 3000);
+        } finally {
+          // Re-enable select
+          this.disabled = false;
+        }
+      });
+    });
   </script>
 </body>
 </html>

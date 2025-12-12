@@ -53,7 +53,9 @@
     <%- include('./partials/sidebar', {
       activePage: 'analytics',
       club: (typeof club !== 'undefined' ? club : null),
-      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0)
+      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0),
+      accessiblePages: (typeof accessiblePages !== 'undefined' ? accessiblePages : []),
+      officer: (typeof officer !== 'undefined' ? officer : null)
     }) %>
 
     <!-- Main -->
@@ -84,10 +86,15 @@
                   <p class="text-sm font-bold text-gray-900 leading-tight"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
                   <p class="text-xs text-gray-500 mt-1"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
                 </div>
-                <% if (typeof officer !== 'undefined' && officer && officer.photo_url) { %>
-                  <img src="<%= officer.photo_url %>" alt="Profile" class="w-10 h-10 rounded-full ring-1 ring-red-600 object-cover">
+                <% if (typeof officer !== 'undefined' && officer && officer.profile_picture) { %>
+                  <img src="<%= officer.profile_picture %>" alt="Profile" class="w-10 h-10 rounded-full ring-1 ring-red-600 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden w-10 h-10 rounded-full ring-1 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } else { %>
-                  <div class="w-10 h-10 rounded-full ring-1 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">UC</div>
+                  <div class="w-10 h-10 rounded-full ring-1 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } %>
               </button>
               <div id="profileMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">

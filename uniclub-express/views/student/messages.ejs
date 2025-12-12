@@ -1110,7 +1110,7 @@
                 <% if (isNewDate) { %>
                   <div class="text-center my-4">
                     <span class="text-xs text-white/40 light-mode:text-[#94a3b8] px-3 py-1 rounded-full bg-white/5 light-mode:bg-[#e2e8f0]">
-                      <%= dateStr.toUpperCase() %> • <%= msgDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) %>
+                      <%= typeof dateStr === 'string' ? dateStr.toUpperCase() : dateStr %> • <%= msgDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) %>
                     </span>
                   </div>
                 <% } %>
@@ -1290,9 +1290,19 @@
       const conversationId = this.dataset.conversationId;
       const message = messageInput?.value.trim();
 
-      if (!message || !conversationId) return;
+      if (!message || !conversationId) {
+        if (!message) {
+          alert('Please enter a message');
+        }
+        return;
+      }
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+      // Disable button while sending
+      const originalText = this.innerHTML;
+      this.disabled = true;
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
 
       try {
         const response = await fetch('/student/messages/send', {
@@ -1307,16 +1317,23 @@
           })
         });
 
-        if (response.ok) {
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && data.success) {
           messageInput.value = '';
           // Reload page to show new message
           window.location.reload();
         } else {
-          alert('Failed to send message. Please try again.');
+          const errorMsg = data.error || 'Failed to send message. Please try again.';
+          alert(errorMsg);
+          this.disabled = false;
+          this.innerHTML = originalText;
         }
       } catch (error) {
         console.error('Error sending message:', error);
-        alert('Failed to send message. Please try again.');
+        alert('Failed to send message. Please check your connection and try again.');
+        this.disabled = false;
+        this.innerHTML = originalText;
       }
     });
 

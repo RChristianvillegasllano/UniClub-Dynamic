@@ -70,7 +70,7 @@
     <div class="min-h-screen lg:grid lg:grid-cols-[260px_1fr] gap-6 p-6">
       <!-- Sidebar -->
       <div id="sidebar" class="lg:block sidebar-hidden fixed lg:static inset-y-0 left-0 z-40 transition-transform duration-300 ease-in-out w-64 lg:w-auto">
-        <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/dashboard'), messages: (typeof messages !== 'undefined' ? messages : []), pendingCount: (typeof pendingApprovals !== 'undefined' ? pendingApprovals : 0) }) %>
+        <%- include('../layouts/adminSidebar', { currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/dashboard'), messages: (typeof messages !== 'undefined' ? messages : []), pendingCount: (typeof pendingApprovals !== 'undefined' ? pendingApprovals : 0), adminOfficer: (typeof adminOfficer !== 'undefined' ? adminOfficer : null), csrfToken: (typeof csrfToken !== 'undefined' ? csrfToken : '') }) %>
       </div>
       <!-- Overlay for mobile -->
       <div id="sidebarOverlay" class="lg:hidden hidden fixed inset-0 bg-black bg-opacity-50 z-30" onclick="toggleSidebar()"></div>
@@ -383,16 +383,7 @@
           
           <script>
             // Store initial clubs data
-            const initialClubsData = <%- JSON.stringify({
-              clubs: (clubsList || []).slice(0, 8).map(c => ({
-                id: c.id,
-                name: c.name || '',
-                department: c.department || '—',
-                officer_count: Number(c.officer_count || 0),
-                activity_count: Number(c.activity_count || 0)
-              })),
-              totalCount: clubsCount || 0
-            }) %>;
+            const initialClubsData = JSON.parse('<%- JSON.stringify({ clubs: (clubsList || []).slice(0, 8).map(c => ({ id: c.id, name: c.name || "", department: c.department || "—", officer_count: Number(c.officer_count || 0), activity_count: Number(c.activity_count || 0) })), totalCount: clubsCount || 0 }) %>');
             
             // Async club search using API
             const clubSearch = document.getElementById('clubSearch');

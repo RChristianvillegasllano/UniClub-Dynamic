@@ -37,6 +37,24 @@
     var isAuditor = officerRole.includes('auditor');
     var isTreasurer = officerRole.includes('treasurer') || officerRole.includes('finance');
     var isFinanceRole = isAuditor || isTreasurer;
+    var isPress = officerRole.includes('press') || officerRole.includes('media') || officerRole.includes('reporter') || officerRole.includes('journalist');
+    
+    // Get accessible pages for proper access control
+    var accessiblePagesList = (typeof accessiblePages !== 'undefined' && Array.isArray(accessiblePages)) ? accessiblePages : [];
+    var hasAllAccess = accessiblePagesList.includes('all');
+    var hasMembersAccess = hasAllAccess || accessiblePagesList.includes('members');
+    var hasFinanceAccess = hasAllAccess || accessiblePagesList.includes('finance');
+    var hasAttendanceAccess = hasAllAccess || accessiblePagesList.includes('attendance');
+    var hasReportsAccess = hasAllAccess || accessiblePagesList.includes('reports');
+    var hasAnnouncementsAccess = hasAllAccess || accessiblePagesList.includes('announcements');
+    var hasEventsAccess = hasAllAccess || accessiblePagesList.includes('events');
+    
+    // Get permissions for action buttons (check if permissions are passed from route)
+    var permissions = (typeof permissions !== 'undefined' && permissions) ? permissions : [];
+    var canCreateEvents = hasAllAccess || (permissions.includes && permissions.includes('create_events'));
+    var canApproveApplications = hasAllAccess || (permissions.includes && permissions.includes('approve_applications'));
+    var canCreateAttendance = hasAllAccess || (permissions.includes && permissions.includes('create_attendance'));
+    var canPostAnnouncements = hasAllAccess || (permissions.includes && permissions.includes('post_announcements'));
   %>
   <div class="flex h-screen">
     <!-- Sidebar -->
@@ -45,7 +63,8 @@
       club: (typeof club !== 'undefined' ? club : null),
       accessiblePages: (typeof accessiblePages !== 'undefined' ? accessiblePages : []),
       officer: (typeof officer !== 'undefined' ? officer : null),
-      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0)
+      unreadCount: (typeof unreadCount !== 'undefined' ? unreadCount : 0),
+      permissions: (typeof permissions !== 'undefined' ? permissions : [])
     }) %>
 
     <!-- Main -->
@@ -109,10 +128,15 @@
                   <p class="text-sm font-semibold text-gray-900"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
                   <p class="text-xs text-gray-600"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
                 </div>
-                <% if (typeof officer !== 'undefined' && officer && officer.photo_url) { %>
-                  <img src="<%= officer.photo_url %>" alt="Profile" class="w-11 h-11 rounded-full ring-2 ring-red-600 object-cover">
+                <% if (typeof officer !== 'undefined' && officer && officer.profile_picture) { %>
+                  <img src="<%= officer.profile_picture %>" alt="Profile" class="w-11 h-11 rounded-full ring-2 ring-red-600 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden w-11 h-11 rounded-full ring-2 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } else { %>
-                  <div class="w-11 h-11 rounded-full ring-2 ring-red-600 bg-gray-200 flex items-center justify-center text-xs text-gray-600">UC</div>
+                  <div class="w-11 h-11 rounded-full ring-2 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } %>
               </button>
               <div id="profileMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
@@ -165,15 +189,8 @@
         </div>
         <!-- Stats -->
         <% 
-          // Get accessible pages for filtering dashboard content
-          const accessiblePagesList = (typeof accessiblePages !== 'undefined' && Array.isArray(accessiblePages)) ? accessiblePages : [];
-          const hasAllAccess = accessiblePagesList.includes('all');
-          const hasMembersAccess = hasAllAccess || accessiblePagesList.includes('members');
-          const hasAttendanceAccess = hasAllAccess || accessiblePagesList.includes('attendance');
-          const hasReportsAccess = hasAllAccess || accessiblePagesList.includes('reports');
-          const hasAnnouncementsAccess = hasAllAccess || accessiblePagesList.includes('announcements');
-          
-          // Note: isAuditor, isTreasurer, and isFinanceRole are already defined in the header section above
+          // Note: accessiblePagesList, hasAllAccess, hasMembersAccess, etc. are already defined in the header section above
+          // Note: isAuditor, isTreasurer, isFinanceRole, and isPress are already defined in the header section above
         %>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <% if (isAuditor) { %>
@@ -266,6 +283,7 @@
             </div>
           </div>
           <% } %>
+          <% if (hasEventsAccess) { %>
           <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border border-gray-100">
             <div class="flex items-start justify-between">
               <div>
@@ -278,6 +296,7 @@
               </div>
             </div>
           </div>
+          <% } %>
           <% if (hasAttendanceAccess) { %>
           <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5 border-2 border-green-100">
             <div class="flex items-start justify-between">
@@ -401,7 +420,8 @@
           </div>
           <% } %>
 
-          <!-- Upcoming Events (Default) -->
+          <!-- Upcoming Events (Default) - Only show if user has events access -->
+          <% if (hasEventsAccess) { %>
           <div class="bg-gray-50 rounded-2xl p-6 shadow-lg border border-gray-200">
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-xl font-bold text-gray-800 flex items-center gap-2">
@@ -430,11 +450,20 @@
                 <div class="text-center text-gray-500 text-sm py-8">No events yet — let's plan your first one!</div>
               <% } %>
             </div>
+            <% 
+              // Check if user has permission to create events
+              var canCreateEvents = hasAllAccess || (typeof permissions !== 'undefined' && permissions && Array.isArray(permissions) && permissions.includes('create_events'));
+            %>
+            <% if (canCreateEvents) { %>
             <button id="createEvent" class="w-full bg-gray-900 text-white py-3 rounded-xl font-semibold hover:bg-black transition-colors flex items-center justify-center gap-2">
               Create Event
               <i data-lucide="chevron-right" class="w-5 h-5"></i>
             </button>
+            <% } else { %>
+            <p class="text-center text-sm text-gray-500 py-2">View-only access</p>
+            <% } %>
           </div>
+          <% } %>
           <% } %>
 
           <!-- Analytics Preview -->
@@ -540,7 +569,8 @@
             </a>
           </div>
 
-          <!-- Audit History -->
+          <!-- Audit History - Only show for auditors or users with finance access -->
+          <% if (isAuditor || hasFinanceAccess) { %>
           <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
             <div class="flex items-center justify-between mb-6">
               <h2 class="text-xl font-bold text-gray-800">Audit History</h2>
@@ -571,6 +601,7 @@
               <i data-lucide="chevron-right" class="w-5 h-5"></i>
             </a>
           </div>
+          <% } %>
         </div>
         <% } else { %>
         <!-- Default sections for other roles -->

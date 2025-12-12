@@ -253,9 +253,16 @@
                   <tr class="officer-row">
                     <td class="p-3">
                       <div class="flex items-center gap-3">
-                        <div class="officer-avatar" title="<%= o.name %>">
-                          <%= (o.first_name || o.name || '?').charAt(0) %><%= (o.last_name || '').charAt(0) %>
-                        </div>
+                        <% if (o.profile_picture) { %>
+                          <img src="<%= o.profile_picture %>" alt="<%= o.name %>" class="w-10 h-10 rounded-full object-cover border-2 border-slate-200" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                          <div class="officer-avatar hidden" title="<%= o.name %>">
+                            <%= (o.first_name || o.name || '?').charAt(0) %><%= (o.last_name || '').charAt(0) %>
+                          </div>
+                        <% } else { %>
+                          <div class="officer-avatar" title="<%= o.name %>">
+                            <%= (o.first_name || o.name || '?').charAt(0) %><%= (o.last_name || '').charAt(0) %>
+                          </div>
+                        <% } %>
                         <div class="min-w-0 flex-1">
                           <div class="font-semibold text-slate-800 text-sm flex items-center gap-1 flex-wrap">
                             <span><%= o.name %></span>

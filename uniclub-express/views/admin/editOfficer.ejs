@@ -533,7 +533,7 @@
     #studentid {
       max-width: 150px;
     }
-    #username {
+    #password, #confirm_password {
       max-width: 300px;
     }
 
@@ -672,17 +672,50 @@
           const selectedClubId = current.club_id ? Number(current.club_id) : null;
           const selectedDepartment = current.department || "";
           const selectedProgram = current.program || "";
-          let permissionsData = officer.permissions || {};
+          // Parse permissions - handle both string and object formats
+          let permissionsData = {};
+          try {
+            if (officer.permissions) {
+              if (typeof officer.permissions === 'string') {
+                permissionsData = JSON.parse(officer.permissions);
+              } else if (typeof officer.permissions === 'object') {
+                permissionsData = officer.permissions;
+              }
+              // If old format was just an array, wrap it
+              if (Array.isArray(permissionsData)) {
+                permissionsData = { permissions: permissionsData };
+              }
+            }
+          } catch (err) {
+            console.warn("Error parsing permissions in view:", err);
+            permissionsData = {};
+          }
+          
+          // Handle form data if present
           if (safeFormData && safeFormData.permissions) {
             try {
-              permissionsData = JSON.parse(safeFormData.permissions);
+              const parsed = typeof safeFormData.permissions === 'string' 
+                ? JSON.parse(safeFormData.permissions) 
+                : safeFormData.permissions;
+              if (parsed && parsed.permissions) {
+                permissionsData = parsed;
+              } else if (Array.isArray(parsed)) {
+                permissionsData = { permissions: parsed };
+              }
             } catch (err) {
-              permissionsData = officer.permissions || {};
+              console.warn("Error parsing form permissions:", err);
             }
           }
-          // For demo purposes, pre-check sample permissions if none exist
-          if (!permissionsData.permissions || permissionsData.permissions.length === 0) {
-            permissionsData = { permissions: ['view_dashboard', 'view_dashboard_reports', 'export_reports', 'view_members', 'add_members', 'remove_members', 'approve_applications'] };
+          
+          // Ensure permissions is in the correct format
+          if (Array.isArray(permissionsData)) {
+            permissionsData = { permissions: permissionsData };
+          }
+          if (!permissionsData.permissions || !Array.isArray(permissionsData.permissions) || permissionsData.permissions.length === 0) {
+            // If still empty, the server should have auto-loaded based on role
+            // But if it didn't, we'll let the JavaScript handle it on the client side
+            permissionsData = { permissions: [] };
+            console.warn('[Edit Officer View] No permissions found for officer, server should auto-load based on role');
           }
 
           const logs = (typeof activityLogs !== 'undefined' && activityLogs) ? activityLogs : [];
@@ -782,27 +815,90 @@
 
             <div>
               <label class="block text-sm font-medium text-slate-600 mb-1">Role</label>
-              <input type="text" name="role" required value="<%= current.role || '' %>"
-                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+              <select name="role" required
+                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <option value="">Select Role</option>
+                <optgroup label="Presidents">
+                  <option value="President" <%= current.role === 'President' ? 'selected' : '' %>>President</option>
+                  <option value="Supremo" <%= current.role === 'Supremo' ? 'selected' : '' %>>Supremo</option>
+                  <option value="Grand Peer" <%= current.role === 'Grand Peer' ? 'selected' : '' %>>Grand Peer</option>
+                </optgroup>
+                <optgroup label="Vice-Presidents">
+                  <option value="Vice President" <%= current.role === 'Vice President' ? 'selected' : '' %>>Vice President</option>
+                  <option value="Vice-President Internal" <%= current.role === 'Vice-President Internal' ? 'selected' : '' %>>Vice-President Internal</option>
+                  <option value="Vice-President External" <%= current.role === 'Vice-President External' ? 'selected' : '' %>>Vice-President External</option>
+                </optgroup>
+                <optgroup label="Secretaries">
+                  <option value="Secretary" <%= current.role === 'Secretary' ? 'selected' : '' %>>Secretary</option>
+                  <option value="Assistant Secretary" <%= current.role === 'Assistant Secretary' ? 'selected' : '' %>>Assistant Secretary</option>
+                </optgroup>
+                <optgroup label="Treasurers">
+                  <option value="Treasurer" <%= current.role === 'Treasurer' ? 'selected' : '' %>>Treasurer</option>
+                  <option value="Assistant Treasurer" <%= current.role === 'Assistant Treasurer' ? 'selected' : '' %>>Assistant Treasurer</option>
+                </optgroup>
+                <optgroup label="Auditors">
+                  <option value="Auditor" <%= current.role === 'Auditor' ? 'selected' : '' %>>Auditor</option>
+                  <option value="Assistant Auditor" <%= current.role === 'Assistant Auditor' ? 'selected' : '' %>>Assistant Auditor</option>
+                </optgroup>
+                <optgroup label="Public Relations">
+                  <option value="Public Information Officer (PIO)" <%= current.role === 'Public Information Officer (PIO)' ? 'selected' : '' %>>Public Information Officer (PIO)</option>
+                  <option value="Public Relations Officer (PRO)" <%= current.role === 'Public Relations Officer (PRO)' ? 'selected' : '' %>>Public Relations Officer (PRO)</option>
+                  <option value="Assistant Public Relations Officer" <%= current.role === 'Assistant Public Relations Officer' ? 'selected' : '' %>>Assistant Public Relations Officer</option>
+                </optgroup>
+                <optgroup label="Management">
+                  <option value="Creatives Member" <%= current.role === 'Creatives Member' ? 'selected' : '' %>>Creatives Member</option>
+                  <option value="Business Manager" <%= current.role === 'Business Manager' ? 'selected' : '' %>>Business Manager</option>
+                  <option value="Assistant Business Manager" <%= current.role === 'Assistant Business Manager' ? 'selected' : '' %>>Assistant Business Manager</option>
+                </optgroup>
+                <optgroup label="Year Representatives">
+                  <option value="1st Year Representative" <%= current.role === '1st Year Representative' ? 'selected' : '' %>>1st Year Representative</option>
+                  <option value="2nd Year Representative" <%= current.role === '2nd Year Representative' ? 'selected' : '' %>>2nd Year Representative</option>
+                  <option value="3rd Year Representative" <%= current.role === '3rd Year Representative' ? 'selected' : '' %>>3rd Year Representative</option>
+                  <option value="4th Year Representative" <%= current.role === '4th Year Representative' ? 'selected' : '' %>>4th Year Representative</option>
+                </optgroup>
+              </select>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" data-dept-program>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4" data-dept-program>
               <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1">Username</label>
-                <input type="text" name="username" id="username" required autocomplete="username" value="<%= current.username || '' %>"
-                       class="border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <label class="block text-sm font-medium text-slate-600 mb-1">Current Password</label>
+                <div class="relative">
+                  <input type="password" name="current_password" id="current_password" autocomplete="current-password" placeholder="Enter current password"
+                         class="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                  <button type="button" onclick="togglePasswordVisibility('current_password', 'current-password-toggle')" 
+                          class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                          id="current-password-toggle">
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Required if changing password</p>
               </div>
               <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1">Password <span class="text-xs text-gray-500">(leave blank to keep current)</span></label>
-                <input type="password" name="password" autocomplete="new-password" placeholder="Leave blank to keep current password"
-                       class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <label class="block text-sm font-medium text-slate-600 mb-1">New Password</label>
+                <div class="relative">
+                  <input type="password" name="password" id="password" autocomplete="new-password" placeholder="Enter new password"
+                         class="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                  <button type="button" onclick="togglePasswordVisibility('password', 'password-toggle')" 
+                          class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                          id="password-toggle">
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Leave blank to keep current</p>
               </div>
-            </div>
-
-            <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Photo URL <span class="text-gray-400 text-xs">(optional)</span></label>
-              <input type="url" name="photo_url" placeholder="https://" value="<%= current.photo_url || '' %>"
-                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+              <div>
+                <label class="block text-sm font-medium text-slate-600 mb-1">Confirm Password</label>
+                <div class="relative">
+                  <input type="password" name="confirm_password" id="confirm_password" autocomplete="new-password" placeholder="Confirm new password"
+                         class="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                  <button type="button" onclick="togglePasswordVisibility('confirm_password', 'confirm-password-toggle')" 
+                          class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                          id="confirm-password-toggle">
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <p id="password-match-error" class="text-xs text-red-500 mt-1 hidden">Passwords do not match</p>
+              </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -836,30 +932,6 @@
           <div id="tab-content-permissions" class="tab-content">
             <div class="flex flex-col lg:flex-row gap-6">
               <section class="flex-1 space-y-6">
-                <!-- Summary -->
-                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-sm">
-                  <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                      <h3 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <i data-lucide="shield-check" class="w-5 h-5 text-blue-600"></i>
-                        Permission Summary
-                      </h3>
-                      <p class="text-sm text-slate-500">
-                        Expand a category to fine-tune what this officer can access.
-                      </p>
-                    </div>
-                    <div class="text-center">
-                      <p class="text-xs uppercase tracking-wide text-slate-500">Selected</p>
-                      <p class="text-3xl font-bold text-blue-600" id="selected-count">0</p>
-                    </div>
-                  </div>
-                  <div id="permission-chips" class="flex flex-wrap gap-2 mt-4">
-                    <span class="text-sm text-gray-500 italic">
-                      No permissions selected yet. Click category headers to expand and select permissions.
-                    </span>
-                  </div>
-                </div>
-
                 <!-- Actions + Search -->
                 <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div class="flex flex-wrap gap-3">
@@ -914,7 +986,7 @@
                           <span class="permission-label">View Dashboard</span>
                         </label>
                         <label class="permission-item">
-                          <input type="checkbox" class="permission-checkbox dashboard-perm" data-category="dashboard" data-perm="view_dashboard_reports">
+                          <input type="checkbox" class="permission-checkbox dashboard-perm" data-category="dashboard" data-perm="view_org_reports">
                           <span class="permission-label">View Organization Reports</span>
                         </label>
                         <label class="permission-item">
@@ -1067,6 +1139,10 @@
                         <label class="permission-item">
                           <input type="checkbox" class="permission-checkbox events-perm" data-category="events" data-perm="cancel_events">
                           <span class="permission-label">Cancel Events</span>
+                        </label>
+                        <label class="permission-item">
+                          <input type="checkbox" class="permission-checkbox events-perm" data-category="events" data-perm="delete_events">
+                          <span class="permission-label">Delete Events</span>
                         </label>
                         <label class="permission-item">
                           <input type="checkbox" class="permission-checkbox events-perm" data-category="events" data-perm="manage_attendance">
@@ -1231,7 +1307,14 @@
                   </div>
                 </div>
 
+                <!-- Use unescaped output so JSON remains valid for JS parsing -->
                 <input type="hidden" name="permissions" id="permissionsEditField" value='<%- JSON.stringify(permissionsData) %>'>
+                <!-- Debug: Output permissions for verification -->
+                <script>
+                  window.__officerPermissions = <%- JSON.stringify(permissionsData) %>;
+                  console.log('[Edit Officer] Permissions passed to view:', window.__officerPermissions);
+                  console.log('[Edit Officer] Permission count:', window.__officerPermissions?.permissions?.length || 0);
+                </script>
               </section>
 
               <!-- Quick Navigation -->
@@ -1482,6 +1565,15 @@
         if (tabName === 'permissions') {
           floatingBar.style.display = 'flex';
           document.body.style.paddingBottom = '80px';
+          // Ensure permissions are initialized when switching to permissions tab
+          setTimeout(() => {
+            const checkedCount = document.querySelectorAll('.permission-checkbox:checked').length;
+            const permField = document.getElementById('permissionsEditField');
+            if (checkedCount === 0 && permField && permField.value && permField.value !== '{}') {
+              console.log('[Edit Officer] Permissions tab opened, re-initializing permissions...');
+              initializePermissions();
+            }
+          }, 100);
         } else {
           floatingBar.style.display = 'none';
           document.body.style.paddingBottom = '0';
@@ -1580,37 +1672,45 @@
         }
       });
       
-      if (selected.length === 0) {
-        chipsContainer.innerHTML = '<span class="text-sm text-gray-500 italic">No permissions selected yet. Click category headers to expand and select permissions.</span>';
-        selectedCount.textContent = '0';
-        if (actionBarCount) actionBarCount.textContent = '0 permissions selected';
-        if (tabBadge) tabBadge.textContent = '0';
-      } else {
-        chipsContainer.innerHTML = '';
-        
-        const categoryNames = {
-          dashboard: 'Dashboard',
-          members: 'Members',
-          finance: 'Financial',
-          events: 'Events',
-          documents: 'Documents',
-          comms: 'Communication',
-          admin: 'System Admin'
-        };
-        
-        Object.keys(categoryCounts).forEach(catId => {
-          const chip = document.createElement('span');
-          chip.className = 'category-chip';
-          chip.innerHTML = `<i data-lucide="${catId === 'dashboard' ? 'layout-dashboard' : catId === 'members' ? 'users' : catId === 'finance' ? 'dollar-sign' : catId === 'events' ? 'calendar' : catId === 'documents' ? 'file-text' : catId === 'comms' ? 'message-square' : 'settings'}" class="w-3 h-3"></i> ${categoryNames[catId]} (${categoryCounts[catId]})`;
-          chip.onclick = () => scrollToCategory(catId);
-          chipsContainer.appendChild(chip);
-        });
-        
-        if (window.lucide) window.lucide.replace();
-        
+      // Update action bar and tab badge if they exist
+      if (actionBarCount) {
+        actionBarCount.textContent = selected.length === 0 ? '0 permissions selected' : `${selected.length} permission${selected.length !== 1 ? 's' : ''} selected`;
+      }
+      if (tabBadge) {
+        tabBadge.textContent = String(selected.length);
+      }
+      
+      // Update chips container and selected count if they exist (removed from UI but keeping code for potential future use)
+      if (chipsContainer) {
+        if (selected.length === 0) {
+          chipsContainer.innerHTML = '<span class="text-sm text-gray-500 italic">No permissions selected yet. Click category headers to expand and select permissions.</span>';
+        } else {
+          chipsContainer.innerHTML = '';
+          
+          const categoryNames = {
+            dashboard: 'Dashboard',
+            members: 'Members',
+            finance: 'Financial',
+            events: 'Events',
+            documents: 'Documents',
+            comms: 'Communication',
+            admin: 'System Admin'
+          };
+          
+          Object.keys(categoryCounts).forEach(catId => {
+            const chip = document.createElement('span');
+            chip.className = 'category-chip';
+            chip.innerHTML = `<i data-lucide="${catId === 'dashboard' ? 'layout-dashboard' : catId === 'members' ? 'users' : catId === 'finance' ? 'dollar-sign' : catId === 'events' ? 'calendar' : catId === 'documents' ? 'file-text' : catId === 'comms' ? 'message-square' : 'settings'}" class="w-3 h-3"></i> ${categoryNames[catId]} (${categoryCounts[catId]})`;
+            chip.onclick = () => scrollToCategory(catId);
+            chipsContainer.appendChild(chip);
+          });
+          
+          if (window.lucide) window.lucide.replace();
+        }
+      }
+      
+      if (selectedCount) {
         selectedCount.textContent = selected.length;
-        if (actionBarCount) actionBarCount.textContent = `${selected.length} permission${selected.length !== 1 ? 's' : ''} selected`;
-        if (tabBadge) tabBadge.textContent = String(selected.length);
       }
       
       updateCategoryCounts();
@@ -1673,14 +1773,49 @@
         return;
       }
 
-      let existingPermissions = {};
-      try {
-        const permValue = permField.value || '{}';
-        existingPermissions = JSON.parse(permValue);
-      } catch (e) {
-        existingPermissions = {};
+      // Check if permissions checkboxes exist
+      const permissionCheckboxes = document.querySelectorAll('.permission-checkbox');
+      if (permissionCheckboxes.length === 0) {
+        setTimeout(initializePermissions, 100);
+        return;
       }
 
+      let existingPermissions = {};
+      
+      // First try to use the global permissions if available (from server)
+      if (window.__officerPermissions && window.__officerPermissions.permissions) {
+        existingPermissions = window.__officerPermissions;
+        console.log('[Edit Officer] Using permissions from window.__officerPermissions:', existingPermissions);
+      } else {
+        // Fallback to parsing from field
+        try {
+          const permValue = permField.value || '{}';
+          if (permValue && permValue.trim() && permValue !== '{}') {
+            existingPermissions = JSON.parse(permValue);
+            console.log('[Edit Officer] Loaded permissions from field:', existingPermissions);
+            console.log('[Edit Officer] Permission count:', existingPermissions.permissions?.length || 0);
+          } else {
+            console.warn('[Edit Officer] No permissions found in field (value is empty or {}), checking if we need to fetch from role...');
+            // If field is empty, try to get role and fetch permissions
+            const roleSelect = document.querySelector('select[name="role"]');
+            const currentRole = roleSelect ? roleSelect.value : '';
+            if (currentRole && currentRole.toLowerCase().includes('president')) {
+              console.warn('[Edit Officer] President role detected but no permissions in field - this should have been auto-loaded by server');
+            }
+            existingPermissions = {};
+          }
+        } catch (e) {
+          console.error('[Edit Officer] Error parsing permissions:', e, 'Raw value:', permField.value);
+          existingPermissions = {};
+        }
+      }
+
+      // Reset all checkboxes first
+      document.querySelectorAll('.permission-checkbox').forEach(cb => {
+        cb.checked = false;
+      });
+
+      // Reset all category states
       document.querySelectorAll('.permission-category-content').forEach(content => {
         content.classList.remove('expanded');
       });
@@ -1688,13 +1823,27 @@
         category.classList.remove('expanded');
       });
       
-      if (existingPermissions.permissions && Array.isArray(existingPermissions.permissions)) {
+      // Load permissions from the field
+      if (existingPermissions.permissions && Array.isArray(existingPermissions.permissions) && existingPermissions.permissions.length > 0) {
+        const loadedCategories = new Set();
+        let checkedCount = 0;
+        let notFoundCount = 0;
+        const notFoundPerms = [];
+        
+        // Specific member permissions to check
+        const memberPerms = ['view_members', 'add_members', 'edit_members', 'remove_members', 'approve_applications'];
+        const memberPermsInData = memberPerms.filter(p => existingPermissions.permissions.includes(p));
+        console.log(`[Edit Officer] Member permissions in data:`, memberPermsInData);
+        console.log(`[Edit Officer] All permissions count:`, existingPermissions.permissions.length);
+        
         existingPermissions.permissions.forEach(perm => {
           const checkbox = document.querySelector(`[data-perm="${perm}"]`);
           if (checkbox) {
             checkbox.checked = true;
+            checkedCount++;
             const categoryId = checkbox.dataset.category;
             if (categoryId) {
+              loadedCategories.add(categoryId);
               const category = document.querySelector(`[data-category="${categoryId}"]`);
               const content = document.getElementById(`content-${categoryId}`);
               if (category && content) {
@@ -1702,33 +1851,115 @@
                 content.classList.add('expanded');
               }
             }
+          } else {
+            notFoundCount++;
+            notFoundPerms.push(perm);
+            console.warn(`[Edit Officer] Permission checkbox not found for: ${perm}`);
           }
         });
+        
+        // Check specifically for member permissions
+        memberPerms.forEach(perm => {
+          const checkbox = document.querySelector(`[data-perm="${perm}"]`);
+          const isInData = existingPermissions.permissions.includes(perm);
+          console.log(`[Edit Officer] Member permission "${perm}": in data=${isInData}, checkbox exists=${!!checkbox}, checked=${checkbox?.checked || false}`);
+        });
+        
+        console.log(`[Edit Officer] Successfully checked ${checkedCount} permissions across ${loadedCategories.size} categories`);
+        if (notFoundCount > 0) {
+          console.warn(`[Edit Officer] ${notFoundCount} permissions were not found in the form:`, notFoundPerms);
+        }
+        
+        // Verify the checkboxes are actually checked
+        const verifiedChecked = document.querySelectorAll('.permission-checkbox:checked').length;
+        if (verifiedChecked !== checkedCount) {
+          console.warn(`[Edit Officer] Mismatch: Expected ${checkedCount} checked, but found ${verifiedChecked} actually checked`);
+        }
+        
+        // Double-check member permissions are checked
+        const memberCheckboxesChecked = memberPerms.filter(perm => {
+          const cb = document.querySelector(`[data-perm="${perm}"]`);
+          return cb && cb.checked;
+        });
+        console.log(`[Edit Officer] Member permissions actually checked:`, memberCheckboxesChecked);
+        if (memberCheckboxesChecked.length < memberPermsInData.length) {
+          console.error(`[Edit Officer] ERROR: Some member permissions are missing! Expected ${memberPermsInData.length}, found ${memberCheckboxesChecked.length}`);
+        }
+      } else {
+        console.warn('[Edit Officer] No permissions to load or permissions array is empty');
+        console.warn('[Edit Officer] Permissions data:', existingPermissions);
+        
+        // If no permissions but we have a role, log it for debugging
+        const roleSelect = document.querySelector('select[name="role"]');
+        const currentRole = roleSelect ? roleSelect.value : '';
+        if (currentRole) {
+          console.warn(`[Edit Officer] Officer role is: "${currentRole}" - permissions should have been auto-loaded by server`);
+        }
       }
       
+      // Attach event listeners
       attachPermissionListeners();
+      
+      // Update UI state
       updateCategoryCheckboxes();
       updateCategoryCounts();
       updatePermissionSummary();
       updatePermissionsField();
 
-      form.addEventListener('submit', function() {
-        updatePermissionsField();
-      });
+      // Mark permissions as initialized (permission update is handled in main form submit handler)
+      if (!form.hasAttribute('data-permissions-initialized')) {
+        form.setAttribute('data-permissions-initialized', 'true');
+      }
       
       if (window.lucide) {
         window.lucide.replace();
       }
 
       // Default Activity Logs filter
-      setActivityFilter('all');
+      if (typeof setActivityFilter === 'function') {
+        setActivityFilter('all');
+      }
     }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializePermissions);
-    } else {
-      initializePermissions();
+    // Initialize permissions when DOM is ready
+    function startPermissionInitialization() {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          setTimeout(initializePermissions, 200);
+        });
+      } else {
+        setTimeout(initializePermissions, 200);
+      }
+      
+      // Also try after a longer delay to ensure all elements are rendered
+      setTimeout(function() {
+        const permField = document.getElementById('permissionsEditField');
+        const permissionCheckboxes = document.querySelectorAll('.permission-checkbox');
+        
+        if (permField && permissionCheckboxes.length > 0) {
+          try {
+            const permValue = permField.value || '{}';
+            if (permValue && permValue.trim() && permValue !== '{}') {
+              const existingPermissions = JSON.parse(permValue);
+              if (existingPermissions.permissions && existingPermissions.permissions.length > 0) {
+                // Re-check if permissions weren't loaded initially
+                const checkedCount = document.querySelectorAll('.permission-checkbox:checked').length;
+                if (checkedCount === 0) {
+                  console.log('[Edit Officer] Permissions found but not loaded, re-initializing...');
+                  initializePermissions();
+                } else {
+                  console.log(`[Edit Officer] Permissions already loaded (${checkedCount} checked)`);
+                }
+              }
+            }
+          } catch (e) {
+            console.error('[Edit Officer] Error checking permissions:', e);
+          }
+        }
+      }, 800);
     }
+    
+    startPermissionInitialization();
 
     // Student ID validation: exactly 6 digits
     function validateStudentId() {
@@ -1811,18 +2042,143 @@
       }
     }
 
-    // Form submission validation
-    document.getElementById('officerEditForm').addEventListener('submit', function(e) {
-      const idValid = validateStudentId();
-      const firstNameValid = validateName('firstName', 'firstNameWarning');
-      const lastNameValid = validateName('lastName', 'lastNameWarning');
-      
-      if (!idValid || !firstNameValid || !lastNameValid) {
-        e.preventDefault();
-        showToast('Please fix the validation errors before submitting.', 'error', 'Validation Error');
-        return false;
+
+    // Form submission validation and permission update
+    const form = document.getElementById('officerEditForm');
+    if (form) {
+      form.addEventListener('submit', function(e) {
+        // Always update permissions field before submission
+        if (typeof updatePermissionsField === 'function') {
+          updatePermissionsField();
+          const finalPerms = document.getElementById('permissionsEditField');
+          if (finalPerms) {
+            console.log('[Edit Officer] Form submitting with permissions:', finalPerms.value);
+          }
+        }
+        
+        // Validate form fields
+        const idValid = validateStudentId();
+        const firstNameValid = validateName('firstName', 'firstNameWarning');
+        const lastNameValid = validateName('lastName', 'lastNameWarning');
+        
+        // Validate role
+        const roleSelect = document.querySelector('select[name="role"]');
+        if (roleSelect && !roleSelect.value) {
+          e.preventDefault();
+          showToast('Please select a role.', 'error', 'Validation Error');
+          return false;
+        }
+        
+        // Validate password change
+        const currentPasswordField = document.getElementById('current_password');
+        const passwordField = document.getElementById('password');
+        const confirmPasswordField = document.getElementById('confirm_password');
+        const passwordMatchError = document.getElementById('password-match-error');
+        
+        if (passwordField && confirmPasswordField) {
+          const currentPassword = currentPasswordField ? currentPasswordField.value.trim() : '';
+          const password = passwordField.value.trim();
+          const confirmPassword = confirmPasswordField.value.trim();
+          
+          if (password.length > 0) {
+            // If changing password, current password is required
+            if (!currentPassword || currentPassword.length === 0) {
+              e.preventDefault();
+              showToast('Current password is required to change password.', 'error', 'Validation Error');
+              return false;
+            }
+            
+            if (confirmPassword.length === 0) {
+              e.preventDefault();
+              showToast('Please confirm your new password.', 'error', 'Validation Error');
+              if (passwordMatchError) {
+                passwordMatchError.textContent = 'Please confirm your new password';
+                passwordMatchError.classList.remove('hidden');
+              }
+              return false;
+            }
+            
+            if (password !== confirmPassword) {
+              e.preventDefault();
+              showToast('New passwords do not match.', 'error', 'Validation Error');
+              if (passwordMatchError) {
+                passwordMatchError.textContent = 'New passwords do not match';
+                passwordMatchError.classList.remove('hidden');
+              }
+              return false;
+            }
+          }
+          
+          // Clear error if passwords match
+          if (passwordMatchError && password === confirmPassword) {
+            passwordMatchError.classList.add('hidden');
+          }
+        }
+        
+        if (!idValid || !firstNameValid || !lastNameValid) {
+          e.preventDefault();
+          showToast('Please fix the validation errors before submitting.', 'error', 'Validation Error');
+          return false;
+        }
+        
+        // Show loading state
+        const submitButtons = form.querySelectorAll('button[type="submit"]');
+        submitButtons.forEach(btn => {
+          btn.disabled = true;
+          btn.innerHTML = '<i data-lucide="loader-2" class="inline w-4 h-4 mr-1 animate-spin"></i> Saving...';
+          if (window.lucide) window.lucide.replace();
+        });
+        
+        // Allow form to submit
+        return true;
+      });
+    }
+
+    // Password confirmation validation (real-time)
+    const currentPasswordField = document.getElementById('current_password');
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirm_password');
+    const passwordMatchError = document.getElementById('password-match-error');
+    
+    if (passwordField && confirmPasswordField && passwordMatchError) {
+      function validatePasswordMatch() {
+        const currentPassword = currentPasswordField ? currentPasswordField.value.trim() : '';
+        const password = passwordField.value.trim();
+        const confirmPassword = confirmPasswordField.value.trim();
+        
+        if (password.length === 0 && confirmPassword.length === 0) {
+          passwordMatchError.classList.add('hidden');
+          return;
+        }
+        
+        if (password.length > 0) {
+          if (currentPassword && currentPassword.length === 0) {
+            passwordMatchError.textContent = 'Current password is required';
+            passwordMatchError.classList.remove('hidden');
+            return;
+          }
+          
+          if (confirmPassword.length === 0) {
+            passwordMatchError.textContent = 'Please confirm your new password';
+            passwordMatchError.classList.remove('hidden');
+            return;
+          }
+          
+          if (password !== confirmPassword) {
+            passwordMatchError.textContent = 'New passwords do not match';
+            passwordMatchError.classList.remove('hidden');
+          } else {
+            passwordMatchError.classList.add('hidden');
+          }
+        }
       }
-    });
+      
+      if (currentPasswordField) {
+        currentPasswordField.addEventListener('input', validatePasswordMatch);
+      }
+      passwordField.addEventListener('input', validatePasswordMatch);
+      confirmPasswordField.addEventListener('input', validatePasswordMatch);
+    }
 
     // Mobile sidebar toggle
     function toggleSidebar() {
@@ -1835,6 +2191,22 @@
     }
     document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
     document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+    // Password visibility toggle function
+    function togglePasswordVisibility(inputId, buttonId) {
+      const input = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
+      if (input && button) {
+        if (input.type === 'password') {
+          input.type = 'text';
+          button.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+        } else {
+          input.type = 'password';
+          button.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+        }
+        if (window.lucide) window.lucide.replace();
+      }
+    }
   </script>
   <script src="/js/departmentPrograms.js"></script>
   <!-- Toast Container -->

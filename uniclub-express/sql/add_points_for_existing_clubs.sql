@@ -47,3 +47,9 @@ SELECT
 FROM student_points
 WHERE source = 'club_join';
 
+
+
+
+
+
+

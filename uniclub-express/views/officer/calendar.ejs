@@ -8,10 +8,14 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     const renderLucideIcons = (options) => {
+      try {
       if (window.lucide?.createIcons) {
         window.lucide.createIcons(options);
       } else if (window.lucide?.replace) {
         window.lucide.replace(options);
+        }
+      } catch (error) {
+        console.error('Error rendering Lucide icons:', error);
       }
     };
 
@@ -28,6 +32,31 @@
   </script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @keyframes slide-in {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+    @keyframes slide-out {
+      from {
+        transform: translateX(0);
+        opacity: 1;
+      }
+      to {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+    }
+    .animate-slide-in {
+      animation: slide-in 0.3s ease-out;
+    }
+  </style>
 </head>
 <body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
   <div class="flex h-screen">
@@ -86,17 +115,28 @@
               const daysInMonth = lastDay.getDate();
               const startDayOfWeek = firstDay.getDay();
               
-              // Get events grouped by date
+              // Get events grouped by date (including multi-day events)
               const eventsByDate = {};
               if (typeof events !== 'undefined' && events) {
                 events.forEach(function(event) {
                   if (event.date) {
-                    const eventDate = new Date(event.date);
-                    const dateKey = eventDate.toISOString().split('T')[0];
+                    const startDate = new Date(event.date);
+                    const endDate = event.end_date ? new Date(event.end_date) : startDate;
+                    
+                    // Add event to all days it spans
+                    const currentDate = new Date(startDate);
+                    while (currentDate <= endDate) {
+                      const dateKey = currentDate.toISOString().split('T')[0];
                     if (!eventsByDate[dateKey]) {
                       eventsByDate[dateKey] = [];
                     }
+                      // Only add if not already in the array (avoid duplicates)
+                      if (!eventsByDate[dateKey].some(e => e.id === event.id)) {
                     eventsByDate[dateKey].push(event);
+                      }
+                      // Move to next day
+                      currentDate.setDate(currentDate.getDate() + 1);
+                    }
                   }
                 });
               }
@@ -133,7 +173,18 @@
                   </div>
                   <div class="space-y-1 max-h-16 overflow-y-auto">
                     <% dayEvents.slice(0, 2).forEach(function(event) { %>
-                      <div onclick="viewEvent(<%= event.id %>)" class="text-xs px-2 py-1 rounded bg-red-100 text-red-800 hover:bg-red-200 cursor-pointer truncate" title="<%= event.name %>">
+                      <% 
+                        const eventStatus = event.status || 'pending_approval';
+                        const statusClass = eventStatus === 'approved_by_admin' ? 'bg-green-100 text-green-800' :
+                                           eventStatus === 'approved' ? 'bg-green-100 text-green-800' : 
+                                           eventStatus === 'posted' || eventStatus === 'posted_to_students' ? 'bg-blue-100 text-blue-800' : 
+                                           'bg-amber-100 text-amber-800';
+                        const statusLabel = eventStatus === 'pending_approval' ? 'Pending Approval' : 
+                                           eventStatus === 'approved_by_admin' ? 'Approved by Admin' :
+                                           eventStatus === 'approved' ? 'Approved' : 
+                                           eventStatus === 'posted' || eventStatus === 'posted_to_students' ? 'Posted' : 'Pending';
+                      %>
+                      <div onclick="viewEvent(<%= event.id %>)" class="text-xs px-2 py-1 rounded <%= statusClass %> hover:opacity-80 cursor-pointer truncate" title="<%= event.name %> - <%= statusLabel %>">
                         <%= event.name %>
                       </div>
                     <% }) %>
@@ -150,49 +201,153 @@
         <!-- Upcoming Events List -->
         <div class="mt-8 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
           <h2 class="text-xl font-bold text-gray-800 mb-4">Upcoming Events</h2>
-          <div class="space-y-3">
+          <div class="space-y-4">
             <% if (typeof events !== 'undefined' && events && events.length > 0) { %>
               <% events.slice(0, 10).forEach(function(event) { %>
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-2">
-                      <h3 class="font-semibold text-gray-900"><%= event.name %></h3>
-                      <% if (event.name && event.name.includes('[CANCELLED]')) { %>
-                        <span class="px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">Cancelled</span>
-                      <% } %>
+                <div class="p-4 bg-gray-50 rounded-xl border border-gray-200 hover:bg-gray-100 transition-colors">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                      <div class="flex items-start gap-3 mb-3">
+                        <div class="flex-shrink-0 mt-0.5">
+                          <i data-lucide="calendar" class="w-5 h-5 text-red-600"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                          <div class="flex items-start justify-between gap-3 mb-2">
+                            <h3 class="font-semibold text-gray-900 text-base leading-tight"><%= event.name %></h3>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                        <% 
+                          const eventStatus = event.status || 'pending_approval';
+                          const isPending = eventStatus === 'pending_approval';
+                                const isApprovedByAdmin = eventStatus === 'approved_by_admin';
+                                const isApproved = eventStatus === 'approved' || isApprovedByAdmin;
+                                const isPosted = event.posted_to_students === 1 || eventStatus === 'posted' || eventStatus === 'posted_to_students';
+                                const isPresident = typeof officer !== 'undefined' && officer.role && officer.role.toLowerCase().includes('president');
+                        %>
+                        <% if (isPending) { %>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 flex items-center gap-1.5 whitespace-nowrap">
+                                  <i data-lucide="clock" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                  <span>Pending</span>
+                                </span>
+                              <% } else if (isApprovedByAdmin && !isPosted) { %>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex items-center gap-1.5 whitespace-nowrap">
+                                  <i data-lucide="check-circle" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                  <span>Approved</span>
+                          </span>
+                        <% } else if (isApproved && !isPosted) { %>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 flex items-center gap-1.5 whitespace-nowrap">
+                                  <i data-lucide="check-circle" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                  <span>Approved</span>
+                          </span>
+                        <% } else if (isPosted) { %>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 flex items-center gap-1.5 whitespace-nowrap">
+                                  <i data-lucide="send" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                  <span>Posted</span>
+                          </span>
+                        <% } %>
+                        <% if (event.name && event.name.includes('[CANCELLED]')) { %>
+                                <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700 flex items-center gap-1.5 whitespace-nowrap">
+                                  <i data-lucide="x-circle" class="w-3.5 h-3.5 flex-shrink-0"></i>
+                                  <span>Cancelled</span>
+                                </span>
+                        <% } %>
+                      </div>
                     </div>
-                    <div class="flex flex-wrap gap-3 text-sm text-gray-600">
-                      <span class="flex items-center gap-1">
-                        <i data-lucide="calendar" class="w-4 h-4"></i>
-                        <%= new Date(event.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                          <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-2">
+                            <span class="flex items-center gap-1.5">
+                              <i data-lucide="calendar" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
+                              <span class="text-gray-700">
+                                <% 
+                                  const startDate = new Date(event.date);
+                                  const endDate = event.end_date ? new Date(event.end_date) : startDate;
+                                  const isMultiDay = endDate.getTime() !== startDate.getTime();
+                                  if (isMultiDay) {
+                                %>
+                                  <%= startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %> - <%= endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                                <% } else { %>
+                                  <%= startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
+                                <% } %>
+                              </span>
                       </span>
                       <% if (event.location) { %>
-                        <span class="flex items-center gap-1">
-                          <i data-lucide="map-pin" class="w-4 h-4"></i>
-                          <%= event.location %>
+                              <span class="flex items-center gap-1.5">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-gray-400 flex-shrink-0"></i>
+                                <span class="text-gray-700"><%= event.location %></span>
                         </span>
                       <% } %>
                     </div>
                     <% if (event.description) { %>
-                      <p class="text-sm text-gray-500 mt-2 line-clamp-2"><%= event.description %></p>
+                            <p class="text-sm text-gray-500 mt-2 line-clamp-2 leading-relaxed"><%= event.description %></p>
+                    <% } %>
+                    <% if (isApprovedByAdmin && !isPosted && isPresident) { %>
+                      <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p class="text-sm text-green-800 mb-2">
+                          <i data-lucide="info" class="w-4 h-4 inline"></i>
+                          This event has been approved by admin. As president, you can now post it to students.
+                        </p>
+                        <% if (event.admin_requirements) { %>
+                          <div class="mb-2">
+                            <p class="text-xs font-semibold text-green-900 mb-1">Admin Requirements:</p>
+                            <p class="text-xs text-green-700 whitespace-pre-line"><%= event.admin_requirements %></p>
+                          </div>
+                        <% } %>
+                        <div class="flex gap-2">
+                          <button onclick="postEventToStudents(<%= event.id %>)" class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
+                          <i data-lucide="send" class="w-4 h-4"></i>
+                            Post Event
+                          </button>
+                          <button onclick="moveEvent(<%= event.id %>)" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center gap-2" title="Reschedule Event">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                            Move
+                        </button>
+                        </div>
+                      </div>
+                    <% } else if (isApprovedByAdmin && !isPosted) { %>
+                      <div class="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p class="text-sm text-green-800">
+                          <i data-lucide="info" class="w-4 h-4 inline"></i>
+                          This event has been approved by admin. Waiting for president to post it to students.
+                        </p>
+                      </div>
+                    <% } else if (isPending) { %>
+                      <div class="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p class="text-sm text-amber-800">
+                          <i data-lucide="clock" class="w-4 h-4 inline"></i>
+                          This event is pending admin approval. You will be notified once it's reviewed.
+                        </p>
+                      </div>
                     <% } %>
                   </div>
-                  <div class="flex items-center gap-2 ml-4">
-                    <% if (canEditEvents && !event.name?.includes('[CANCELLED]')) { %>
-                      <button onclick="editEvent(<%= event.id %>)" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+                      </div>
+                    </div>
+                    <div class="flex flex-col items-end gap-2 flex-shrink-0">
+                      <div class="flex items-center gap-1.5">
+                        <% if (isPosted || isApproved) { %>
+                          <button onclick="viewRSVPs(<%= event.id %>)" class="p-2.5 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors shadow-sm hover:shadow" title="View RSVPs">
+                            <i data-lucide="users" class="w-4 h-4"></i>
+                          </button>
+                        <% } %>
+                        <% if (canEditEvents && !event.name?.includes('[CANCELLED]') && (isPending || (isApprovedByAdmin && isPresident))) { %>
+                          <button onclick="editEvent(<%= event.id %>)" class="p-2.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors shadow-sm hover:shadow" title="Edit Event">
                         <i data-lucide="edit" class="w-4 h-4"></i>
                       </button>
                     <% } %>
-                    <% if (canCancelEvents && !event.name?.includes('[CANCELLED]')) { %>
-                      <button onclick="cancelEvent(<%= event.id %>)" class="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors" title="Cancel">
+                        <% if (isPresident && (isApprovedByAdmin || isPosted)) { %>
+                          <button onclick="moveEvent(<%= event.id %>)" class="p-2.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors shadow-sm hover:shadow" title="Reschedule Event">
+                            <i data-lucide="calendar" class="w-4 h-4"></i>
+                          </button>
+                        <% } %>
+                        <% if ((canCancelEvents && !event.name?.includes('[CANCELLED]')) || (isPresident && isPosted)) { %>
+                          <button onclick="cancelEvent(<%= event.id %>)" class="p-2.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors shadow-sm hover:shadow" title="Cancel Event">
                         <i data-lucide="x-circle" class="w-4 h-4"></i>
                       </button>
                     <% } %>
-                    <% if (canDeleteEvents) { %>
-                      <button onclick="deleteEvent(<%= event.id %>)" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+                    <% if (canDeleteEvents && isPending) { %>
+                          <button onclick="deleteEvent(<%= event.id %>)" class="p-2.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors shadow-sm hover:shadow" title="Delete Event">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                       </button>
                     <% } %>
+                      </div>
+                    </div>
                   </div>
                 </div>
               <% }) %>
@@ -207,7 +362,7 @@
 
   <!-- Create/Edit Event Modal -->
   <div id="eventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div class="bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
       <div class="p-6 border-b border-gray-200">
         <div class="flex items-center justify-between">
           <h2 id="modalTitle" class="text-xl font-bold text-gray-900">Create Event</h2>
@@ -216,18 +371,43 @@
           </button>
         </div>
       </div>
-      <form id="eventForm" class="p-6 space-y-4">
+      <form id="eventForm" class="p-6 space-y-4" enctype="multipart/form-data">
         <input type="hidden" id="eventId" name="eventId">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        
+        <!-- Admin Approval Warning -->
+        <div id="approvalWarning" class="bg-amber-50 border-2 border-amber-300 rounded-xl p-4 mb-4">
+          <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 mt-0.5">
+              <i data-lucide="alert-triangle" class="w-5 h-5 text-amber-600"></i>
+            </div>
+            <div class="flex-1">
+              <h3 class="text-sm font-bold text-amber-900 mb-1">⚠️ Admin Approval Required</h3>
+              <p class="text-xs text-amber-800 leading-relaxed">
+                This event must be approved by an administrator before it can be posted to students. 
+                After submission, the admin will review your event and provide a list of requirements. 
+                Once approved, you'll receive a notification and can then post the event to students.
+              </p>
+            </div>
+          </div>
+        </div>
         
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Event Name *</label>
           <input type="text" id="eventName" name="name" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600">
         </div>
         
+        <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="block text-sm font-semibold text-gray-700 mb-2">Date *</label>
-          <input type="date" id="eventDate" name="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Start Date *</label>
+            <input type="date" id="eventDate" name="date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600" onchange="validateDateRange()">
+          </div>
+          <div>
+            <label class="block text-sm font-semibold text-gray-700 mb-2">End Date *</label>
+            <input type="date" id="eventEndDate" name="end_date" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600" onchange="validateDateRange()">
+            <p class="text-xs text-gray-500 mt-1">Leave same as start date for single-day events</p>
+            <p id="dateRangeError" class="text-xs text-red-600 mt-1 hidden">End date must be on or after start date</p>
+          </div>
         </div>
         
         <div>
@@ -238,6 +418,33 @@
         <div>
           <label class="block text-sm font-semibold text-gray-700 mb-2">Description</label>
           <textarea id="eventDescription" name="description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600"></textarea>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Activity Proposal *</label>
+          <input type="file" id="activityProposal" name="activity_proposal" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+          <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX, TXT, RTF, ODT (Max 10MB)</p>
+          <div id="activityProposalPreview" class="mt-2 hidden">
+            <p class="text-xs text-green-600">Current file: <span id="activityProposalFileName"></span></p>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Letter of Intent *</label>
+          <input type="file" id="letterOfIntent" name="letter_of_intent" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+          <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX, TXT, RTF, ODT (Max 10MB)</p>
+          <div id="letterOfIntentPreview" class="mt-2 hidden">
+            <p class="text-xs text-green-600">Current file: <span id="letterOfIntentFileName"></span></p>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Budgetary Requirement *</label>
+          <input type="file" id="budgetaryRequirement" name="budgetary_requirement" accept=".pdf,.doc,.docx,.txt,.rtf,.odt" required class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100">
+          <p class="text-xs text-gray-500 mt-1">Accepted formats: PDF, DOC, DOCX, TXT, RTF, ODT (Max 10MB)</p>
+          <div id="budgetaryRequirementPreview" class="mt-2 hidden">
+            <p class="text-xs text-green-600">Current file: <span id="budgetaryRequirementFileName"></span></p>
+          </div>
         </div>
         
         <div class="flex gap-3 pt-4">
@@ -251,6 +458,191 @@
       </form>
     </div>
   </div>
+
+  <!-- RSVP List Modal -->
+  <div id="rsvpModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="p-6 border-b border-gray-200 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 id="rsvpModalTitle" class="text-xl font-bold text-gray-900">Event RSVPs</h2>
+            <p id="rsvpModalSubtitle" class="text-sm text-gray-500 mt-1">View members who RSVP'd to this event</p>
+          </div>
+          <button onclick="closeRSVPModal()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <i data-lucide="x" class="w-5 h-5 text-gray-600"></i>
+          </button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6">
+        <div id="rsvpLoading" class="text-center py-12">
+          <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-700"></div>
+          <p class="text-gray-500 mt-4">Loading RSVPs...</p>
+        </div>
+        <div id="rsvpContent" class="hidden">
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div class="text-2xl font-bold text-green-700" id="goingCount">0</div>
+              <div class="text-sm text-green-600 mt-1">Going</div>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div class="text-2xl font-bold text-blue-700" id="interestedCount">0</div>
+              <div class="text-sm text-blue-600 mt-1">Interested</div>
+            </div>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+              <div class="text-2xl font-bold text-gray-700" id="totalCount">0</div>
+              <div class="text-sm text-gray-600 mt-1">Total</div>
+            </div>
+          </div>
+
+          <!-- Going Section -->
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <i data-lucide="check-circle" class="w-5 h-5 text-green-600"></i>
+              Going (<span id="goingListCount">0</span>)
+            </h3>
+            <div id="goingList" class="space-y-2">
+              <!-- Going list items will be inserted here -->
+            </div>
+            <div id="noGoing" class="text-center py-8 text-gray-500 hidden">
+              <i data-lucide="users" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i>
+              <p>No one has RSVP'd as going yet</p>
+            </div>
+          </div>
+
+          <!-- Interested Section -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <i data-lucide="heart" class="w-5 h-5 text-blue-600"></i>
+              Interested (<span id="interestedListCount">0</span>)
+            </h3>
+            <div id="interestedList" class="space-y-2">
+              <!-- Interested list items will be inserted here -->
+            </div>
+            <div id="noInterested" class="text-center py-8 text-gray-500 hidden">
+              <i data-lucide="heart" class="w-12 h-12 mx-auto mb-2 text-gray-300"></i>
+              <p>No one has marked as interested yet</p>
+            </div>
+          </div>
+        </div>
+        <div id="rsvpError" class="hidden text-center py-12">
+          <i data-lucide="alert-circle" class="w-12 h-12 mx-auto mb-4 text-red-500"></i>
+          <p class="text-gray-700 font-semibold">Failed to load RSVPs</p>
+          <p class="text-gray-500 text-sm mt-2" id="rsvpErrorMessage"></p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post Event Confirmation Modal -->
+  <div id="postEventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full">
+      <div class="p-6">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="flex-shrink-0 w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+            <i data-lucide="send" class="w-6 h-6 text-green-600"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-bold text-gray-900">Post Event to Students</h3>
+            <p class="text-sm text-gray-500 mt-1">Make this event visible to all students</p>
+          </div>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <p class="text-sm text-blue-800">
+            <i data-lucide="info" class="w-4 h-4 inline mr-1"></i>
+            This will make the event visible in the student portal. Students will be able to view and RSVP to this event.
+          </p>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="closePostEventModal()" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+            Cancel
+          </button>
+          <button onclick="confirmPostEvent()" class="flex-1 px-4 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            Post Event
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Move/Reschedule Event Modal -->
+  <div id="moveEventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full">
+      <div class="p-6">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="flex-shrink-0 w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+            <i data-lucide="calendar" class="w-6 h-6 text-indigo-600"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-bold text-gray-900">Reschedule Event</h3>
+            <p class="text-sm text-gray-500 mt-1" id="moveEventName">Change the event date</p>
+          </div>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">Current Date</label>
+          <div class="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-700" id="moveEventCurrentDate">
+            Loading...
+          </div>
+        </div>
+        <div class="mb-6">
+          <label class="block text-sm font-semibold text-gray-700 mb-2">New Date <span class="text-red-500">*</span></label>
+          <input type="date" id="moveEventNewDate" class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-transparent">
+          <p class="text-xs text-red-500 mt-1 hidden" id="moveEventDateError">Please select a valid date</p>
+        </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+          <p class="text-sm text-amber-800">
+            <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>
+            Rescheduling will notify all students who have RSVP'd to this event.
+          </p>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="closeMoveEventModal()" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+            Cancel
+          </button>
+          <button onclick="confirmMoveEvent()" class="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+            <i data-lucide="calendar" class="w-4 h-4"></i>
+            Reschedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cancel Event Confirmation Modal -->
+  <div id="cancelEventModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-md w-full">
+      <div class="p-6">
+        <div class="flex items-center gap-4 mb-4">
+          <div class="flex-shrink-0 w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+            <i data-lucide="x-circle" class="w-6 h-6 text-amber-600"></i>
+          </div>
+          <div class="flex-1">
+            <h3 class="text-lg font-bold text-gray-900">Cancel Event</h3>
+            <p class="text-sm text-gray-500 mt-1" id="cancelEventName">Are you sure you want to cancel this event?</p>
+          </div>
+        </div>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p class="text-sm text-red-800">
+            <i data-lucide="alert-triangle" class="w-4 h-4 inline mr-1"></i>
+            This action will mark the event as cancelled. All students who RSVP'd will be notified. This action cannot be undone.
+          </p>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="closeCancelEventModal()" class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+            Keep Event
+          </button>
+          <button onclick="confirmCancelEvent()" class="flex-1 px-4 py-2.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+            <i data-lucide="x-circle" class="w-4 h-4"></i>
+            Cancel Event
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed top-4 right-4 z-[60] space-y-2"></div>
 
   <script>
     const csrfToken = '<%= typeof csrfToken !== "undefined" ? csrfToken : "" %>';
@@ -282,6 +674,14 @@
       document.getElementById('modalTitle').textContent = 'Create Event';
       document.getElementById('eventForm').reset();
       document.getElementById('eventId').value = '';
+      // Reset file previews
+      document.getElementById('activityProposalPreview').classList.add('hidden');
+      document.getElementById('letterOfIntentPreview').classList.add('hidden');
+      document.getElementById('budgetaryRequirementPreview').classList.add('hidden');
+      // Re-enable required attributes
+      document.getElementById('activityProposal').setAttribute('required', 'required');
+      document.getElementById('letterOfIntent').setAttribute('required', 'required');
+      document.getElementById('budgetaryRequirement').setAttribute('required', 'required');
       document.getElementById('eventModal').classList.remove('hidden');
       renderLucideIcons();
     }
@@ -300,15 +700,48 @@
             document.getElementById('eventId').value = eventId;
             document.getElementById('eventName').value = data.event.name || '';
             document.getElementById('eventDate').value = data.event.date ? data.event.date.split('T')[0] : '';
+            document.getElementById('eventEndDate').value = data.event.end_date ? data.event.end_date.split('T')[0] : (data.event.date ? data.event.date.split('T')[0] : '');
             document.getElementById('eventLocation').value = data.event.location || '';
             document.getElementById('eventDescription').value = data.event.description || '';
+            
+            // Show existing file previews if files exist
+            if (data.event.activity_proposal) {
+              const fileName = data.event.activity_proposal.split('/').pop();
+              document.getElementById('activityProposalFileName').textContent = fileName;
+              document.getElementById('activityProposalPreview').classList.remove('hidden');
+              document.getElementById('activityProposal').removeAttribute('required');
+            } else {
+              document.getElementById('activityProposalPreview').classList.add('hidden');
+              document.getElementById('activityProposal').setAttribute('required', 'required');
+            }
+            
+            if (data.event.letter_of_intent) {
+              const fileName = data.event.letter_of_intent.split('/').pop();
+              document.getElementById('letterOfIntentFileName').textContent = fileName;
+              document.getElementById('letterOfIntentPreview').classList.remove('hidden');
+              document.getElementById('letterOfIntent').removeAttribute('required');
+            } else {
+              document.getElementById('letterOfIntentPreview').classList.add('hidden');
+              document.getElementById('letterOfIntent').setAttribute('required', 'required');
+            }
+            
+            if (data.event.budgetary_requirement) {
+              const fileName = data.event.budgetary_requirement.split('/').pop();
+              document.getElementById('budgetaryRequirementFileName').textContent = fileName;
+              document.getElementById('budgetaryRequirementPreview').classList.remove('hidden');
+              document.getElementById('budgetaryRequirement').removeAttribute('required');
+            } else {
+              document.getElementById('budgetaryRequirementPreview').classList.add('hidden');
+              document.getElementById('budgetaryRequirement').setAttribute('required', 'required');
+            }
+            
             document.getElementById('eventModal').classList.remove('hidden');
             renderLucideIcons();
           }
         })
         .catch(err => {
           console.error('Error fetching event:', err);
-          alert('Failed to load event details');
+          showToast('Failed to load event details', 'error');
         });
     }
     
@@ -316,13 +749,51 @@
       editEvent(eventId); // For now, viewing opens edit modal (read-only for non-editors)
     }
     
+    // Validate date range
+    function validateDateRange() {
+      const startDate = document.getElementById('eventDate').value;
+      const endDate = document.getElementById('eventEndDate').value;
+      const errorMsg = document.getElementById('dateRangeError');
+      
+      if (startDate && endDate && endDate < startDate) {
+        errorMsg.classList.remove('hidden');
+        document.getElementById('eventEndDate').classList.add('border-red-500');
+        return false;
+      } else {
+        errorMsg.classList.add('hidden');
+        document.getElementById('eventEndDate').classList.remove('border-red-500');
+        return true;
+      }
+    }
+    
     // Form submission
     document.getElementById('eventForm').addEventListener('submit', async function(e) {
       e.preventDefault();
       
+      // Validate date range before submission
+      if (!validateDateRange()) {
+        showToast('Please ensure the end date is on or after the start date.', 'error');
+        return;
+      }
+      
       const eventId = document.getElementById('eventId').value;
       const formData = new FormData(this);
-      const data = Object.fromEntries(formData);
+      
+      // Validate file uploads for new events
+      if (!eventId) {
+        if (!formData.get('activity_proposal') || formData.get('activity_proposal').size === 0) {
+          showToast('Please upload an Activity Proposal file', 'error');
+          return;
+        }
+        if (!formData.get('letter_of_intent') || formData.get('letter_of_intent').size === 0) {
+          showToast('Please upload a Letter of Intent file', 'error');
+          return;
+        }
+        if (!formData.get('budgetary_requirement') || formData.get('budgetary_requirement').size === 0) {
+          showToast('Please upload a Budgetary Requirement file', 'error');
+          return;
+        }
+      }
       
       const url = eventId 
         ? `/officer/calendar/event/${eventId}/update`
@@ -332,30 +803,226 @@
         const response = await fetch(url, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'X-CSRF-Token': csrfToken
           },
           credentials: 'same-origin',
-          body: JSON.stringify({ ...data, _csrf: csrfToken })
+          body: formData
         });
         
         const result = await response.json();
         
         if (result.success) {
-          alert('Event saved successfully!');
-          location.reload();
+          if (result.status === 'pending_approval') {
+            showToast('Event submitted successfully! Your event is now pending admin approval.', 'success');
+          } else {
+            showToast('Event saved successfully!', 'success');
+          }
+          setTimeout(() => location.reload(), 1500);
         } else {
-          alert('Error: ' + (result.error || 'Failed to save event'));
+          showToast(result.error || 'Failed to save event', 'error');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('An error occurred while saving the event.');
+        showToast('An error occurred while saving the event.', 'error');
       }
     });
     
-    // Cancel event
-    async function cancelEvent(eventId) {
-      if (!confirm('Are you sure you want to cancel this event?')) return;
+    // Store current event IDs for modal confirmations
+    let currentPostEventId = null;
+    let currentMoveEventId = null;
+    let currentMoveEventData = null;
+    let currentCancelEventId = null;
+
+    // Toast notification function
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const bgColor = type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
+      const icon = type === 'success' ? 'check-circle' : type === 'error' ? 'x-circle' : 'info';
+      
+      toast.className = `${bgColor} text-white px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 min-w-[300px] max-w-md animate-slide-in`;
+      toast.innerHTML = `
+        <i data-lucide="${icon}" class="w-5 h-5 flex-shrink-0"></i>
+        <p class="flex-1 text-sm font-medium">${message}</p>
+        <button onclick="this.parentElement.remove()" class="flex-shrink-0 hover:opacity-80">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      `;
+      
+      container.appendChild(toast);
+      renderLucideIcons();
+      
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        toast.style.animation = 'slide-out 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+
+    // Post Event Modal Functions
+    function openPostEventModal(eventId) {
+      currentPostEventId = eventId;
+      document.getElementById('postEventModal').classList.remove('hidden');
+      renderLucideIcons();
+    }
+
+    function closePostEventModal() {
+      document.getElementById('postEventModal').classList.add('hidden');
+      currentPostEventId = null;
+    }
+
+    async function confirmPostEvent() {
+      if (!currentPostEventId) return;
+      
+      const eventId = currentPostEventId;
+      closePostEventModal();
+      
+      try {
+        const response = await fetch(`/officer/calendar/event/${eventId}/post`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ _csrf: csrfToken })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          showToast('Event posted to students successfully!', 'success');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          showToast(result.error || 'Failed to post event', 'error');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showToast('An error occurred while posting the event.', 'error');
+      }
+    }
+    
+    // Post event to students - opens modal
+    function postEventToStudents(eventId) {
+      openPostEventModal(eventId);
+    }
+    
+    // Move/Reschedule Event Modal Functions
+    async function moveEvent(eventId) {
+      try {
+        const response = await fetch(`/officer/calendar/event/${eventId}`);
+        const result = await response.json();
+        
+        if (!result.success || !result.event) {
+          showToast('Failed to load event details', 'error');
+        return;
+      }
+      
+        const event = result.event;
+        currentMoveEventId = eventId;
+        currentMoveEventData = event;
+        
+        // Populate modal
+        document.getElementById('moveEventName').textContent = event.name || 'Change the event date';
+        const currentDate = event.date ? new Date(event.date).toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        }) : 'Not set';
+        document.getElementById('moveEventCurrentDate').textContent = currentDate;
+        document.getElementById('moveEventNewDate').value = event.date ? event.date.split('T')[0] : '';
+        document.getElementById('moveEventDateError').classList.add('hidden');
+        
+        document.getElementById('moveEventModal').classList.remove('hidden');
+        renderLucideIcons();
+      } catch (error) {
+        console.error('Error:', error);
+        showToast('An error occurred while loading event details.', 'error');
+      }
+    }
+
+    function closeMoveEventModal() {
+      document.getElementById('moveEventModal').classList.add('hidden');
+      currentMoveEventId = null;
+      currentMoveEventData = null;
+      document.getElementById('moveEventDateError').classList.add('hidden');
+    }
+
+    async function confirmMoveEvent() {
+      if (!currentMoveEventId || !currentMoveEventData) return;
+      
+      const newDate = document.getElementById('moveEventNewDate').value;
+      const errorMsg = document.getElementById('moveEventDateError');
+      
+      if (!newDate) {
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+      
+      // Validate date format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+      
+      // Validate date is not in the past
+      const selectedDate = new Date(newDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < today) {
+        errorMsg.textContent = 'Cannot reschedule to a past date';
+        errorMsg.classList.remove('hidden');
+        return;
+      }
+      
+      errorMsg.classList.add('hidden');
+      closeMoveEventModal();
+      
+      try {
+        const updateResponse = await fetch(`/officer/calendar/event/${currentMoveEventId}/move`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ date: newDate, _csrf: csrfToken })
+        });
+        
+        const updateResult = await updateResponse.json();
+        
+        if (updateResult.success) {
+          showToast('Event rescheduled successfully!', 'success');
+          setTimeout(() => location.reload(), 1500);
+        } else {
+          showToast(updateResult.error || 'Failed to reschedule event', 'error');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        showToast('An error occurred while rescheduling the event.', 'error');
+      }
+    }
+
+    // Cancel Event Modal Functions
+    function openCancelEventModal(eventId, eventName) {
+      currentCancelEventId = eventId;
+      document.getElementById('cancelEventName').textContent = eventName || 'Are you sure you want to cancel this event?';
+      document.getElementById('cancelEventModal').classList.remove('hidden');
+      renderLucideIcons();
+    }
+
+    function closeCancelEventModal() {
+      document.getElementById('cancelEventModal').classList.add('hidden');
+      currentCancelEventId = null;
+    }
+
+    async function confirmCancelEvent() {
+      if (!currentCancelEventId) return;
+      
+      const eventId = currentCancelEventId;
+      closeCancelEventModal();
       
       try {
         const response = await fetch(`/officer/calendar/event/${eventId}/cancel`, {
@@ -371,18 +1038,35 @@
         const result = await response.json();
         
         if (result.success) {
-          alert('Event cancelled successfully!');
-          location.reload();
+          showToast('Event cancelled successfully!', 'success');
+          setTimeout(() => location.reload(), 1500);
         } else {
-          alert('Error: ' + (result.error || 'Failed to cancel event'));
+          showToast(result.error || 'Failed to cancel event', 'error');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('An error occurred while cancelling the event.');
+        showToast('An error occurred while cancelling the event.', 'error');
+      }
+    }
+
+    // Cancel event - opens modal
+    async function cancelEvent(eventId) {
+      try {
+        const response = await fetch(`/officer/calendar/event/${eventId}`);
+        const result = await response.json();
+        
+        if (!result.success || !result.event) {
+          showToast('Failed to load event details', 'error');
+          return;
+        }
+        
+        openCancelEventModal(eventId, result.event.name);
+      } catch (error) {
+        console.error('Error:', error);
+        showToast('An error occurred while loading event details.', 'error');
       }
     }
     
-    // Delete event
     async function deleteEvent(eventId) {
       if (!confirm('Are you sure you want to permanently delete this event? This action cannot be undone.')) return;
       
@@ -400,19 +1084,240 @@
         const result = await response.json();
         
         if (result.success) {
-          alert('Event deleted successfully!');
-          location.reload();
+          showToast('Event deleted successfully!', 'success');
+          setTimeout(() => location.reload(), 1500);
         } else {
-          alert('Error: ' + (result.error || 'Failed to delete event'));
+          showToast(result.error || 'Failed to delete event', 'error');
         }
       } catch (error) {
         console.error('Error:', error);
-        alert('An error occurred while deleting the event.');
+        showToast('An error occurred while deleting the event.', 'error');
       }
     }
     
-    // Initialize icons
+    // Store current event ID for attendance functions
+    let currentRSVPEventId = null;
+    
+    // View RSVPs
+    async function viewRSVPs(eventId) {
+      const modal = document.getElementById('rsvpModal');
+      const loading = document.getElementById('rsvpLoading');
+      const content = document.getElementById('rsvpContent');
+      const error = document.getElementById('rsvpError');
+      
+      currentRSVPEventId = eventId;
+      
+      // Show modal and loading state
+      modal.classList.remove('hidden');
+      loading.classList.remove('hidden');
+      content.classList.add('hidden');
+      error.classList.add('hidden');
+      
+      try {
+        const response = await fetch(`/officer/calendar/event/${eventId}/rsvps`, {
+          credentials: 'same-origin'
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch RSVPs');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load RSVPs');
+        }
+        
+        // Update modal title
+        document.getElementById('rsvpModalTitle').textContent = `RSVPs: ${data.event.name}`;
+        
+        // Update stats
+        document.getElementById('goingCount').textContent = data.goingCount || 0;
+        document.getElementById('interestedCount').textContent = data.interestedCount || 0;
+        document.getElementById('totalCount').textContent = data.total || 0;
+        
+        // Render going list
+        const goingList = document.getElementById('goingList');
+        const noGoing = document.getElementById('noGoing');
+        const goingListCount = document.getElementById('goingListCount');
+        
+        if (data.going && data.going.length > 0) {
+          goingList.innerHTML = data.going.map(student => {
+            const photoUrl = student.photo || '';
+            const initials = `${(student.first_name || '')[0]}${(student.last_name || '')[0]}`;
+            const hasPhoto = photoUrl && photoUrl.trim() !== '';
+            
+            return `
+            <div class="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
+              <div class="flex items-center gap-3 flex-1">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  ${hasPhoto ? 
+                    `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(student.first_name || '')} ${escapeHtml(student.last_name || '')}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                     <span class="text-green-700 font-semibold text-sm" style="display: none;">${initials}</span>` :
+                    `<span class="text-green-700 font-semibold text-sm">${initials}</span>`
+                  }
+                </div>
+                <div class="flex-1">
+                  <p class="font-semibold text-gray-900">${escapeHtml(student.first_name || '')} ${escapeHtml(student.last_name || '')}</p>
+                  <p class="text-sm text-gray-600">${escapeHtml(student.studentid || 'N/A')} • ${escapeHtml(student.program || 'N/A')} • Year ${student.year_level || 'N/A'}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-gray-500">RSVP'd on</p>
+                <p class="text-xs text-gray-700 font-medium">${new Date(student.rsvp_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              </div>
+            </div>
+          `;
+          }).join('');
+          noGoing.classList.add('hidden');
+          goingListCount.textContent = data.going.length;
+        } else {
+          goingList.innerHTML = '';
+          noGoing.classList.remove('hidden');
+          goingListCount.textContent = '0';
+        }
+        
+        // Render interested list
+        const interestedList = document.getElementById('interestedList');
+        const noInterested = document.getElementById('noInterested');
+        const interestedListCount = document.getElementById('interestedListCount');
+        
+        if (data.interested && data.interested.length > 0) {
+          interestedList.innerHTML = data.interested.map(student => {
+            const photoUrl = student.photo || '';
+            const initials = `${(student.first_name || '')[0]}${(student.last_name || '')[0]}`;
+            const hasPhoto = photoUrl && photoUrl.trim() !== '';
+            
+            return `
+            <div class="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div class="flex items-center gap-3 flex-1">
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                  ${hasPhoto ? 
+                    `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(student.first_name || '')} ${escapeHtml(student.last_name || '')}" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                     <span class="text-blue-700 font-semibold text-sm" style="display: none;">${initials}</span>` :
+                    `<span class="text-blue-700 font-semibold text-sm">${initials}</span>`
+                  }
+                </div>
+                <div class="flex-1">
+                  <p class="font-semibold text-gray-900">${escapeHtml(student.first_name || '')} ${escapeHtml(student.last_name || '')}</p>
+                  <p class="text-sm text-gray-600">${escapeHtml(student.studentid || 'N/A')} • ${escapeHtml(student.program || 'N/A')} • Year ${student.year_level || 'N/A'}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <p class="text-xs text-gray-500">RSVP'd on</p>
+                <p class="text-xs text-gray-700 font-medium">${new Date(student.rsvp_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              </div>
+            </div>
+          `;
+          }).join('');
+          noInterested.classList.add('hidden');
+          interestedListCount.textContent = data.interested.length;
+        } else {
+          interestedList.innerHTML = '';
+          noInterested.classList.remove('hidden');
+          interestedListCount.textContent = '0';
+        }
+        
+        // Show content
+        loading.classList.add('hidden');
+        content.classList.remove('hidden');
+        
+        // Reinitialize icons
+        renderLucideIcons();
+      } catch (err) {
+        console.error('Error loading RSVPs:', err);
+        loading.classList.add('hidden');
+        error.classList.remove('hidden');
+        document.getElementById('rsvpErrorMessage').textContent = err.message || 'An error occurred while loading RSVPs';
+      }
+    }
+    
+    // Close RSVP modal
+    function closeRSVPModal() {
+      document.getElementById('rsvpModal').classList.add('hidden');
+      currentRSVPEventId = null;
+    }
+    
+    
+    // Escape HTML helper
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Escape key handlers for modals
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (!document.getElementById('postEventModal').classList.contains('hidden')) {
+          closePostEventModal();
+        } else if (!document.getElementById('moveEventModal').classList.contains('hidden')) {
+          closeMoveEventModal();
+        } else if (!document.getElementById('cancelEventModal').classList.contains('hidden')) {
+          closeCancelEventModal();
+        } else if (!document.getElementById('archiveAttendanceModal').classList.contains('hidden')) {
+          closeArchiveAttendanceModal();
+        } else if (!document.getElementById('rsvpModal').classList.contains('hidden')) {
+          closeRSVPModal();
+        } else if (!document.getElementById('eventModal').classList.contains('hidden')) {
+          closeEventModal();
+        }
+      }
+    });
+
+    // Close modal on background click
     document.addEventListener('DOMContentLoaded', () => {
+      // Initial icon rendering
+      renderLucideIcons();
+      
+      // Re-render icons after a short delay to ensure all elements are loaded
+      setTimeout(() => {
+        renderLucideIcons();
+      }, 100);
+      
+      // Close modals when clicking outside
+      const postEventModal = document.getElementById('postEventModal');
+      if (postEventModal) {
+        postEventModal.addEventListener('click', (e) => {
+          if (e.target.id === 'postEventModal') closePostEventModal();
+        });
+      }
+      
+      const moveEventModal = document.getElementById('moveEventModal');
+      if (moveEventModal) {
+        moveEventModal.addEventListener('click', (e) => {
+          if (e.target.id === 'moveEventModal') closeMoveEventModal();
+        });
+      }
+      
+      const cancelEventModal = document.getElementById('cancelEventModal');
+      if (cancelEventModal) {
+        cancelEventModal.addEventListener('click', (e) => {
+          if (e.target.id === 'cancelEventModal') closeCancelEventModal();
+        });
+      }
+      
+      const rsvpModal = document.getElementById('rsvpModal');
+      if (rsvpModal) {
+        rsvpModal.addEventListener('click', (e) => {
+          if (e.target.id === 'rsvpModal') {
+            closeRSVPModal();
+          }
+        });
+      }
+      
+      // Ensure icons are rendered periodically for dynamically added content
+      setInterval(() => {
+        const icons = document.querySelectorAll('[data-lucide]:not([data-rendered])');
+        if (icons.length > 0) {
+          renderLucideIcons();
+          icons.forEach(icon => icon.setAttribute('data-rendered', 'true'));
+        }
+      }, 500);
+    });
+    
+    // Also render icons when window loads
+    window.addEventListener('load', () => {
       renderLucideIcons();
     });
   </script>

@@ -76,7 +76,7 @@
           </div>
 
           <!-- Programs -->
-          <div class="mt-4" id="programsSection" style="display: <%= club.department ? 'block' : 'none' %>;">
+          <div class="mt-4 <%= club.department ? '' : 'hidden' %>" id="programsSection">
             <div class="flex items-center justify-between mb-2">
               <label class="block text-sm font-medium text-slate-600">Programs <span class="text-gray-400 text-xs font-normal">(Optional, select one or more)</span></label>
               <div class="flex items-center gap-2">
@@ -244,32 +244,30 @@
       
       // Parse existing club programs from the server
       let existingPrograms = [];
-      <% if (club.program) { %>
-        try {
-          const clubProgram = <%- JSON.stringify(club.program) %>;
-          if (Array.isArray(clubProgram)) {
-            existingPrograms = clubProgram.filter(Boolean).map(p => String(p).trim()).filter(Boolean);
-          } else if (typeof clubProgram === 'string') {
-            try {
-              const parsed = JSON.parse(clubProgram);
-              if (Array.isArray(parsed)) {
-                existingPrograms = parsed.filter(Boolean).map(p => String(p).trim()).filter(Boolean);
-              } else {
-                existingPrograms = [clubProgram.trim()].filter(Boolean);
-              }
-            } catch (e) {
-              // If it's a simple string, try to split by comma
-              if (clubProgram.includes(',')) {
-                existingPrograms = clubProgram.split(',').map(p => p.trim()).filter(Boolean);
-              } else {
-                existingPrograms = [clubProgram.trim()].filter(Boolean);
-              }
+      try {
+        const clubProgram = JSON.parse('<%- JSON.stringify(club.program || []) %>');
+        if (Array.isArray(clubProgram)) {
+          existingPrograms = clubProgram.filter(Boolean).map(p => String(p).trim()).filter(Boolean);
+        } else if (typeof clubProgram === 'string') {
+          try {
+            const parsed = JSON.parse(clubProgram);
+            if (Array.isArray(parsed)) {
+              existingPrograms = parsed.filter(Boolean).map(p => String(p).trim()).filter(Boolean);
+            } else {
+              existingPrograms = [clubProgram.trim()].filter(Boolean);
+            }
+          } catch (e) {
+            // If it's a simple string, try to split by comma
+            if (clubProgram.includes(',')) {
+              existingPrograms = clubProgram.split(',').map(p => p.trim()).filter(Boolean);
+            } else {
+              existingPrograms = [clubProgram.trim()].filter(Boolean);
             }
           }
-        } catch (e) {
-          console.warn('Could not parse existing programs:', e);
         }
-      <% } %>
+      } catch (e) {
+        console.warn('Could not parse existing programs:', e);
+      }
       
       function renderProgramCheckboxes(departmentValue) {
         const gridContainer = programOptions.querySelector('.grid');

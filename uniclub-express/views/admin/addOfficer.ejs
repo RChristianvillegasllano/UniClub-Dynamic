@@ -207,14 +207,27 @@
             </div>
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Student ID</label>
-            <input type="text" name="studentid" id="studentid" required value="<%= data.studentid || '' %>"
-                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]"
-                   placeholder="e.g., 111222 (6 digits only)"
-                   maxlength="6"
-                   oninput="validateStudentId()">
-            <p class="text-xs text-gray-500 mt-1">Must be exactly 6 digits</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">Student ID <span class="text-red-500">*</span></label>
+              <input type="text" name="studentid" id="studentid" required value="<%= data.studentid || '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]"
+                     placeholder="e.g., 111222 (6 digits only)"
+                     maxlength="6"
+                     oninput="validateStudentId()">
+              <p class="text-xs text-gray-500 mt-1">Must be exactly 6 digits</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-slate-600 mb-1">UMindanao Email <span class="text-red-500">*</span></label>
+              <input type="email" name="email" id="email" required value="<%= data.email || '' %>"
+                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]"
+                     placeholder="e.g., j.delacruz.111222.tc@umindanao.edu.ph"
+                     pattern="[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph"
+                     onblur="validateEmail()"
+                     oninput="clearEmailError()">
+              <p class="text-xs text-gray-500 mt-1"></p>
+              <p id="emailError" class="text-xs text-red-600 mt-1 hidden"></p>
+            </div>
           </div>
 
           <!-- Validation Warnings -->
@@ -231,7 +244,7 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Club</label>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Club <span class="text-red-500">*</span></label>
             <select name="club_id" required
                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
               <% if (clubs && clubs.length > 0) { %>
@@ -245,51 +258,83 @@
           </div>
 
           <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Role</label>
+            <label class="block text-sm font-medium text-slate-600 mb-1">Role <span class="text-red-500">*</span></label>
             <select name="role" required
                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
               <option value="">Select Role</option>
-              <option value="President" <%= data.role === 'President' ? 'selected' : '' %>>President</option>
-              <option value="Vice President" <%= data.role === 'Vice President' ? 'selected' : '' %>>Vice President</option>
-              <option value="Secretary" <%= data.role === 'Secretary' ? 'selected' : '' %>>Secretary</option>
-              <option value="Treasurer" <%= data.role === 'Treasurer' ? 'selected' : '' %>>Treasurer</option>
-              <option value="Chair" <%= data.role === 'Chair' ? 'selected' : '' %>>Chair</option>
-              <option value="Vice Chair" <%= data.role === 'Vice Chair' ? 'selected' : '' %>>Vice Chair</option>
-              <option value="Public Relations Officer" <%= data.role === 'Public Relations Officer' ? 'selected' : '' %>>Public Relations Officer</option>
-              <option value="Events Coordinator" <%= data.role === 'Events Coordinator' ? 'selected' : '' %>>Events Coordinator</option>
-              <option value="Member" <%= data.role === 'Member' ? 'selected' : '' %>>Member</option>
-              <option value="Other" <%= data.role && !['President', 'Vice President', 'Secretary', 'Treasurer', 'Chair', 'Vice Chair', 'Public Relations Officer', 'Events Coordinator', 'Member'].includes(data.role) ? 'selected' : '' %>>Other</option>
+              <optgroup label="Presidents">
+                <option value="President" <%= data.role === 'President' ? 'selected' : '' %>>President</option>
+                <option value="Supremo" <%= data.role === 'Supremo' ? 'selected' : '' %>>Supremo</option>
+                <option value="Grand Peer" <%= data.role === 'Grand Peer' ? 'selected' : '' %>>Grand Peer</option>
+              </optgroup>
+              <optgroup label="Vice-Presidents">
+                <option value="Vice President" <%= data.role === 'Vice President' ? 'selected' : '' %>>Vice President</option>
+                <option value="Vice-President Internal" <%= data.role === 'Vice-President Internal' ? 'selected' : '' %>>Vice-President Internal</option>
+                <option value="Vice-President External" <%= data.role === 'Vice-President External' ? 'selected' : '' %>>Vice-President External</option>
+              </optgroup>
+              <optgroup label="Secretaries">
+                <option value="Secretary" <%= data.role === 'Secretary' ? 'selected' : '' %>>Secretary</option>
+                <option value="Assistant Secretary" <%= data.role === 'Assistant Secretary' ? 'selected' : '' %>>Assistant Secretary</option>
+              </optgroup>
+              <optgroup label="Treasurers">
+                <option value="Treasurer" <%= data.role === 'Treasurer' ? 'selected' : '' %>>Treasurer</option>
+                <option value="Assistant Treasurer" <%= data.role === 'Assistant Treasurer' ? 'selected' : '' %>>Assistant Treasurer</option>
+              </optgroup>
+              <optgroup label="Auditors">
+                <option value="Auditor" <%= data.role === 'Auditor' ? 'selected' : '' %>>Auditor</option>
+                <option value="Assistant Auditor" <%= data.role === 'Assistant Auditor' ? 'selected' : '' %>>Assistant Auditor</option>
+              </optgroup>
+              <optgroup label="Public Relations">
+                <option value="Public Information Officer (PIO)" <%= data.role === 'Public Information Officer (PIO)' ? 'selected' : '' %>>Public Information Officer (PIO)</option>
+                <option value="Public Relations Officer (PRO)" <%= data.role === 'Public Relations Officer (PRO)' ? 'selected' : '' %>>Public Relations Officer (PRO)</option>
+                <option value="Assistant Public Relations Officer" <%= data.role === 'Assistant Public Relations Officer' ? 'selected' : '' %>>Assistant Public Relations Officer</option>
+              </optgroup>
+              <optgroup label="Management">
+                <option value="Creatives Member" <%= data.role === 'Creatives Member' ? 'selected' : '' %>>Creatives Member</option>
+                <option value="Business Manager" <%= data.role === 'Business Manager' ? 'selected' : '' %>>Business Manager</option>
+                <option value="Assistant Business Manager" <%= data.role === 'Assistant Business Manager' ? 'selected' : '' %>>Assistant Business Manager</option>
+              </optgroup>
+              <optgroup label="Year Representatives">
+                <option value="1st Year Representative" <%= data.role === '1st Year Representative' ? 'selected' : '' %>>1st Year Representative</option>
+                <option value="2nd Year Representative" <%= data.role === '2nd Year Representative' ? 'selected' : '' %>>2nd Year Representative</option>
+                <option value="3rd Year Representative" <%= data.role === '3rd Year Representative' ? 'selected' : '' %>>3rd Year Representative</option>
+                <option value="4th Year Representative" <%= data.role === '4th Year Representative' ? 'selected' : '' %>>4th Year Representative</option>
+              </optgroup>
             </select>
-            <div id="otherRoleContainer" class="mt-2 <%= data.role && !['President', 'Vice President', 'Secretary', 'Treasurer', 'Chair', 'Vice Chair', 'Public Relations Officer', 'Events Coordinator', 'Member'].includes(data.role) ? '' : 'hidden' %>">
-              <input type="text" name="role_other" id="roleOther" placeholder="Specify role" value="<%= data.role && !['President', 'Vice President', 'Secretary', 'Treasurer', 'Chair', 'Vice Chair', 'Public Relations Officer', 'Events Coordinator', 'Member'].includes(data.role) ? data.role : '' %>"
-                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
-            </div>
-            <input type="hidden" name="role_actual" id="roleActual" value="<%= data.role || '' %>">
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Username</label>
-              <input type="text" name="username" required autocomplete="username" value="<%= data.username || '' %>"
-                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+              <label class="block text-sm font-medium text-slate-600 mb-1">Password <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <input type="password" name="password" id="password" required autocomplete="new-password"
+                       class="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <button type="button" onclick="togglePasswordVisibility('password', 'password-toggle')" 
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                        id="password-toggle">
+                  <i data-lucide="eye" class="w-5 h-5"></i>
+                </button>
+              </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Password</label>
-              <input type="password" name="password" required autocomplete="new-password"
-                     class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+              <label class="block text-sm font-medium text-slate-600 mb-1">Confirm Password <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <input type="password" name="confirm_password" id="confirm_password" required autocomplete="new-password"
+                       class="w-full border border-slate-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
+                <button type="button" onclick="togglePasswordVisibility('confirm_password', 'confirm-password-toggle')" 
+                        class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                        id="confirm-password-toggle">
+                  <i data-lucide="eye" class="w-5 h-5"></i>
+                </button>
+              </div>
+              <p id="password-match-error" class="text-xs text-red-500 mt-1 hidden">Passwords do not match</p>
             </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-slate-600 mb-1">Photo URL <span class="text-gray-400 text-xs">(optional)</span></label>
-            <input type="url" name="photo_url" placeholder="https://" value="<%= data.photo_url || '' %>"
-                   class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Department</label>
-              <select name="department" data-dept-select
+              <label class="block text-sm font-medium text-slate-600 mb-1">Department <span class="text-red-500">*</span></label>
+              <select name="department" data-dept-select required
                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
                 <option value="">Select Department</option>
                 <option value="Department of Accounting Education" <%= selectedDepartment === 'Department of Accounting Education' ? 'selected' : '' %>>Department of Accounting Education</option>
@@ -304,8 +349,8 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-slate-600 mb-1">Program</label>
-              <select name="program" data-program-select data-current="<%= selectedProgram %>"
+              <label class="block text-sm font-medium text-slate-600 mb-1">Program <span class="text-red-500">*</span></label>
+              <select name="program" data-program-select data-current="<%= selectedProgram %>" required
                      class="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1]">
                 <option value="">Select Program</option>
               </select>
@@ -599,7 +644,7 @@
               </div>
             </div>
             <input type="hidden" name="permissions" id="permissionsField" value='<%- JSON.stringify(presetPermissions) %>'>
-            <p class="text-xs text-slate-500 mt-2">Select a role to load default permissions, then customize as needed.</p>
+            <p class="text-xs text-slate-500 mt-2">Permissions are automatically assigned based on the selected role's tier. You can customize them if needed.</p>
           </div>
 
           <div class="flex justify-end">
@@ -751,52 +796,15 @@
     (function(){
       const form = document.getElementById('officerForm');
       const roleSelect = form.querySelector('select[name="role"]');
-      const roleOtherInput = document.getElementById('roleOther');
-      const roleActualInput = document.getElementById('roleActual');
-      const otherRoleContainer = document.getElementById('otherRoleContainer');
       const permField = document.getElementById('permissionsField');
-
-      function getRoleValue() {
-        if (roleSelect.value === 'Other' && roleOtherInput) {
-          return roleOtherInput.value.trim();
-        }
-        return roleSelect.value;
-      }
-
-      function updateRoleActual() {
-        if (roleActualInput) {
-          roleActualInput.value = getRoleValue();
-        }
-      }
 
       // Handle role select change
       if (roleSelect) {
         roleSelect.addEventListener('change', function(e) {
           const selectedValue = e.target.value;
-          if (selectedValue === 'Other') {
-            otherRoleContainer.classList.remove('hidden');
-            if (roleOtherInput) {
-              roleOtherInput.required = true;
-              roleOtherInput.focus();
-            }
-            loadRolePermissions('');
-          } else {
-            otherRoleContainer.classList.add('hidden');
-            if (roleOtherInput) {
-              roleOtherInput.required = false;
-              roleOtherInput.value = '';
-            }
+          if (selectedValue) {
             loadRolePermissions(selectedValue);
-            updateRoleActual();
           }
-        });
-      }
-
-      // Handle "Other" role input change
-      if (roleOtherInput) {
-        roleOtherInput.addEventListener('input', function(e) {
-          loadRolePermissions(e.target.value);
-          updateRoleActual();
         });
       }
 
@@ -821,41 +829,151 @@
         });
         updatePermissionsField();
       } else {
-        const currentRole = getRoleValue();
+        const currentRole = roleSelect ? roleSelect.value : '';
         if (currentRole) {
           loadRolePermissions(currentRole);
         }
       }
 
-      // Initialize role actual value
-      updateRoleActual();
-
       // Handle form submission
       form.addEventListener('submit', function(e) {
-        updateRoleActual();
+        // Always update permissions field before submission
         updatePermissionsField();
-        const roleValue = getRoleValue();
+        
+        // Validate role
+        const roleValue = roleSelect ? roleSelect.value : '';
         if (!roleValue) {
           e.preventDefault();
-          showToast('Please select or specify a role.', 'error', 'Validation Error');
+          showToast('Please select a role.', 'error', 'Validation Error');
           return false;
         }
-        if (roleSelect.value === 'Other') {
-          const otherValue = roleOtherInput ? roleOtherInput.value.trim() : '';
-          if (!otherValue) {
+        
+        // Validate email
+        const emailValid = validateEmail();
+        if (!emailValid) {
+          e.preventDefault();
+          showToast('Please enter a valid UMindanao email address.', 'error', 'Validation Error');
+          return false;
+        }
+        
+        // Validate password confirmation
+        const passwordField = document.getElementById('password');
+        const confirmPasswordField = document.getElementById('confirm_password');
+        const passwordMatchError = document.getElementById('password-match-error');
+        
+        if (passwordField && confirmPasswordField) {
+          const password = passwordField.value.trim();
+          const confirmPassword = confirmPasswordField.value.trim();
+          
+          if (!password || password.length < 6) {
             e.preventDefault();
-            showToast('Please specify the role.', 'error', 'Validation Error');
-            if (roleOtherInput) roleOtherInput.focus();
+            showToast('Password is required and must be at least 6 characters.', 'error', 'Validation Error');
             return false;
           }
+          
+          if (password !== confirmPassword) {
+            e.preventDefault();
+            showToast('Passwords do not match.', 'error', 'Validation Error');
+            if (passwordMatchError) {
+              passwordMatchError.textContent = 'Passwords do not match';
+              passwordMatchError.classList.remove('hidden');
+            }
+            return false;
+          }
+          
+          // Clear error if passwords match
+          if (passwordMatchError) {
+            passwordMatchError.classList.add('hidden');
+          }
         }
-        // Use role_actual as the primary field, remove name from select
-        if (roleActualInput) {
-          roleActualInput.name = 'role';
-        }
-        roleSelect.removeAttribute('name');
       });
     })();
+
+    // Password confirmation validation (real-time)
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirm_password');
+    const passwordMatchError = document.getElementById('password-match-error');
+    
+    if (passwordField && confirmPasswordField && passwordMatchError) {
+      function validatePasswordMatch() {
+        const password = passwordField.value.trim();
+        const confirmPassword = confirmPasswordField.value.trim();
+        
+        if (password.length === 0 && confirmPassword.length === 0) {
+          passwordMatchError.classList.add('hidden');
+          return;
+        }
+        
+        if (password.length > 0 && confirmPassword.length === 0) {
+          passwordMatchError.textContent = 'Please confirm your password';
+          passwordMatchError.classList.remove('hidden');
+          return;
+        }
+        
+        if (password !== confirmPassword) {
+          passwordMatchError.textContent = 'Passwords do not match';
+          passwordMatchError.classList.remove('hidden');
+        } else {
+          passwordMatchError.classList.add('hidden');
+        }
+      }
+      
+      passwordField.addEventListener('input', validatePasswordMatch);
+      confirmPasswordField.addEventListener('input', validatePasswordMatch);
+    }
+
+    // Password visibility toggle function (global scope for onclick handlers)
+    window.togglePasswordVisibility = function(inputId, buttonId) {
+      const input = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
+      if (input && button) {
+        if (input.type === 'password') {
+          input.type = 'text';
+          button.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+        } else {
+          input.type = 'password';
+          button.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+        }
+        if (window.lucide) window.lucide.replace();
+      }
+    };
+
+    // Email validation: firstinitial.lastname.6digits.tc@umindanao.edu.ph
+    window.validateEmail = function() {
+      const emailInput = document.getElementById('email');
+      const emailError = document.getElementById('emailError');
+      const email = emailInput.value.trim();
+      
+      // Email format: firstinitial.lastname.6digits.tc@umindanao.edu.ph
+      const emailPattern = /^[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph$/i;
+      
+      if (email && !emailPattern.test(email)) {
+        emailInput.classList.add('border-red-500');
+        emailInput.classList.remove('border-slate-300');
+        if (emailError) {
+          emailError.textContent = 'Email must follow format: firstinitial.lastname.6digitid.tc@umindanao.edu.ph (e.g., j.delacruz.111222.tc@umindanao.edu.ph)';
+          emailError.classList.remove('hidden');
+        }
+        return false;
+      } else {
+        emailInput.classList.remove('border-red-500');
+        emailInput.classList.add('border-slate-300');
+        if (emailError) {
+          emailError.classList.add('hidden');
+        }
+        return true;
+      }
+    };
+
+    window.clearEmailError = function() {
+      const emailInput = document.getElementById('email');
+      const emailError = document.getElementById('emailError');
+      emailInput.classList.remove('border-red-500');
+      emailInput.classList.add('border-slate-300');
+      if (emailError) {
+        emailError.classList.add('hidden');
+      }
+    };
 
     // Student ID validation: exactly 6 digits
     function validateStudentId() {

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title || 'Event Approvals | UniClub Admin' %></title>
+  <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
+  <div class="flex h-screen">
+    <!-- Sidebar -->
+    <%- include('../layouts/adminSidebar', {
+      currentPath: (typeof currentPath !== 'undefined' ? currentPath : '/admin/event-approvals'),
+      messages: (typeof messages !== 'undefined' ? messages : [])
+    }) %>
+
+    <!-- Main -->
+    <main class="flex-1 overflow-auto">
+      <header class="bg-white/90 backdrop-blur border-b border-gray-200 sticky top-0 z-10">
+        <div class="px-6 md:px-8 py-4">
+          <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Event Approvals</h1>
+          <p class="text-gray-500 mt-1 text-sm">Review and approve pending events from clubs</p>
+        </div>
+      </header>
+
+      <div class="p-6 md:p-8">
+        <% if (typeof pendingEvents !== 'undefined' && pendingEvents && pendingEvents.length > 0) { %>
+          <div class="space-y-4">
+            <% pendingEvents.forEach(function(event) { %>
+              <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-2">
+                      <h3 class="text-xl font-bold text-gray-900"><%= event.name %></h3>
+                      <span class="px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                        Pending Approval
+                      </span>
+                    </div>
+                    <div class="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
+                      <span class="flex items-center gap-1">
+                        <i data-lucide="calendar" class="w-4 h-4"></i>
+                        <%= new Date(event.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) %>
+                      </span>
+                      <% if (event.location) { %>
+                        <span class="flex items-center gap-1">
+                          <i data-lucide="map-pin" class="w-4 h-4"></i>
+                          <%= event.location %>
+                        </span>
+                      <% } %>
+                      <span class="flex items-center gap-1">
+                        <i data-lucide="users" class="w-4 h-4"></i>
+                        <%= event.club_name || 'Unknown Club' %>
+                      </span>
+                      <span class="flex items-center gap-1">
+                        <i data-lucide="user" class="w-4 h-4"></i>
+                        Created by: <%= event.created_by_name || 'Unknown' %> (<%= event.created_by_role || 'Officer' %>)
+                      </span>
+                    </div>
+                    <% if (event.description) { %>
+                      <p class="text-sm text-gray-700 mb-3"><%= event.description %></p>
+                    <% } %>
+                    <p class="text-xs text-gray-500">
+                      Submitted: <%= new Date(event.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) %>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Event Documents Section -->
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                  <h4 class="text-sm font-bold text-gray-900 mb-3">Event Documents</h4>
+                  <div class="space-y-3">
+                    <% if (event.activity_proposal) { %>
+                      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h5 class="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
+                          <i data-lucide="file-text" class="w-4 h-4"></i>
+                          Activity Proposal
+                        </h5>
+                        <a href="<%= event.activity_proposal %>" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+                          <i data-lucide="download" class="w-4 h-4"></i>
+                          Download Activity Proposal
+                        </a>
+                      </div>
+                    <% } %>
+                    
+                    <% if (event.letter_of_intent) { %>
+                      <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <h5 class="text-sm font-semibold text-green-900 mb-2 flex items-center gap-2">
+                          <i data-lucide="file-text" class="w-4 h-4"></i>
+                          Letter of Intent
+                        </h5>
+                        <a href="<%= event.letter_of_intent %>" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white text-sm font-semibold rounded-lg hover:bg-green-700 transition-colors">
+                          <i data-lucide="download" class="w-4 h-4"></i>
+                          Download Letter of Intent
+                        </a>
+                      </div>
+                    <% } %>
+                    
+                    <% if (event.budgetary_requirement) { %>
+                      <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <h5 class="text-sm font-semibold text-purple-900 mb-2 flex items-center gap-2">
+                          <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                          Budgetary Requirement
+                        </h5>
+                        <a href="<%= event.budgetary_requirement %>" target="_blank" class="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-600 text-white text-sm font-semibold rounded-lg hover:bg-purple-700 transition-colors">
+                          <i data-lucide="download" class="w-4 h-4"></i>
+                          Download Budgetary Requirement
+                        </a>
+                      </div>
+                    <% } %>
+                  </div>
+                </div>
+
+                <!-- Approval Form -->
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                  <form class="approval-form" data-event-id="<%= event.id %>">
+                    <div class="mb-4">
+                      <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Requirements/Notes for Officer <span class="text-gray-500 font-normal">(Optional)</span>
+                      </label>
+                      <textarea 
+                        name="requirements" 
+                        rows="4" 
+                        placeholder="List any requirements or notes for the officer (e.g., 'Please provide event poster', 'Ensure venue booking confirmation', etc.)"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600"
+                      ></textarea>
+                    </div>
+                    <div class="flex gap-3">
+                      <button 
+                        type="button" 
+                        onclick="approveEvent(<%= event.id %>, this)"
+                        class="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                        Approve Event
+                      </button>
+                      <button 
+                        type="button" 
+                        onclick="rejectEvent(<%= event.id %>, this)"
+                        class="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <i data-lucide="x-circle" class="w-4 h-4"></i>
+                        Reject Event
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            <% }) %>
+          </div>
+        <% } else { %>
+          <div class="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 text-center">
+            <i data-lucide="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">All Caught Up!</h3>
+            <p class="text-gray-600">There are no pending events awaiting approval.</p>
+          </div>
+        <% } %>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    async function approveEvent(eventId, button) {
+      const form = button.closest('.approval-form');
+      const requirements = form.querySelector('textarea[name="requirements"]').value;
+      
+      if (!confirm('Are you sure you want to approve this event? The officer will be notified.')) {
+        return;
+      }
+      
+      button.disabled = true;
+      button.classList.add('opacity-75', 'cursor-not-allowed');
+      
+      try {
+        const response = await fetch(`/admin/event-approvals/${eventId}/approve`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ requirements })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ Event approved successfully! The officer has been notified.');
+          location.reload();
+        } else {
+          alert('Error: ' + (result.error || 'Failed to approve event'));
+          button.disabled = false;
+          button.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while approving the event.');
+        button.disabled = false;
+        button.classList.remove('opacity-75', 'cursor-not-allowed');
+      }
+    }
+    
+    async function rejectEvent(eventId, button) {
+      const form = button.closest('.approval-form');
+      const reason = prompt('Please provide a reason for rejecting this event:');
+      
+      if (reason === null) {
+        return; // User cancelled
+      }
+      
+      if (!confirm('Are you sure you want to reject this event? The officer will be notified.')) {
+        return;
+      }
+      
+      button.disabled = true;
+      button.classList.add('opacity-75', 'cursor-not-allowed');
+      
+      try {
+        const response = await fetch(`/admin/event-approvals/${eventId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ reason })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('Event rejected. The officer has been notified.');
+          location.reload();
+        } else {
+          alert('Error: ' + (result.error || 'Failed to reject event'));
+          button.disabled = false;
+          button.classList.remove('opacity-75', 'cursor-not-allowed');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while rejecting the event.');
+        button.disabled = false;
+        button.classList.remove('opacity-75', 'cursor-not-allowed');
+      }
+    }
+  </script>
+</body>
+</html>
+

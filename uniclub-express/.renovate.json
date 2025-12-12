@@ -1,0 +1,38 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "matchDepTypes": ["dependencies"],
+      "groupName": "production dependencies",
+      "groupSlug": "prod-deps"
+    },
+    {
+      "matchDepTypes": ["devDependencies"],
+      "groupName": "development dependencies",
+      "groupSlug": "dev-deps"
+    },
+    {
+      "matchPackageNames": ["express", "mysql2", "ejs"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    }
+  ],
+  "schedule": ["before 10am on monday"],
+  "timezone": "America/New_York",
+  "automerge": false,
+  "automergeType": "pr",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "labels": ["dependencies", "renovate"],
+  "assignees": ["security-team"],
+  "reviewers": ["security-team"]
+}
+

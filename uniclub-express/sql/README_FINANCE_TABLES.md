@@ -67,3 +67,9 @@ SHOW TABLES LIKE '%audit_logs%';
 - Tables are safe to create multiple times (uses `CREATE TABLE IF NOT EXISTS`)
 - Foreign keys reference `clubs` and `officers` tables
 
+
+
+
+
+
+

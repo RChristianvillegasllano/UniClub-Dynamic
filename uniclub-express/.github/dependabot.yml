@@ -1,0 +1,40 @@
+# Dependabot Configuration
+# Automatically creates pull requests for dependency updates
+
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "security-team"
+    labels:
+      - "dependencies"
+      - "security"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # Group updates to reduce PR noise
+    groups:
+      production-dependencies:
+        dependency-type: "production"
+      development-dependencies:
+        dependency-type: "development"
+    # Ignore major version updates (review manually)
+    ignore:
+      - dependency-name: "express"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mysql2"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "ejs"
+        update-types: ["version-update:semver-major"]
+    # Security updates are always allowed
+    allow:
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+

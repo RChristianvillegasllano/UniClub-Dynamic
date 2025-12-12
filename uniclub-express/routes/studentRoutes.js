@@ -4,6 +4,15 @@ import bcrypt from "bcryptjs";
 import { body, validationResult } from "express-validator";
 import pool from "../config/db.js";
 import { loginLimiter, csrfProtection } from "../middleware/security.js";
+import { 
+  strictAuthLimiter,
+  recordFailedAttempt,
+  clearFailedAttempts,
+  isAccountLocked,
+  getLockoutTimeRemaining,
+  logSecurityEvent
+} from "../middleware/advancedSecurity.js";
+import { updateEventStatuses } from "../utils/eventStatus.js";
 
 const router = express.Router();
 
@@ -66,6 +75,7 @@ router.get("/login", (req, res) => {
 });
 
 router.post("/login", 
+  strictAuthLimiter,
   loginLimiter,
   body('email').trim().isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').notEmpty().withMessage('Password is required'),
@@ -79,15 +89,29 @@ router.post("/login",
   }
 
   const { email, password } = req.body;
+  
+  // Validate email and password (additional check)
+  if (!email || !password) {
+    return res.render("student/login", {
+      title: "Student Portal | UniClub",
+      error: "Email and password are required",
+    });
+  }
+
+  // Normalize email and get client IP - must be defined before try block
+  // Ensure email is a string before calling toLowerCase
+  const normalizedEmail = (email && typeof email === 'string') ? email.toLowerCase().trim() : '';
+  const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+  
+  // Additional safety check - if normalizedEmail is empty after normalization, reject
+  if (!normalizedEmail) {
+    return res.render("student/login", {
+      title: "Student Portal | UniClub",
+      error: "Invalid email format",
+    });
+  }
 
   try {
-    // Validate email and password (additional check)
-    if (!email || !password) {
-      return res.render("student/login", {
-        title: "Student Portal | UniClub",
-        error: "Email and password are required",
-      });
-    }
 
     // Ensure password column exists
     await pool.query(`ALTER TABLE students ADD COLUMN IF NOT EXISTS password VARCHAR(255)`);
@@ -105,17 +129,20 @@ router.post("/login",
          department,
          program,
          year_level,
-         birthdate
+         birthdate,
+         profile_picture
        FROM students 
        WHERE email = ? 
        LIMIT 1`,
-      [email.toLowerCase()]
+      [normalizedEmail]
     );
 
     const student = rows[0];
     
     // Check if student exists
     if (!student) {
+      recordFailedAttempt(normalizedEmail, clientIP);
+      logSecurityEvent('FAILED_LOGIN', { email: normalizedEmail, reason: 'User not found', ip: clientIP }, req);
       return res.render("student/login", {
         title: "Student Portal | UniClub",
         error: "Invalid email or password",
@@ -124,6 +151,8 @@ router.post("/login",
 
     // Check if password exists (for accounts created before password was added)
     if (!student.password) {
+      recordFailedAttempt(normalizedEmail, clientIP);
+      logSecurityEvent('FAILED_LOGIN', { email: normalizedEmail, reason: 'No password set', ip: clientIP }, req);
       return res.render("student/login", {
         title: "Student Portal | UniClub",
         error: "Account not set up. Please contact support or sign up again.",
@@ -134,11 +163,17 @@ router.post("/login",
     const passwordMatch = await bcrypt.compare(password, student.password);
     
     if (!passwordMatch) {
+      recordFailedAttempt(normalizedEmail, clientIP);
+      logSecurityEvent('FAILED_LOGIN', { email: normalizedEmail, reason: 'Invalid password', ip: clientIP }, req);
       return res.render("student/login", {
         title: "Student Portal | UniClub",
         error: "Invalid email or password",
       });
     }
+    
+    // Clear failed attempts on successful login
+    clearFailedAttempts(normalizedEmail, clientIP);
+    logSecurityEvent('SUCCESSFUL_LOGIN', { email: normalizedEmail, studentId: student.id, ip: clientIP }, req);
 
     // Create session
     req.session.student = {
@@ -152,6 +187,7 @@ router.post("/login",
       program: student.program,
       year_level: student.year_level,
       birthdate: student.birthdate,
+      profile_picture: student.profile_picture || null,
     };
 
     // Save session before redirecting to ensure CSRF secret persists
@@ -175,16 +211,31 @@ router.post("/login",
 });
 
 router.post("/logout", (req, res) => {
-  req.session.student = null;
-  res.redirect("/student/login");
+  // Properly destroy session server-side
+  const sessionId = req.sessionID;
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying student session:", err);
+    } else {
+      console.log(`[LOGOUT] Student session ${sessionId} destroyed`);
+    }
+    // Clear cookie
+    res.clearCookie('sessionId');
+    res.redirect("/student/login");
+  });
 });
 
 router.get("/logout", (req, res) => {
-  req.session.student = null;
+  // Properly destroy session server-side
+  const sessionId = req.sessionID;
   req.session.destroy((err) => {
     if (err) {
       console.error("Error destroying session:", err);
+    } else {
+      console.log(`[LOGOUT] Student session ${sessionId} destroyed`);
     }
+    // Clear cookie
+    res.clearCookie('sessionId');
     res.redirect("/student/login");
   });
 });
@@ -362,10 +413,20 @@ router.post("/signup",
     // Hash password (use trimmed password)
     const hashedPassword = await bcrypt.hash(trimmedPassword, 10);
 
+    // Ensure status column exists
+    try {
+      await pool.query(`ALTER TABLE students ADD COLUMN status VARCHAR(50) DEFAULT 'Active'`);
+    } catch (err) {
+      // Column already exists, ignore error
+      if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+        console.error('Error adding status column:', err);
+      }
+    }
+
     // Insert student into database
     await pool.query(
-      `INSERT INTO students (first_name, last_name, birthdate, studentid, department, program, year_level, email, password, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      `INSERT INTO students (first_name, last_name, birthdate, studentid, department, program, year_level, email, password, status, created_at) 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Active', NOW())`,
       [
         firstNameValidation.value,
         lastNameValidation.value,
@@ -449,7 +510,11 @@ router.get("/dashboard", requireStudent, async (req, res) => {
           COALESCE(e_counts.event_count, 0) as event_count,
           COALESCE(m_counts.member_count, 0) as member_count,
           next_event.name as next_event_name,
-          next_event.date as next_event_date
+          next_event.date as next_event_date,
+          CASE 
+            WHEN membership.student_id IS NOT NULL AND (membership.status = 'approved' OR membership.status = 'Approved') THEN 1
+            ELSE 0
+          END as is_member
         FROM clubs c
         LEFT JOIN (
           SELECT club_id, COUNT(*) as officer_count
@@ -474,6 +539,12 @@ router.get("/dashboard", requireStudent, async (req, res) => {
           ORDER BY date ASC
           LIMIT 1
         ) next_event ON next_event.club_id = c.id
+        LEFT JOIN (
+          SELECT student_id, club_id, status
+          FROM membership_applications
+          WHERE student_id = ?
+          ORDER BY created_at DESC
+        ) membership ON membership.club_id = c.id
         WHERE (c.status = 'Active' OR c.status IS NULL)
         AND (
           -- Show clubs from student's department (if department is provided and matches)
@@ -495,6 +566,7 @@ router.get("/dashboard", requireStudent, async (req, res) => {
         )
         ORDER BY c.name ASC
       `, [
+        studentId,
         hasDepartment ? 1 : 0, 
         studentDeptLower,
         hasDepartment ? 1 : 0,
@@ -519,32 +591,62 @@ router.get("/dashboard", requireStudent, async (req, res) => {
     const clubs = clubsResult.rows || [];
     console.log("Total clubs to render:", clubs.length);
     
-    // Get upcoming events with club names
+    // Get upcoming events with club names (exclude pending/rejected events)
     const eventsResult = await pool.query(
       `SELECT 
         e.id,
         e.name,
         e.date,
+        e.end_date,
         e.location,
         e.description,
         c.name as club_name,
-        c.category as club_category
+        c.category as club_category,
+        -- Use database status if it's a valid final status, otherwise calculate based on dates
+        CASE 
+          WHEN e.status IN ('Ongoing', 'ongoing', 'Completed', 'completed', 'Cancelled', 'cancelled') THEN e.status
+          WHEN e.date IS NULL THEN 'Scheduled'
+          WHEN DATE(e.date) > CURDATE() THEN 'Scheduled'
+          WHEN DATE(e.date) = CURDATE() OR (DATE(e.date) <= CURDATE() AND COALESCE(DATE(e.end_date), DATE(e.date)) >= CURDATE()) THEN 'Ongoing'
+          WHEN COALESCE(DATE(e.end_date), DATE(e.date)) < CURDATE() THEN 'Completed'
+          ELSE COALESCE(e.status, 'Scheduled')
+        END AS status
        FROM events e
        LEFT JOIN clubs c ON e.club_id = c.id
-       WHERE e.date >= CURRENT_DATE 
+       WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+         AND COALESCE(e.status, 'pending_approval') != 'rejected'
+         AND COALESCE(e.status, '') NOT IN ('Completed', 'completed', 'Cancelled', 'cancelled')
+         AND (e.posted_to_students = 1 OR e.posted_to_students IS NULL)
+         -- Exclude events that have ended (show only upcoming and ongoing events)
+         AND (
+           -- Event is upcoming (date in future)
+           DATE(e.date) > CURDATE()
+           OR
+           -- Event is ongoing (date is today or past, but end_date is today or future)
+           (DATE(e.date) <= CURDATE() AND (e.end_date IS NULL OR DATE(e.end_date) >= CURDATE()))
+         )
        ORDER BY e.date ASC 
        LIMIT 10`
     ).catch(() => ({ rows: [] }));
     
-    const events = (eventsResult.rows || []).map(row => ({
-      id: row.id,
-      name: row.name,
-      date: row.date ? new Date(row.date).toLocaleDateString() : 'TBA',
-      location: row.location || 'TBA',
-      description: row.description || '',
-      club_name: row.club_name || 'Unknown Club',
-      club_category: row.club_category || 'General'
-    }));
+    const events = (eventsResult.rows || []).map(row => {
+      // Normalize status
+      let status = row.status || 'Scheduled';
+      if (status) {
+        status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      }
+      
+      return {
+        id: row.id,
+        name: row.name,
+        date: row.date ? new Date(row.date).toLocaleDateString() : 'TBA',
+        location: row.location || 'TBA',
+        description: row.description || '',
+        club_name: row.club_name || 'Unknown Club',
+        club_category: row.club_category || 'General',
+        status: status
+      };
+    });
 
     // Get statistics
     const statsResult = await pool.query(`
@@ -965,6 +1067,12 @@ router.get("/discover", requireStudent, async (req, res) => {
           ORDER BY date ASC
           LIMIT 1
         ) next_event ON next_event.club_id = c.id
+        LEFT JOIN (
+          SELECT student_id, club_id, status
+          FROM membership_applications
+          WHERE student_id = ?
+          ORDER BY created_at DESC
+        ) membership ON membership.club_id = c.id
         WHERE (c.status = 'Active' OR c.status IS NULL)
         AND (
           -- Show clubs from student's department (if department is provided and matches)
@@ -986,6 +1094,7 @@ router.get("/discover", requireStudent, async (req, res) => {
         )
         ORDER BY c.name ASC
       `, [
+        studentId,
         hasDepartment ? 1 : 0, 
         studentDeptLower,
         hasDepartment ? 1 : 0,
@@ -1213,7 +1322,13 @@ router.get("/club/:id", requireStudent, async (req, res) => {
         next_event.name as next_event_name,
         next_event.date as next_event_date,
         next_event.location as next_event_location,
-        next_event.description as next_event_description
+        next_event.description as next_event_description,
+        next_event.next_event_id,
+        CASE 
+          WHEN next_event_rsvp.student_id IS NOT NULL AND (next_event_rsvp.status = 'going' OR next_event_rsvp.status IS NULL) THEN 'going'
+          WHEN next_event_rsvp.student_id IS NOT NULL AND next_event_rsvp.status = 'interested' THEN 'interested'
+          ELSE 'not_responded'
+        END as next_event_rsvp_status
       FROM clubs c
       LEFT JOIN (
         SELECT club_id, COUNT(*) as member_count
@@ -1224,18 +1339,39 @@ router.get("/club/:id", requireStudent, async (req, res) => {
       LEFT JOIN (
         SELECT club_id, COUNT(*) as event_count
         FROM events
-        WHERE date >= CURRENT_DATE
+        WHERE COALESCE(status, 'pending_approval') != 'pending_approval'
+          AND COALESCE(status, 'pending_approval') != 'rejected'
+          AND COALESCE(status, '') NOT IN ('Completed', 'completed', 'Cancelled', 'cancelled')
+          AND (
+            -- Event is upcoming (date in future)
+            DATE(date) > CURDATE()
+            OR
+            -- Event is ongoing (date is today or past, but end_date is today or future)
+            (DATE(date) <= CURDATE() AND (end_date IS NULL OR DATE(end_date) >= CURDATE()))
+          )
         GROUP BY club_id
       ) e_counts ON e_counts.club_id = c.id
       LEFT JOIN (
-        SELECT club_id, name, date, location, description
+        SELECT club_id, id as next_event_id, name, date, location, description
         FROM events
-        WHERE date >= CURRENT_DATE
+        WHERE COALESCE(status, 'pending_approval') != 'pending_approval'
+          AND COALESCE(status, 'pending_approval') != 'rejected'
+          AND COALESCE(status, '') NOT IN ('Completed', 'completed', 'Cancelled', 'cancelled')
+          AND (posted_to_students = 1 OR posted_to_students IS NULL)
+          -- Exclude events that have ended (show only upcoming and ongoing events)
+          AND (
+            -- Event is upcoming (date in future)
+            DATE(date) > CURDATE()
+            OR
+            -- Event is ongoing (date is today or past, but end_date is today or future)
+            (DATE(date) <= CURDATE() AND (end_date IS NULL OR DATE(end_date) >= CURDATE()))
+          )
         ORDER BY date ASC
         LIMIT 1
       ) next_event ON next_event.club_id = c.id
+      LEFT JOIN event_attendance next_event_rsvp ON next_event_rsvp.event_id = next_event.next_event_id AND next_event_rsvp.student_id = ?
       WHERE c.id = ? AND (c.status = 'Active' OR c.status IS NULL)
-    `, [clubId]);
+    `, [studentId, clubId]);
 
     if (!clubResult.rows || clubResult.rows.length === 0) {
       return res.status(404).render("errors/404", { title: "Club Not Found" });
@@ -1243,22 +1379,60 @@ router.get("/club/:id", requireStudent, async (req, res) => {
 
     const club = clubResult.rows[0];
 
-    // Get upcoming events
+    // Get upcoming events with RSVP status
     const eventsResult = await pool.query(`
       SELECT 
-        id,
-        name as title,
-        date,
-        location,
-        description,
-        created_at
-      FROM events
-      WHERE club_id = ? AND (date >= CURRENT_DATE OR date IS NULL)
-      ORDER BY date ASC
+        e.id,
+        e.name as title,
+        e.date,
+        e.end_date,
+        e.location,
+        e.description,
+        e.created_at,
+        CASE 
+          WHEN ea.student_id IS NOT NULL AND (ea.status = 'going' OR ea.status IS NULL) THEN 'going'
+          WHEN ea.student_id IS NOT NULL AND ea.status = 'interested' THEN 'interested'
+          ELSE 'not_responded'
+        END as rsvp_status,
+        -- Use database status if it's a valid final status, otherwise calculate based on dates
+        CASE 
+          WHEN e.status IN ('Ongoing', 'ongoing', 'Completed', 'completed', 'Cancelled', 'cancelled') THEN e.status
+          WHEN e.date IS NULL THEN 'Scheduled'
+          WHEN DATE(e.date) > CURDATE() THEN 'Scheduled'
+          WHEN DATE(e.date) = CURDATE() OR (DATE(e.date) <= CURDATE() AND COALESCE(DATE(e.end_date), DATE(e.date)) >= CURDATE()) THEN 'Ongoing'
+          WHEN COALESCE(DATE(e.end_date), DATE(e.date)) < CURDATE() THEN 'Completed'
+          ELSE COALESCE(e.status, 'Scheduled')
+        END AS status
+      FROM events e
+      LEFT JOIN event_attendance ea ON ea.event_id = e.id AND ea.student_id = ?
+      WHERE e.club_id = ? 
+        AND COALESCE(e.status, 'pending_approval') != 'pending_approval'
+        AND COALESCE(e.status, 'pending_approval') != 'rejected'
+        AND COALESCE(e.status, '') NOT IN ('Completed', 'completed', 'Cancelled', 'cancelled')
+        AND (e.posted_to_students = 1 OR e.posted_to_students IS NULL)
+        -- Exclude events that have ended (show only upcoming and ongoing events)
+        AND (
+          -- Event is upcoming (date in future)
+          DATE(e.date) > CURDATE()
+          OR
+          -- Event is ongoing (date is today or past, but end_date is today or future)
+          (DATE(e.date) <= CURDATE() AND (e.end_date IS NULL OR DATE(e.end_date) >= CURDATE()))
+        )
+      ORDER BY e.date ASC
       LIMIT 10
-    `, [clubId]);
+    `, [studentId, clubId]);
 
-    const events = eventsResult.rows || [];
+    const events = (eventsResult.rows || []).map(row => {
+      // Normalize status
+      let status = row.status || 'Scheduled';
+      if (status) {
+        status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      }
+      return {
+        ...row,
+        status: status
+      };
+    });
 
     // Get officers
     const officersResult = await pool.query(`
@@ -1270,7 +1444,8 @@ router.get("/club/:id", requireStudent, async (req, res) => {
         role as position,
         department,
         program,
-        studentid
+        studentid,
+        profile_picture
       FROM officers
       WHERE club_id = ? AND (status = 'Active' OR status IS NULL)
       ORDER BY 
@@ -1457,15 +1632,25 @@ router.get("/my-clubs", requireStudent, async (req, res) => {
       }
 
       // Get points earned for this student in this club
+      // Note: student_points table doesn't have event_id or club_id columns
+      // We'll try to match points by source and description containing club name
       try {
         const pointsResult = await pool.query(`
           SELECT COALESCE(SUM(sp.points), 0) as total
           FROM student_points sp
-          INNER JOIN events e ON sp.event_id = e.id
-          WHERE sp.student_id = ? AND e.club_id = ?
-        `, [studentId, club.id]).catch(() => ({ rows: [{ total: 0 }] }));
+          WHERE sp.student_id = ?
+            AND (
+              (sp.source = 'club_join' AND sp.description LIKE ?)
+              OR (sp.source = 'event_attendance' AND EXISTS (
+                SELECT 1 FROM event_attendance ea
+                INNER JOIN events e ON ea.event_id = e.id
+                WHERE ea.student_id = ? AND e.club_id = ?
+              ))
+            )
+        `, [studentId, `%${club.name}%`, studentId, club.id]).catch(() => ({ rows: [{ total: 0 }] }));
         club.points_earned = Number(pointsResult.rows[0]?.total || 0);
       } catch (e) {
+        console.error('Error calculating club points:', e);
         club.points_earned = 0;
       }
 
@@ -1995,6 +2180,9 @@ router.get("/messages", requireStudent, async (req, res) => {
 
 // Events Page
 router.get("/events", requireStudent, async (req, res) => {
+  // Auto-update event statuses before loading events
+  await updateEventStatuses();
+  
   try {
     const student = req.session.student;
     const studentId = student?.id;
@@ -2011,6 +2199,7 @@ router.get("/events", requireStudent, async (req, res) => {
           e.id,
           e.name,
           e.date,
+          e.end_date,
           e.location,
           e.description,
           c.id as club_id,
@@ -2023,7 +2212,17 @@ router.get("/events", requireStudent, async (req, res) => {
             WHEN ea.student_id IS NOT NULL AND (ea.status = 'going' OR ea.status IS NULL) THEN 'going'
             WHEN ea.student_id IS NOT NULL AND ea.status = 'interested' THEN 'interested'
             ELSE 'not_responded'
-          END as rsvp_status
+          END as rsvp_status,
+          COALESCE(ea.attendance_status, NULL) as attendance_status,
+          -- Use database status if it's a valid final status, otherwise calculate based on dates
+          CASE 
+            WHEN e.status IN ('Ongoing', 'ongoing', 'Completed', 'completed', 'Cancelled', 'cancelled') THEN e.status
+            WHEN e.date IS NULL THEN 'Scheduled'
+            WHEN DATE(e.date) > CURDATE() THEN 'Scheduled'
+            WHEN DATE(e.date) = CURDATE() OR (DATE(e.date) <= CURDATE() AND COALESCE(DATE(e.end_date), DATE(e.date)) >= CURDATE()) THEN 'Ongoing'
+            WHEN COALESCE(DATE(e.end_date), DATE(e.date)) < CURDATE() THEN 'Completed'
+            ELSE COALESCE(e.status, 'Scheduled')
+          END AS status
         FROM events e
         LEFT JOIN clubs c ON e.club_id = c.id
         LEFT JOIN (
@@ -2039,6 +2238,18 @@ router.get("/events", requireStudent, async (req, res) => {
           GROUP BY event_id
         ) interested_counts ON interested_counts.event_id = e.id
         LEFT JOIN event_attendance ea ON ea.event_id = e.id AND ea.student_id = ?
+        WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+          AND COALESCE(e.status, 'pending_approval') != 'rejected'
+          AND COALESCE(e.status, '') NOT IN ('Completed', 'completed', 'Cancelled', 'cancelled')
+          AND (e.posted_to_students = 1 OR e.posted_to_students IS NULL)
+          -- Exclude events that have ended (show only upcoming and ongoing events)
+          AND (
+            -- Event is upcoming (date in future)
+            DATE(e.date) > CURDATE()
+            OR
+            -- Event is ongoing (date is today or past, but end_date is today or future)
+            (DATE(e.date) <= CURDATE() AND (e.end_date IS NULL OR DATE(e.end_date) >= CURDATE()))
+          )
         ORDER BY 
           CASE WHEN e.date >= CURRENT_DATE THEN 0 ELSE 1 END,
           e.date ASC
@@ -2052,6 +2263,7 @@ router.get("/events", requireStudent, async (req, res) => {
             e.id,
             e.name,
             e.date,
+            e.end_date,
             e.location,
             e.description,
             c.id as club_id,
@@ -2060,9 +2272,30 @@ router.get("/events", requireStudent, async (req, res) => {
             c.photo as club_photo,
             0 as going_count,
             0 as interested_count,
-            'not_responded' as rsvp_status
+            'not_responded' as rsvp_status,
+            -- Use database status if it's a valid final status, otherwise calculate based on dates
+            CASE 
+              WHEN e.status IN ('Ongoing', 'ongoing', 'Completed', 'completed', 'Cancelled', 'cancelled') THEN e.status
+              WHEN e.date IS NULL THEN 'Scheduled'
+              WHEN DATE(e.date) > CURDATE() THEN 'Scheduled'
+              WHEN DATE(e.date) = CURDATE() OR (DATE(e.date) <= CURDATE() AND COALESCE(DATE(e.end_date), DATE(e.date)) >= CURDATE()) THEN 'Ongoing'
+              WHEN COALESCE(DATE(e.end_date), DATE(e.date)) < CURDATE() THEN 'Completed'
+              ELSE COALESCE(e.status, 'Scheduled')
+            END AS status
           FROM events e
           LEFT JOIN clubs c ON e.club_id = c.id
+          WHERE COALESCE(e.status, 'pending_approval') != 'pending_approval'
+            AND COALESCE(e.status, 'pending_approval') != 'rejected'
+            AND COALESCE(e.status, '') NOT IN ('Completed', 'completed', 'Cancelled', 'cancelled')
+            AND (e.posted_to_students = 1 OR e.posted_to_students IS NULL)
+            -- Exclude events that have ended (show only upcoming and ongoing events)
+            AND (
+              -- Event is upcoming (date in future)
+              DATE(e.date) > CURDATE()
+              OR
+              -- Event is ongoing (date is today or past, but end_date is today or future)
+              (DATE(e.date) <= CURDATE() AND (e.end_date IS NULL OR DATE(e.end_date) >= CURDATE()))
+            )
           ORDER BY 
             CASE WHEN e.date >= CURRENT_DATE THEN 0 ELSE 1 END,
             e.date ASC
@@ -2299,6 +2532,246 @@ router.post("/clubs/join", requireStudent, async (req, res) => {
   }
 });
 
+// Leave Club
+router.post("/clubs/leave", requireStudent, async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  
+  try {
+    const student = req.session.student;
+    const studentId = student?.id;
+    const { club_id } = req.body;
+
+    if (!studentId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "You must be logged in to leave a club" 
+      });
+    }
+
+    if (!club_id || isNaN(parseInt(club_id))) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid club ID" 
+      });
+    }
+
+    const clubId = parseInt(club_id);
+
+    // Verify student is a member
+    const membershipResult = await pool.query(`
+      SELECT id, status
+      FROM membership_applications
+      WHERE student_id = ? AND club_id = ?
+      ORDER BY created_at DESC
+      LIMIT 1
+    `, [studentId, clubId]);
+
+    if (membershipResult.rows.length === 0 || 
+        (membershipResult.rows[0].status !== 'approved' && membershipResult.rows[0].status !== 'Approved')) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "You are not a member of this club" 
+      });
+    }
+
+    // Get club and president info
+    const clubResult = await pool.query(`
+      SELECT c.id, c.name, o.id as president_id, o.first_name, o.last_name
+      FROM clubs c
+      LEFT JOIN officers o ON o.club_id = c.id AND LOWER(TRIM(o.role)) LIKE '%president%'
+      WHERE c.id = ?
+      LIMIT 1
+    `, [clubId]);
+
+    if (clubResult.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Club not found" 
+      });
+    }
+
+    const club = clubResult.rows[0];
+    const presidentId = club.president_id;
+    const studentName = `${student.first_name || ''} ${student.last_name || ''}`.trim() || student.email || 'A student';
+
+    // Update membership status to 'left' or delete the record
+    // We'll update status to 'left' to keep a record
+    await pool.query(`
+      UPDATE membership_applications
+      SET status = 'left'
+      WHERE student_id = ? AND club_id = ?
+    `, [studentId, clubId]);
+
+    // Send notification message to president if president exists
+    if (presidentId) {
+      try {
+        // Ensure messages table has modern columns
+        const columnCheck = await pool.query(`
+          SELECT COLUMN_NAME 
+          FROM INFORMATION_SCHEMA.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+          AND TABLE_NAME = 'messages' 
+          AND COLUMN_NAME IN ('sender_id', 'receiver_id', 'sender_type', 'receiver_type')
+        `).catch(() => ({ rows: [] }));
+
+        const foundColumns = columnCheck.rows.map(r => r.COLUMN_NAME);
+        const hasModernColumns = ['sender_id', 'receiver_id', 'sender_type', 'receiver_type'].every(col => foundColumns.includes(col));
+
+        if (hasModernColumns) {
+          await pool.query(`
+            INSERT INTO messages (sender_id, receiver_id, sender_type, receiver_type, sender_name, subject, content, created_at)
+            VALUES (?, ?, 'student', 'officer', ?, ?, ?, NOW())
+          `, [
+            studentId,
+            presidentId,
+            studentName,
+            `Student Left ${club.name}`,
+            `${studentName} has left ${club.name}. They are no longer a member of the club.`
+          ]);
+        } else {
+          // Fallback to old message structure
+          await pool.query(`
+            INSERT INTO messages (sender_name, sender_email, subject, content, created_at)
+            VALUES (?, ?, ?, ?, NOW())
+          `, [
+            studentName,
+            student.email || '',
+            `Student Left ${club.name}`,
+            `${studentName} has left ${club.name}. They are no longer a member of the club.`
+          ]);
+        }
+      } catch (msgError) {
+        console.error("Error sending notification to president:", msgError);
+        // Don't fail the leave request if message sending fails
+      }
+    }
+
+    console.log(`[Leave Club] Student ${studentId} (${studentName}) left club ${clubId} (${club.name})`);
+
+    return res.json({ 
+      success: true, 
+      message: `You have successfully left ${club.name}. The club president has been notified.` 
+    });
+  } catch (error) {
+    console.error("Error leaving club:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to leave the club. Please try again." 
+    });
+  }
+});
+
+// RSVP to Event
+router.post("/events/:id/rsvp", requireStudent, async (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  
+  try {
+    const student = req.session.student;
+    const studentId = student?.id;
+    
+    if (!studentId) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "You must be logged in to RSVP to events" 
+      });
+    }
+
+    const eventId = parseInt(req.params.id);
+    const { action, status } = req.body; // action: 'going', 'interested', 'cancel'
+
+    if (!eventId || isNaN(eventId)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Invalid event ID" 
+      });
+    }
+
+    // Verify event exists and is posted
+    const { rows: eventRows } = await pool.query(
+      `SELECT id, status, posted_to_students 
+       FROM events 
+       WHERE id = ? 
+         AND COALESCE(status, 'pending_approval') != 'pending_approval'
+         AND COALESCE(status, 'pending_approval') != 'rejected'
+         AND (posted_to_students = 1 OR posted_to_students IS NULL)`,
+      [eventId]
+    );
+
+    if (eventRows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Event not found or not available for RSVP" 
+      });
+    }
+
+    // Determine RSVP status
+    let rsvpStatus = null;
+    if (action === 'cancel') {
+      rsvpStatus = null; // Remove RSVP
+    } else if (status === 'interested') {
+      rsvpStatus = 'interested';
+    } else {
+      rsvpStatus = 'going'; // Default to 'going'
+    }
+
+    // Ensure event_attendance table exists
+    try {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS event_attendance (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          event_id INT NOT NULL,
+          student_id INT NOT NULL,
+          status VARCHAR(50) DEFAULT 'going',
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          UNIQUE KEY unique_event_student (event_id, student_id),
+          INDEX idx_event_id (event_id),
+          INDEX idx_student_id (student_id)
+        )
+      `);
+    } catch (tableError) {
+      // Table might already exist, continue
+      console.log("Event attendance table check:", tableError.message);
+    }
+
+    if (rsvpStatus === null) {
+      // Remove RSVP
+      await pool.query(
+        `DELETE FROM event_attendance WHERE event_id = ? AND student_id = ?`,
+        [eventId, studentId]
+      );
+      
+      return res.json({ 
+        success: true, 
+        message: "RSVP removed successfully",
+        rsvp_status: 'not_responded'
+      });
+    } else {
+      // Insert or update RSVP
+      await pool.query(
+        `INSERT INTO event_attendance (event_id, student_id, status, created_at, updated_at)
+         VALUES (?, ?, ?, NOW(), NOW())
+         ON DUPLICATE KEY UPDATE 
+           status = VALUES(status),
+           updated_at = NOW()`,
+        [eventId, studentId, rsvpStatus]
+      );
+      
+      return res.json({ 
+        success: true, 
+        message: `You are now ${rsvpStatus === 'going' ? 'going' : 'interested'} in this event`,
+        rsvp_status: rsvpStatus
+      });
+    }
+  } catch (error) {
+    console.error("Error processing RSVP:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "An error occurred while processing your RSVP. Please try again." 
+    });
+  }
+});
+
 // Leave Club - Remove Membership
 router.post("/clubs/leave", requireStudent, async (req, res) => {
   res.setHeader('Content-Type', 'application/json');
@@ -2388,6 +2861,25 @@ router.get("/messages", requireStudent, async (req, res) => {
       return res.redirect("/student/login");
     }
 
+    // Ensure messages table has modern columns
+    const columnsToAdd = [
+      { name: 'sender_id', def: 'INT' },
+      { name: 'receiver_id', def: 'INT' },
+      { name: 'sender_type', def: "VARCHAR(20) DEFAULT 'student'" },
+      { name: 'receiver_type', def: "VARCHAR(20) DEFAULT 'officer'" }
+    ];
+
+    for (const col of columnsToAdd) {
+      try {
+        await pool.query(`ALTER TABLE messages ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        // Ignore duplicate column errors
+        if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+          console.warn(`Warning: Could not add column ${col.name}:`, err.message);
+        }
+      }
+    }
+
     const conversationId = req.query.conversation;
 
     // Get clubs the student is a member of
@@ -2401,8 +2893,22 @@ router.get("/messages", requireStudent, async (req, res) => {
     const myClubIds = myClubsResult.rows.map(c => c.id);
     const clubs = myClubsResult.rows || [];
 
-    // Get conversations (officers from student's clubs)
+    // Get conversations (officers from student's clubs + admin)
     let conversations = [];
+    
+    // Add Admin as a conversation (special ID: -1 or 'admin')
+    const adminConversation = {
+      id: 'admin',
+      name: 'Admin',
+      role: 'Administrator',
+      club_id: null,
+      club_name: 'UniClub System',
+      photo: null,
+      is_online: 1,
+      type: 'admin'
+    };
+    
+    // Get officers from student's clubs
     if (myClubIds.length > 0) {
       const conversationsResult = await pool.query(`
         SELECT 
@@ -2422,7 +2928,7 @@ router.get("/messages", requireStudent, async (req, res) => {
       `, myClubIds).catch(() => ({ rows: [] }));
 
       // Get last message and unread count for each conversation
-      // First check if messages table has sender_id and receiver_id columns
+      // Check if messages table has all modern columns
       const columnCheck = await pool.query(`
         SELECT COLUMN_NAME 
         FROM INFORMATION_SCHEMA.COLUMNS 
@@ -2431,9 +2937,37 @@ router.get("/messages", requireStudent, async (req, res) => {
         AND COLUMN_NAME IN ('sender_id', 'receiver_id', 'sender_type', 'receiver_type')
       `).catch(() => ({ rows: [] }));
 
-      const hasModernColumns = columnCheck.rows.some(r => 
-        ['sender_id', 'receiver_id', 'sender_type', 'receiver_type'].includes(r.COLUMN_NAME)
-      );
+      const foundColumns = columnCheck.rows.map(r => r.COLUMN_NAME);
+      const hasModernColumns = ['sender_id', 'receiver_id', 'sender_type', 'receiver_type'].every(col => foundColumns.includes(col));
+      
+      // Add admin conversation with last message and unread count
+      if (hasModernColumns) {
+        // Get admin messages (using recipient_id/recipient_type for old admin messages, or sender_type='admin')
+        const adminLastMessageResult = await pool.query(`
+          SELECT content, created_at
+          FROM messages
+          WHERE (
+            (receiver_id = ? AND receiver_type = 'student' AND (sender_type = 'admin' OR sender_name = 'Admin'))
+            OR (sender_id = ? AND sender_type = 'student' AND receiver_type = 'admin')
+          )
+          ORDER BY created_at DESC
+          LIMIT 1
+        `, [studentId, studentId]).catch(() => ({ rows: [] }));
+        
+        adminConversation.last_message = adminLastMessageResult.rows[0]?.content || null;
+        adminConversation.last_message_time = adminLastMessageResult.rows[0]?.created_at || null;
+        
+        // Count unread admin messages
+        const adminUnreadResult = await pool.query(`
+          SELECT COUNT(*) as count
+          FROM messages
+          WHERE receiver_id = ? AND receiver_type = 'student'
+          AND (sender_type = 'admin' OR sender_name = 'Admin')
+          AND (\`read\` = 0 OR \`read\` IS NULL)
+        `, [studentId]).catch(() => ({ rows: [{ count: 0 }] }));
+        
+        adminConversation.unread_count = Number(adminUnreadResult.rows[0]?.count || 0);
+      }
 
       for (const conv of conversationsResult.rows) {
         let lastMessage = null;
@@ -2446,6 +2980,7 @@ router.get("/messages", requireStudent, async (req, res) => {
             FROM messages
             WHERE ((sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?))
             AND (sender_type = 'student' OR sender_type = 'officer')
+            AND (receiver_type = 'student' OR receiver_type = 'officer')
             ORDER BY created_at DESC
             LIMIT 1
           `, [studentId, conv.id, conv.id, studentId]).catch(() => ({ rows: [] }));
@@ -2485,19 +3020,23 @@ router.get("/messages", requireStudent, async (req, res) => {
           club_name: conv.club_name,
           photo: conv.photo || conv.club_photo,
           is_online: conv.is_online,
+          type: 'officer',
           last_message: lastMessage ? lastMessage.content : null,
           last_message_time: lastMessage ? lastMessage.created_at : null,
           unread_count: unreadCount
         });
       }
     }
+    
+    // Add admin at the beginning of conversations
+    conversations.unshift(adminConversation);
 
     // Get active conversation and its messages
     let activeConversation = null;
     let activeMessages = [];
 
     if (conversationId) {
-      activeConversation = conversations.find(c => c.id == conversationId);
+      activeConversation = conversations.find(c => String(c.id) === String(conversationId));
       
       if (activeConversation) {
         // Check if messages table has modern columns
@@ -2506,48 +3045,93 @@ router.get("/messages", requireStudent, async (req, res) => {
           FROM INFORMATION_SCHEMA.COLUMNS 
           WHERE TABLE_SCHEMA = DATABASE() 
           AND TABLE_NAME = 'messages' 
-          AND COLUMN_NAME IN ('sender_id', 'receiver_id')
+          AND COLUMN_NAME IN ('sender_id', 'receiver_id', 'sender_type', 'receiver_type')
         `).catch(() => ({ rows: [] }));
 
-        const hasModernColumns = columnCheck.rows.some(r => 
-          ['sender_id', 'receiver_id'].includes(r.COLUMN_NAME)
-        );
+        const foundColumns = columnCheck.rows.map(r => r.COLUMN_NAME);
+        const hasModernColumns = ['sender_id', 'receiver_id', 'sender_type', 'receiver_type'].every(col => foundColumns.includes(col));
 
         if (hasModernColumns) {
-          // Get all messages between student and officer
-          const messagesResult = await pool.query(`
-            SELECT 
-              m.id,
-              m.content,
-              m.sender_id,
-              m.receiver_id,
-              m.created_at,
-              CASE 
-                WHEN m.sender_id = ? AND m.sender_type = 'student' THEN CONCAT(s.first_name, ' ', s.last_name)
-                WHEN m.sender_id = ? AND m.sender_type = 'officer' THEN CONCAT(o.first_name, ' ', o.last_name)
-                ELSE 'Unknown'
-              END as sender_name
-            FROM messages m
-            LEFT JOIN students s ON s.id = m.sender_id AND m.sender_type = 'student'
-            LEFT JOIN officers o ON o.id = m.sender_id AND m.sender_type = 'officer'
-            WHERE ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
-            AND (m.sender_type = 'student' OR m.sender_type = 'officer')
-            ORDER BY m.created_at ASC
-          `, [studentId, conversationId, studentId, conversationId, conversationId, studentId]).catch(() => ({ rows: [] }));
+          if (activeConversation.type === 'admin') {
+            // Get all messages between student and admin
+            const messagesResult = await pool.query(`
+              SELECT 
+                m.id,
+                m.content,
+                m.sender_id,
+                m.receiver_id,
+                m.sender_type,
+                m.receiver_type,
+                m.sender_name,
+                m.created_at,
+                CASE 
+                  WHEN m.sender_type = 'student' THEN CONCAT(s.first_name, ' ', s.last_name)
+                  WHEN m.sender_type = 'admin' THEN COALESCE(m.sender_name, 'Admin')
+                  ELSE 'Unknown'
+                END as sender_name_display
+              FROM messages m
+              LEFT JOIN students s ON s.id = m.sender_id AND m.sender_type = 'student'
+              WHERE (
+                (m.receiver_id = ? AND m.receiver_type = 'student' AND (m.sender_type = 'admin' OR m.sender_name = 'Admin'))
+                OR (m.sender_id = ? AND m.sender_type = 'student' AND m.receiver_type = 'admin')
+              )
+              ORDER BY m.created_at ASC
+            `, [studentId, studentId]).catch(() => ({ rows: [] }));
 
-          activeMessages = messagesResult.rows.map(msg => ({
-            ...msg,
-            sender_id: msg.sender_id
-          }));
+            activeMessages = messagesResult.rows.map(msg => ({
+              ...msg,
+              is_student: msg.sender_type === 'student',
+              is_admin: msg.sender_type === 'admin' || msg.sender_name === 'Admin'
+            }));
 
-          // Mark messages as read
-          await pool.query(`
-            UPDATE messages
-            SET \`read\` = 1
-            WHERE sender_id = ? AND receiver_id = ? 
-            AND sender_type = 'officer' AND receiver_type = 'student'
-            AND (\`read\` = 0 OR \`read\` IS NULL)
-          `, [conversationId, studentId]).catch(() => {});
+            // Mark admin messages as read
+            await pool.query(`
+              UPDATE messages
+              SET \`read\` = 1
+              WHERE receiver_id = ? AND receiver_type = 'student'
+              AND (sender_type = 'admin' OR sender_name = 'Admin')
+              AND (\`read\` = 0 OR \`read\` IS NULL)
+            `, [studentId]).catch(() => {});
+          } else {
+            // Get all messages between student and officer
+            const messagesResult = await pool.query(`
+              SELECT 
+                m.id,
+                m.content,
+                m.sender_id,
+                m.receiver_id,
+                m.sender_type,
+                m.receiver_type,
+                m.created_at,
+                CASE 
+                  WHEN m.sender_id = ? AND m.sender_type = 'student' THEN CONCAT(s.first_name, ' ', s.last_name)
+                  WHEN m.sender_id = ? AND m.sender_type = 'officer' THEN CONCAT(o.first_name, ' ', o.last_name)
+                  ELSE 'Unknown'
+                END as sender_name
+              FROM messages m
+              LEFT JOIN students s ON s.id = m.sender_id AND m.sender_type = 'student'
+              LEFT JOIN officers o ON o.id = m.sender_id AND m.sender_type = 'officer'
+              WHERE ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
+              AND (m.sender_type = 'student' OR m.sender_type = 'officer')
+              AND (m.receiver_type = 'student' OR m.receiver_type = 'officer')
+              ORDER BY m.created_at ASC
+            `, [studentId, conversationId, studentId, conversationId, conversationId, studentId]).catch(() => ({ rows: [] }));
+
+            activeMessages = messagesResult.rows.map(msg => ({
+              ...msg,
+              is_student: msg.sender_type === 'student',
+              is_officer: msg.sender_type === 'officer'
+            }));
+
+            // Mark messages as read
+            await pool.query(`
+              UPDATE messages
+              SET \`read\` = 1
+              WHERE sender_id = ? AND receiver_id = ? 
+              AND sender_type = 'officer' AND receiver_type = 'student'
+              AND (\`read\` = 0 OR \`read\` IS NULL)
+            `, [conversationId, studentId]).catch(() => {});
+          }
         } else {
           // Fallback: return empty messages for now (table structure needs to be updated)
           activeMessages = [];
@@ -2566,7 +3150,7 @@ router.get("/messages", requireStudent, async (req, res) => {
     
     const announcements = announcementsResult.rows || [];
 
-    // Get unread messages count
+    // Get unread messages count (from both officers and admin)
     let unreadMessagesCount = 0;
     try {
       const columnCheck = await pool.query(`
@@ -2586,8 +3170,8 @@ router.get("/messages", requireStudent, async (req, res) => {
         `, [studentId]).catch(() => ({ rows: [{ count: 0 }] }));
         unreadMessagesCount = Number(unreadResult.rows[0]?.count || 0);
       } else {
-        // Count unread from conversations
-        unreadMessagesCount = conversations.reduce((sum, conv) => sum + conv.unread_count, 0);
+        // Count unread from conversations (includes admin)
+        unreadMessagesCount = conversations.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
       }
     } catch (e) {
       unreadMessagesCount = 0;
@@ -2617,36 +3201,51 @@ router.post("/messages/send", requireStudent, async (req, res) => {
     const studentId = student?.id;
     const { conversation_id, message } = req.body;
 
-    if (!studentId || !conversation_id || !message) {
+    if (!studentId || !conversation_id || !message || !message.trim()) {
       return res.status(400).json({ success: false, error: "Missing required fields" });
     }
 
-    // Check if messages table has modern columns
-    const columnCheck = await pool.query(`
-      SELECT COLUMN_NAME 
-      FROM INFORMATION_SCHEMA.COLUMNS 
-      WHERE TABLE_SCHEMA = DATABASE() 
-      AND TABLE_NAME = 'messages' 
-      AND COLUMN_NAME IN ('sender_id', 'receiver_id', 'sender_type', 'receiver_type')
-    `).catch(() => ({ rows: [] }));
+    // Ensure messages table has modern columns
+    const columnsToAdd = [
+      { name: 'sender_id', def: 'INT' },
+      { name: 'receiver_id', def: 'INT' },
+      { name: 'sender_type', def: "VARCHAR(20) DEFAULT 'student'" },
+      { name: 'receiver_type', def: "VARCHAR(20) DEFAULT 'officer'" }
+    ];
 
-    const hasModernColumns = columnCheck.rows.some(r => 
-      ['sender_id', 'receiver_id', 'sender_type', 'receiver_type'].includes(r.COLUMN_NAME)
-    );
+    for (const col of columnsToAdd) {
+      try {
+        await pool.query(`ALTER TABLE messages ADD COLUMN ${col.name} ${col.def}`);
+      } catch (err) {
+        // Ignore duplicate column errors
+        if (err.code !== 'ER_DUP_FIELDNAME' && err.errno !== 1060) {
+          console.warn(`Warning: Could not add column ${col.name}:`, err.message);
+        }
+      }
+    }
 
-    if (hasModernColumns) {
+    // Handle sending to admin or officer
+    if (conversation_id === 'admin' || String(conversation_id) === 'admin') {
+      // Send message to admin
+      await pool.query(`
+        INSERT INTO messages (sender_id, receiver_id, sender_type, receiver_type, content, \`read\`, created_at)
+        VALUES (?, NULL, 'student', 'admin', ?, 0, NOW())
+      `, [studentId, message.trim()]);
+    } else {
+      // Verify the conversation_id is a valid officer ID
+      const officerCheck = await pool.query(`
+        SELECT id FROM officers WHERE id = ?
+      `, [conversation_id]).catch(() => ({ rows: [] }));
+
+      if (officerCheck.rows.length === 0) {
+        return res.status(404).json({ success: false, error: "Officer not found" });
+      }
+
       // Insert message with modern structure
       await pool.query(`
         INSERT INTO messages (sender_id, receiver_id, sender_type, receiver_type, content, \`read\`, created_at)
         VALUES (?, ?, 'student', 'officer', ?, 0, NOW())
-      `, [studentId, conversation_id, message]);
-    } else {
-      // Fallback: use old structure (will need table migration)
-      const studentName = `${student.first_name || ''} ${student.last_name || ''}`.trim();
-      await pool.query(`
-        INSERT INTO messages (sender_name, sender_email, subject, content, \`read\`, created_at)
-        VALUES (?, ?, 'Message', ?, 0, NOW())
-      `, [studentName, student.email || '', message]);
+      `, [studentId, conversation_id, message.trim()]);
     }
 
     res.json({ success: true });
@@ -2685,7 +3284,8 @@ router.get("/profile", requireStudent, async (req, res) => {
         program,
         year_level,
         birthdate,
-        created_at
+        created_at,
+        profile_picture
       FROM students 
       WHERE id = ?`,
       [studentId]
@@ -2700,7 +3300,7 @@ router.get("/profile", requireStudent, async (req, res) => {
       { name: 'skills', type: 'JSON' },
       { name: 'interests', type: 'JSON' },
       { name: 'social_links', type: 'JSON' },
-      { name: 'profile_picture', type: 'VARCHAR(255)' },
+      { name: 'profile_picture', type: 'MEDIUMTEXT' },
       { name: 'location', type: 'VARCHAR(255)' }
     ];
     
@@ -3339,11 +3939,26 @@ router.post("/profile/picture", requireStudent, async (req, res) => {
       }
     }
 
-    // Ensure profile_picture column exists (use TEXT to support base64 data URLs)
-    await pool.query(`
-      ALTER TABLE students 
-      ADD COLUMN IF NOT EXISTS profile_picture TEXT
-    `).catch(() => {});
+    // Ensure profile_picture column exists and is MEDIUMTEXT (supports larger data URLs / file paths)
+    try {
+      const colCheck = await pool.query(
+        `SELECT DATA_TYPE 
+           FROM information_schema.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'students' 
+            AND COLUMN_NAME = 'profile_picture'`
+      );
+      if (!colCheck.rows.length) {
+        await pool.query(`ALTER TABLE students ADD COLUMN profile_picture MEDIUMTEXT`);
+      } else {
+        const dataType = (colCheck.rows[0]?.DATA_TYPE || '').toLowerCase();
+        if (dataType !== 'mediumtext') {
+          await pool.query(`ALTER TABLE students MODIFY COLUMN profile_picture MEDIUMTEXT`);
+        }
+      }
+    } catch (err) {
+      console.error('Column ensure/modify failed for profile_picture:', err.message);
+    }
 
     // Update profile picture
     await pool.query(

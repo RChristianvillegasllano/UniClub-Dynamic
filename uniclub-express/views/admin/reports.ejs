@@ -506,13 +506,13 @@
                       const lastName = row.last_name || row.lastname || '';
                       const displayName = [firstName, lastName].filter(Boolean).join(' ') || row.name || '—';
                       const initials = (firstName || displayName).charAt(0) + (lastName ? lastName.charAt(0) : '');
-                      const program = row.program || row.course || '';
-                      const department = row.department || 'No department';
                       const studentId = row.studentid || row.student_id || '—';
                       const clubName = row.club || row.club_name || 'Unassigned';
                       const role = row.role || 'Member';
                       const status = (row.status || 'Active').toLowerCase();
                       const perms = parsePermissions(row.permissions);
+                      const program = row.program || row.course || row.program_name || '';
+                      const department = row.department || row.dept || row.department_name || '';
                   %>
                     <tr class="report-row">
                       <td class="officer-report-cell">
@@ -565,6 +565,77 @@
                             <% } %>
                           </div>
                         <% } %>
+                      </td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+            </div>
+          <% } else if (reportType === 'students') { %>
+            <div class="overflow-x-auto rounded-2xl border border-slate-200 shadow-sm">
+              <table class="officer-report-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Student ID</th>
+                    <th>Clubs Joined</th>
+                    <th>Year Level</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% reportData.forEach(row => { 
+                      const firstName = row.first_name || row.firstname || '';
+                      const lastName = row.last_name || row.lastname || '';
+                      const displayName = [firstName, lastName].filter(Boolean).join(' ') || row.name || '—';
+                      const initials = (firstName || displayName).charAt(0) + (lastName ? lastName.charAt(0) : '');
+                      const studentId = row.studentid || row.student_id || '—';
+                      const clubsJoined = row.clubs_joined || 'No club memberships';
+                      const yearLevel = row.year_level || row.year || '—';
+                      const email = row.email || 'No email';
+                      const status = (row.status || 'Active').toLowerCase();
+                      const program = row.program || row.course || row.program_name || '';
+                      const department = row.department || row.dept || row.department_name || '';
+                  %>
+                    <tr class="report-row">
+                      <td class="officer-report-cell">
+                        <div class="flex items-center gap-3">
+                          <div class="officer-report-avatar"><%= initials.toUpperCase() %></div>
+                          <div class="space-y-1">
+                            <p class="font-semibold text-slate-800 leading-tight"><%= displayName %></p>
+                            <% if (program) { %>
+                              <span class="officer-report-badge gray text-xs"><%= program %></span>
+                            <% } %>
+                            <p class="text-xs text-slate-500"><%= department %></p>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="officer-report-cell font-semibold text-slate-800"><%= studentId %></td>
+                      <td class="officer-report-cell text-sm text-slate-700">
+                        <div class="space-y-1">
+                          <% if (clubsJoined && clubsJoined !== 'No club memberships') { %>
+                            <span class="officer-report-badge blue text-xs">Clubs</span>
+                            <p class="text-xs text-slate-700"><%= clubsJoined %></p>
+                          <% } else { %>
+                            <span class="text-xs text-slate-500 italic">No club memberships</span>
+                          <% } %>
+                        </div>
+                      </td>
+                      <td class="officer-report-cell">
+                        <span class="officer-report-badge gray text-xs">
+                          <i data-lucide="trending-up" class="w-3 h-3"></i>
+                          <%= yearLevel %>
+                        </span>
+                      </td>
+                      <td class="officer-report-cell text-sm text-slate-700">
+                        <%= email %>
+                      </td>
+                      <td class="officer-report-cell">
+                        <span class="officer-report-status <%= status %> text-xs">
+                          <span class="inline-flex h-2.5 w-2.5 rounded-full bg-current opacity-70"></span>
+                          <%= row.status || 'Active' %>
+                        </span>
                       </td>
                     </tr>
                   <% }) %>

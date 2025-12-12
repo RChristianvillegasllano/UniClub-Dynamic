@@ -6,6 +6,15 @@ import pool from "../config/db.js";
 import { sendOTPEmail } from "../config/email.js";
 import { generateOTP, storeOTP, verifyOTP } from "../config/otpStore.js";
 import { loginLimiter, passwordResetLimiter, csrfProtection } from "../middleware/security.js";
+import { 
+  strictAuthLimiter,
+  validatePasswordStrength,
+  recordFailedAttempt,
+  clearFailedAttempts,
+  isAccountLocked,
+  getLockoutTimeRemaining,
+  logSecurityEvent
+} from "../middleware/advancedSecurity.js";
 import { getPermissionsForRole } from "../config/tierPermissions.js";
 import crypto from "crypto";
 
@@ -31,6 +40,7 @@ router.get("/login", (req, res) => {
 });
 
 router.post("/login", 
+  strictAuthLimiter,
   loginLimiter,
   body('email').trim().isEmail().normalizeEmail().withMessage('Valid email is required'),
   body('password').notEmpty().withMessage('Password is required'),
@@ -44,11 +54,14 @@ router.post("/login",
 
   const { email, password } = req.body;
   try {
+    // Use normalized email from express-validator (already normalized by normalizeEmail())
+    const normalizedEmail = email ? email.trim().toLowerCase() : '';
+    
     // MySQL doesn't support IF NOT EXISTS in ALTER TABLE, so we'll try to add columns and ignore errors if they exist
     const columnsToAdd = [
       { name: 'username', def: 'TEXT' },
       { name: 'password_hash', def: 'TEXT' },
-      { name: 'photo_url', def: 'TEXT' },
+      { name: 'profile_picture', def: 'MEDIUMTEXT' },
       { name: 'permissions', def: "JSON DEFAULT ('{}')" },
       { name: 'email', def: 'TEXT' },
       { name: 'facebook', def: 'TEXT' },
@@ -74,8 +87,25 @@ router.post("/login",
         // Continue silently for duplicate column errors
       }
     }
+    // Ensure profile_picture column exists
+    try {
+      const colCheck = await pool.query(
+        `SELECT DATA_TYPE 
+           FROM information_schema.COLUMNS 
+          WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'officers' 
+            AND COLUMN_NAME = 'profile_picture'`
+      );
+      if (!colCheck.rows.length) {
+        await pool.query(`ALTER TABLE officers ADD COLUMN profile_picture MEDIUMTEXT`);
+      }
+    } catch (err) {
+      console.error('Column check failed for profile_picture:', err.message);
+    }
+    
     // columns added in Step 6 (SQL migrations)
-    const { rows } = await pool.query(
+    // First try exact match with normalized email
+    let { rows } = await pool.query(
       `SELECT 
          id,
          first_name,
@@ -86,7 +116,7 @@ router.post("/login",
          password_hash,
          club_id,
          permissions,
-         photo_url,
+         profile_picture,
          email,
          facebook,
          bio,
@@ -94,12 +124,162 @@ router.post("/login",
          program,
          COALESCE(status, 'Active') AS status
        FROM officers 
-       WHERE email = ? 
+       WHERE LOWER(TRIM(email)) = ? 
        LIMIT 1`,
-      [email ? email.trim().toLowerCase() : '']
+      [normalizedEmail]
     );
-    const officer = rows[0];
-    if (!officer) return res.status(401).render("officer/login", { error: "Invalid credentials" });
+    
+    // If no match, try case-insensitive search without trim (for existing records)
+    if (rows.length === 0) {
+      console.log(`[Officer Login] No exact match for normalized email: ${normalizedEmail}, trying case-insensitive search...`);
+      const result = await pool.query(
+        `SELECT 
+           id,
+           first_name,
+           last_name,
+           CONCAT(first_name, ' ', last_name) AS name,
+           role,
+           username,
+           password_hash,
+           club_id,
+           permissions,
+           profile_picture,
+           email,
+           facebook,
+           bio,
+           department,
+           program,
+           COALESCE(status, 'Active') AS status
+         FROM officers 
+         WHERE LOWER(email) = ? 
+         LIMIT 1`,
+        [normalizedEmail]
+      );
+      rows = result.rows;
+      
+      // If found with case-insensitive, update the email to normalized version
+      if (rows.length > 0) {
+        const foundOfficer = rows[0];
+        console.log(`[Officer Login] Found officer with case-insensitive match. Current email: "${foundOfficer.email}", normalizing to: "${normalizedEmail}"`);
+        try {
+          await pool.query(
+            "UPDATE officers SET email = ? WHERE id = ?",
+            [normalizedEmail, foundOfficer.id]
+          );
+          console.log(`[Officer Login] Updated email for officer ${foundOfficer.id} to normalized format`);
+        } catch (updateErr) {
+          console.warn(`[Officer Login] Could not update email for officer ${foundOfficer.id}:`, updateErr.message);
+        }
+      }
+    }
+    
+    let officer = rows[0];
+    if (!officer) {
+      // Debug: Check what emails exist in database (first 5 for debugging)
+      const debugEmails = await pool.query(
+        "SELECT id, email, LOWER(TRIM(email)) as normalized FROM officers WHERE email IS NOT NULL LIMIT 5"
+      ).catch(() => ({ rows: [] }));
+      
+      // Also check if this specific email exists with any variation
+      const specificCheck = await pool.query(
+        "SELECT id, email, LOWER(TRIM(email)) as normalized FROM officers WHERE email LIKE ? OR LOWER(email) LIKE ? LIMIT 5",
+        [`%${normalizedEmail.split('@')[0]}%`, `%${normalizedEmail.split('@')[0]}%`]
+      ).catch(() => ({ rows: [] }));
+      
+      // Extract student ID from email format: firstinitial.lastname.6digits.tc@umindanao.edu.ph
+      const emailParts = normalizedEmail.match(/^[a-z]\.([a-z]+)\.(\d{6})\.tc@umindanao\.edu\.ph$/);
+      if (emailParts) {
+        const studentIdFromEmail = emailParts[2];
+        console.log(`[Officer Login] Extracted student ID from email: ${studentIdFromEmail}`);
+        
+        // Check if officer exists with this student ID
+        const studentIdCheck = await pool.query(
+          "SELECT id, first_name, last_name, email, studentid FROM officers WHERE studentid = ? LIMIT 1",
+          [studentIdFromEmail]
+        ).catch(() => ({ rows: [] }));
+        
+        if (studentIdCheck.rows.length > 0) {
+          const officerByStudentId = studentIdCheck.rows[0];
+          console.log(`[Officer Login] Found officer by student ID ${studentIdFromEmail}:`, {
+            id: officerByStudentId.id,
+            name: `${officerByStudentId.first_name} ${officerByStudentId.last_name}`,
+            currentEmail: officerByStudentId.email,
+            studentId: officerByStudentId.studentid
+          });
+          
+          // If officer has no email or different email, update it
+          if (!officerByStudentId.email || officerByStudentId.email.trim().toLowerCase() !== normalizedEmail) {
+            try {
+              await pool.query(
+                "UPDATE officers SET email = ? WHERE id = ?",
+                [normalizedEmail, officerByStudentId.id]
+              );
+              console.log(`[Officer Login] Updated email for officer ${officerByStudentId.id} from "${officerByStudentId.email || 'NULL'}" to "${normalizedEmail}"`);
+            } catch (updateErr) {
+              console.error(`[Officer Login] Could not update email for officer ${officerByStudentId.id}:`, updateErr.message);
+            }
+          }
+          
+          // Fetch the full officer record
+          const fullOfficerResult = await pool.query(
+            `SELECT 
+               id,
+               first_name,
+               last_name,
+               CONCAT(first_name, ' ', last_name) AS name,
+               role,
+               username,
+               password_hash,
+               club_id,
+               permissions,
+               profile_picture,
+               email,
+               facebook,
+               bio,
+               department,
+               program,
+               COALESCE(status, 'Active') AS status
+             FROM officers 
+             WHERE id = ? 
+             LIMIT 1`,
+            [officerByStudentId.id]
+          );
+          
+          if (fullOfficerResult.rows.length > 0) {
+            officer = fullOfficerResult.rows[0];
+            console.log(`[Officer Login] Using officer found by student ID: ${officer.id}`);
+          }
+        } else {
+          console.log(`[Officer Login] No officer found with student ID ${studentIdFromEmail} either`);
+        }
+      }
+      
+      if (!officer) {
+        const clientIP = req.ip || req.connection.remoteAddress;
+        recordFailedAttempt(normalizedEmail, clientIP);
+        logSecurityEvent('FAILED_LOGIN', { email: normalizedEmail, reason: 'User not found', ip: clientIP }, req);
+        console.log(`[Officer Login] No officer found with email: ${normalizedEmail}`);
+        console.log(`[Officer Login] Sample emails in database:`, debugEmails.rows.map(r => ({ id: r.id, email: r.email, normalized: r.normalized })));
+        if (specificCheck.rows.length > 0) {
+          console.log(`[Officer Login] Found similar emails:`, specificCheck.rows.map(r => ({ id: r.id, email: r.email, normalized: r.normalized })));
+        }
+        return res.status(401).render("officer/login", { error: "Invalid credentials" });
+      }
+    }
+    
+    const clientIP = req.ip || req.connection.remoteAddress;
+    
+    // Check if account is locked
+    if (isAccountLocked(normalizedEmail, clientIP)) {
+      const remainingTime = getLockoutTimeRemaining(normalizedEmail, clientIP);
+      logSecurityEvent('LOCKED_ACCOUNT_ACCESS_ATTEMPT', { email: normalizedEmail, ip: clientIP }, req);
+      return res.status(401).render("officer/login", { 
+        error: `Account temporarily locked due to multiple failed attempts. Please try again in ${Math.ceil(remainingTime / 60)} minutes.` 
+      });
+    }
+
+    // Debug: Log officer found
+    console.log(`[Officer Login] Officer found - ID: ${officer.id}, Email: ${officer.email}, Has password_hash: ${officer.password_hash ? 'Yes (' + officer.password_hash.length + ' chars)' : 'No'}`);
 
     // Check if officer account is pending approval
     // Only block if status is explicitly 'Pending' or 'Rejected', allow 'Active' or null/undefined
@@ -115,8 +295,26 @@ router.post("/login",
       });
     }
 
-    const ok = await bcrypt.compare(password, officer.password_hash || "");
-    if (!ok) return res.status(401).render("officer/login", { error: "Invalid credentials" });
+    // Check if password exists (for accounts created before password was added)
+    if (!officer.password_hash || officer.password_hash.trim().length === 0) {
+      console.log(`[Officer Login] Officer ${officer.id} has no password_hash`);
+      return res.status(401).render("officer/login", { 
+        error: "Account not set up. Please contact support or have an administrator set your password." 
+      });
+    }
+
+    const ok = await bcrypt.compare(password, officer.password_hash);
+    if (!ok) {
+      recordFailedAttempt(normalizedEmail, clientIP);
+      logSecurityEvent('FAILED_LOGIN', { email: normalizedEmail, reason: 'Invalid password', ip: clientIP }, req);
+      console.log(`[Officer Login] Password mismatch for officer ${officer.id} (email: ${officer.email})`);
+      return res.status(401).render("officer/login", { error: "Invalid credentials" });
+    }
+    
+    // Clear failed attempts on successful login
+    clearFailedAttempts(normalizedEmail, clientIP);
+    logSecurityEvent('SUCCESSFUL_LOGIN', { email: normalizedEmail, officerId: officer.id, ip: clientIP }, req);
+    console.log(`[Officer Login] Successful login for officer ${officer.id} (email: ${officer.email})`);
 
     // minimal profile in session
     req.session.officer = {
@@ -125,7 +323,7 @@ router.post("/login",
       role: officer.role,
       club_id: officer.club_id,
       username: officer.username,
-      photo_url: officer.photo_url,
+      profile_picture: officer.profile_picture,
       permissions: officer.permissions, // JSON (parsed later)
       email: officer.email,
       facebook: officer.facebook,
@@ -141,8 +339,18 @@ router.post("/login",
 });
 
 router.post("/logout", (req, res) => {
-  req.session.officer = null;
-  res.redirect("/officer/login");
+  // Properly destroy session server-side
+  const sessionId = req.sessionID;
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Error destroying officer session:", err);
+    } else {
+      console.log(`[LOGOUT] Officer session ${sessionId} destroyed`);
+    }
+    // Clear cookie
+    res.clearCookie('sessionId');
+    res.redirect("/officer/login");
+  });
 });
 
 // Officer Sign Up
@@ -458,10 +666,10 @@ router.post("/signup", async (req, res) => {
       });
     }
 
-    // Check if email already exists
+    // Check if email already exists (normalize email for comparison)
     const existingUser = await pool.query(
-      "SELECT id FROM officers WHERE email = ? LIMIT 1",
-      [email.trim().toLowerCase()]
+      "SELECT id FROM officers WHERE LOWER(TRIM(email)) = ? LIMIT 1",
+      [emailTrimmed]
     );
     if (existingUser.rows.length > 0) {
       return res.render("officer/signup", {

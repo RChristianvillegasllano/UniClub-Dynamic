@@ -174,90 +174,275 @@
           </div>
         <% } %>
 
-        <form action="/admin/students/edit/<%= student.id %>" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-6" id="studentForm" data-dept-program>
+        <form action="/admin/students/edit/<%= student.id %>" method="POST" enctype="multipart/form-data" class="space-y-6" id="studentForm" data-dept-program>
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <div>
-            <label class="block text-sm font-semibold mb-2">First Name <span class="text-red-500">*</span></label>
-            <input type="text" name="first_name" id="firstName" value="<%= student.first_name || '' %>" required
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
-              placeholder="Enter first name"
-              pattern="[A-Za-z\s'-]+"
-              title="Only letters, spaces, hyphens, and apostrophes are allowed"
-              oninput="validateName('firstName', 'firstNameWarning')" />
-          </div>
-          <div>
-            <label class="block text-sm font-semibold mb-2">Last Name <span class="text-red-500">*</span></label>
-            <input type="text" name="last_name" id="lastName" value="<%= student.last_name || '' %>" required
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
-              placeholder="Enter last name"
-              pattern="[A-Za-z\s'-]+"
-              title="Only letters, spaces, hyphens, and apostrophes are allowed"
-              oninput="validateName('lastName', 'lastNameWarning')" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold mb-2">Birthdate <span class="text-red-500">*</span></label>
-            <input type="date" name="birthdate" id="birthdate" value="<%= student.birthdate ? new Date(student.birthdate).toISOString().split('T')[0] : '' %>" required
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold mb-2">Email <span class="text-red-500">*</span></label>
-            <input type="email" name="email" id="email" value="<%= student.email %>" required
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
-              placeholder="e.g., j.delacruz.111222.tc@umindanao.edu.ph"
-              onblur="validateEmail()" />
-            
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold mb-2">Student ID <span class="text-red-500">*</span></label>
-            <input type="text" name="studentid" id="studentid" value="<%= student.studentid || '' %>" required
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none"
-              placeholder="e.g., 111222 (6 digits only)"
-              maxlength="6"
-              oninput="validateStudentId()" />
-          </div>
-
-          <div>
-            <label class="block text-sm font-semibold mb-2">Department</label>
-            <select name="department" required data-dept-select
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
-              <option value="">Select Department</option>
-              <option value="Department of Accounting Education" <%= (student.department === 'Department of Accounting Education') ? 'selected' : '' %>>Department of Accounting Education</option>
-              <option value="Department of Arts and Sciences Education" <%= (student.department === 'Department of Arts and Sciences Education') ? 'selected' : '' %>>Department of Arts and Sciences Education</option>
-              <option value="Department of Business Administration Education" <%= (student.department === 'Department of Business Administration Education') ? 'selected' : '' %>>Department of Business Administration Education</option>
-              <option value="Department of Computing Education" <%= (student.department === 'Department of Computing Education') ? 'selected' : '' %>>Department of Computing Education</option>
-              <option value="Department of Criminal Justice Education" <%= (student.department === 'Department of Criminal Justice Education') ? 'selected' : '' %>>Department of Criminal Justice Education</option>
-              <option value="Department of Engineering Education" <%= (student.department === 'Department of Engineering Education') ? 'selected' : '' %>>Department of Engineering Education</option>
-              <option value="Department of Hospitality Education" <%= (student.department === 'Department of Hospitality Education') ? 'selected' : '' %>>Department of Hospitality Education</option>
-              <option value="Department of Teacher Education" <%= (student.department === 'Department of Teacher Education') ? 'selected' : '' %>>Department of Teacher Education</option>
-            </select>
-          </div>
-
-			<div>
-				<label class="block text-sm font-semibold mb-2">Program</label>
-				<select name="program" required data-program-select data-current="<%= student.program || '' %>"
-					class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
-					<option value="">Select Program</option>
-				</select>
-          </div>
-
           
+          <!-- Personal Information -->
+          <div class="space-y-5">
+            <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Personal Information</h3>
+            
+            <!-- Names Row -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  First Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="first_name"
+                  id="firstName"
+                  value="<%= student.first_name || '' %>"
+                  placeholder="Enter your first name"
+                  required
+                  title="Only letters, spaces, hyphens, and apostrophes are allowed"
+                  oninput="validateName('firstName', 'firstNameWarning')"
+                  class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900 placeholder:text-gray-400
+                         focus:outline-none focus:border-[#a10109d1]"
+                />
+                <p class="text-xs text-gray-500 mt-1"></p>
+                <p id="firstNameWarning" class="text-xs text-red-600 mt-1 hidden"></p>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Last Name <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="last_name"
+                  id="lastName"
+                  value="<%= student.last_name || '' %>"
+                  placeholder="Enter your last name"
+                  required
+                  title="Only letters, spaces, hyphens, and apostrophes are allowed"
+                  oninput="validateName('lastName', 'lastNameWarning')"
+                  class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900 placeholder:text-gray-400
+                         focus:outline-none focus:border-[#a10109d1]"
+                />
+                <p class="text-xs text-gray-500 mt-1"></p>
+                <p id="lastNameWarning" class="text-xs text-red-600 mt-1 hidden"></p>
+              </div>
+            </div>
 
-          <div>
-            <label class="block text-sm font-semibold mb-2">Year Level <span class="text-red-500">*</span></label>
-            <select name="year_level" required
-              class="w-full px-5 py-3 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none">
-              <option value="1" <%= (student.year_level === "1" || student.year_level === "1st Year") ? "selected" : "" %>>1st Year</option>
-              <option value="2" <%= (student.year_level === "2" || student.year_level === "2nd Year") ? "selected" : "" %>>2nd Year</option>
-              <option value="3" <%= (student.year_level === "3" || student.year_level === "3rd Year") ? "selected" : "" %>>3rd Year</option>
-              <option value="4" <%= (student.year_level === "4" || student.year_level === "4th Year") ? "selected" : "" %>>4th Year</option>
-            </select>
+            <!-- Birthdate & Student ID Row -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Birthdate <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="birthdate"
+                  id="birthdate"
+                  value="<%= student.birthdate ? new Date(student.birthdate).toISOString().split('T')[0] : '' %>"
+                  required
+                  class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900
+                         focus:outline-none focus:border-[#a10109d1]"
+                />
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Student ID <span class="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="studentid"
+                  id="studentid"
+                  value="<%= student.studentid || '' %>"
+                  placeholder="Enter your 6-digit Student ID"
+                  required
+                  maxlength="6"
+                  pattern="[0-9]{6}"
+                  oninput="validateStudentId()"
+                  class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900 placeholder:text-gray-400
+                         focus:outline-none focus:border-[#a10109d1]"
+                />
+                <p class="text-xs text-gray-500 mt-1">Must be exactly 6 digits</p>
+                <p id="studentIdError" class="text-xs text-red-600 mt-1 hidden"></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic Information -->
+          <div class="space-y-5 pt-4" data-dept-program>
+            <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Academic Information</h3>
+            
+            <!-- Department & Program Row -->
+            <div class="grid md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Department <span class="text-red-500">*</span>
+                </label>
+                <select
+                  name="department"
+                  id="department"
+                  data-dept-select
+                  required
+                  class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900
+                         focus:outline-none focus:border-[#a10109d1]">
+                  <option value="">Select Department</option>
+                  <option value="Department of Accounting Education" <%= (student.department === 'Department of Accounting Education') ? 'selected' : '' %>>Department of Accounting Education</option>
+                  <option value="Department of Arts and Sciences Education" <%= (student.department === 'Department of Arts and Sciences Education') ? 'selected' : '' %>>Department of Arts and Sciences Education</option>
+                  <option value="Department of Business Administration Education" <%= (student.department === 'Department of Business Administration Education') ? 'selected' : '' %>>Department of Business Administration Education</option>
+                  <option value="Department of Computing Education" <%= (student.department === 'Department of Computing Education') ? 'selected' : '' %>>Department of Computing Education</option>
+                  <option value="Department of Criminal Justice Education" <%= (student.department === 'Department of Criminal Justice Education') ? 'selected' : '' %>>Department of Criminal Justice Education</option>
+                  <option value="Department of Engineering Education" <%= (student.department === 'Department of Engineering Education') ? 'selected' : '' %>>Department of Engineering Education</option>
+                  <option value="Department of Hospitality Education" <%= (student.department === 'Department of Hospitality Education') ? 'selected' : '' %>>Department of Hospitality Education</option>
+                  <option value="Department of Teacher Education" <%= (student.department === 'Department of Teacher Education') ? 'selected' : '' %>>Department of Teacher Education</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Program <span class="text-red-500">*</span>
+                </label>
+                <select
+                  name="program"
+                  id="program"
+                  data-program-select
+                  data-current="<%= student.program || '' %>"
+                  required
+                  class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                         text-gray-900
+                         focus:outline-none focus:border-[#a10109d1]">
+                  <option value="">Select Program</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Year Level -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-800 mb-2">
+                Year Level <span class="text-red-500">*</span>
+              </label>
+              <select
+                name="year_level"
+                id="yearLevel"
+                required
+                class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                       text-gray-900
+                       focus:outline-none focus:border-[#a10109d1]">
+                <option value="1" <%= (student.year_level === "1" || student.year_level === "1st Year") ? "selected" : "" %>>1st Year</option>
+                <option value="2" <%= (student.year_level === "2" || student.year_level === "2nd Year") ? "selected" : "" %>>2nd Year</option>
+                <option value="3" <%= (student.year_level === "3" || student.year_level === "3rd Year") ? "selected" : "" %>>3rd Year</option>
+                <option value="4" <%= (student.year_level === "4" || student.year_level === "4th Year") ? "selected" : "" %>>4th Year</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Account Setup -->
+          <div class="space-y-5 pt-4">
+            <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Account Setup</h3>
+            
+            <!-- Email -->
+            <div>
+              <label class="block text-sm font-semibold text-gray-800 mb-2">
+                UMindanao Email <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                id="email"
+                value="<%= student.email %>"
+                placeholder="Enter your UMindanao email"
+                required
+                pattern="[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph"
+                onblur="validateEmail()"
+                oninput="clearEmailError()"
+                class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                       text-gray-900 placeholder:text-gray-400
+                       focus:outline-none focus:border-[#a10109d1]"
+              />
+              <p class="text-xs text-gray-500 mt-1"></p>
+              <p id="emailError" class="text-xs text-red-600 mt-1 hidden"></p>
+            </div>
+
+            <!-- Passwords Row -->
+            <div class="grid md:grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Current Password
+                </label>
+                <div class="relative">
+                  <input
+                    type="password"
+                    name="current_password"
+                    id="current_password"
+                    placeholder="Enter current password"
+                    class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900 placeholder:text-gray-400 pr-10
+                           focus:outline-none focus:border-[#a10109d1]"
+                  />
+                  <button
+                    type="button"
+                    onclick="togglePassword('current_password', 'current-password-toggle')"
+                    id="current-password-toggle"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Required if changing password</p>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  New Password
+                </label>
+                <div class="relative">
+                  <input
+                    type="password"
+                    name="password"
+                    id="password"
+                    placeholder="Enter new password"
+                    minlength="8"
+                    class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900 placeholder:text-gray-400 pr-10
+                           focus:outline-none focus:border-[#a10109d1]"
+                  />
+                  <button
+                    type="button"
+                    onclick="togglePassword('password', 'password-toggle')"
+                    id="password-toggle"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <p class="text-xs text-gray-500 mt-1">Leave blank to keep current</p>
+              </div>
+              <div>
+                <label class="block text-sm font-semibold text-gray-800 mb-2">
+                  Confirm Password
+                </label>
+                <div class="relative">
+                  <input
+                    type="password"
+                    name="confirmPassword"
+                    id="confirmPassword"
+                    placeholder="Confirm new password"
+                    class="w-full px-4 py-3.5 text-sm rounded-xl border-2 border-gray-200 bg-white
+                           text-gray-900 placeholder:text-gray-400 pr-10
+                           focus:outline-none focus:border-[#a10109d1]"
+                  />
+                  <button
+                    type="button"
+                    onclick="togglePassword('confirmPassword', 'confirm-password-toggle')"
+                    id="confirm-password-toggle"
+                    class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  >
+                    <i data-lucide="eye" class="w-5 h-5"></i>
+                  </button>
+                </div>
+                <p id="passwordMatchError" class="text-xs text-red-600 mt-1 hidden">Passwords do not match</p>
+              </div>
+            </div>
           </div>
 
           <!-- Validation Warnings -->
-          <div id="validationWarnings" class="md:col-span-2 hidden">
+          <div id="validationWarnings" class="hidden">
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
               <div class="flex items-start">
                 <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 mr-2 mt-0.5"></i>
@@ -269,11 +454,28 @@
             </div>
           </div>
 
-          <div class="md:col-span-2">
-          <button type="submit" id="submitBtn"
-              class="w-full py-3 bg-[#a10109d1] text-white font-semibold rounded-xl hover:bg-[#870107] transition duration-200">
-            Update Student
-          </button>
+          <!-- Profile Photo (Optional) -->
+          <div class="pt-4 space-y-3">
+            <label class="block text-sm font-semibold text-gray-800">Profile Photo <span class="text-gray-400 font-normal">(optional)</span></label>
+            <p class="text-xs text-gray-500">Max size 5MB. Supported: JPG, PNG, GIF, WebP.</p>
+            <% if (student.profile_picture) { %>
+              <div class="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <img src="<%= student.profile_picture %>" alt="Current photo" class="w-16 h-16 object-cover rounded-lg border border-slate-300" onerror="this.style.display='none'">
+                <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer">
+                  <input type="checkbox" name="delete_photo" class="rounded">
+                  <span>Delete current photo</span>
+                </label>
+              </div>
+            <% } %>
+            <input type="file" name="photo" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+              class="w-full px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none bg-white">
+          </div>
+
+          <div>
+            <button type="submit" id="submitBtn"
+                class="w-full py-4 bg-[#a10109d1] text-white font-semibold rounded-xl hover:bg-[#870107] transition duration-200">
+              Update Student
+            </button>
           </div>
         </form>
       </section>
@@ -291,94 +493,73 @@
     // Email validation: j.lastname.6digits.xx.tc@umindanao.edu.ph
     function validateEmail() {
       const emailInput = document.getElementById('email');
+      const emailError = document.getElementById('emailError');
       const email = emailInput.value.trim();
-      const warningsDiv = document.getElementById('validationWarnings');
-      const warningList = document.getElementById('warningList');
       
       // Email format: firstinitial.lastname.6digits.tc@umindanao.edu.ph
       const emailPattern = /^[a-z]\.[a-z]+\.\d{6}\.tc@umindanao\.edu\.ph$/i;
       
       if (email && !emailPattern.test(email)) {
         emailInput.classList.add('border-red-500');
-        emailInput.classList.remove('border-gray-300');
-        
-        // Check if warning already exists
-        let emailWarning = document.getElementById('emailWarning');
-        if (!emailWarning) {
-          emailWarning = document.createElement('li');
-          emailWarning.id = 'emailWarning';
-          warningList.appendChild(emailWarning);
+        emailInput.classList.remove('border-gray-200');
+        if (emailError) {
+          emailError.textContent = 'Email must follow format: firstinitial.lastname.6digitid.tc@umindanao.edu.ph (e.g., j.delacruz.111222.tc@umindanao.edu.ph)';
+          emailError.classList.remove('hidden');
         }
-        emailWarning.textContent = 'Email must follow format: firstinitial.lastname.6digitid.tc@umindanao.edu.ph (e.g., j.delacruz.111222.tc@umindanao.edu.ph or r.llano.141429.tc@umindanao.edu.ph)';
-        
-        warningsDiv.classList.remove('hidden');
         return false;
       } else {
         emailInput.classList.remove('border-red-500');
-        emailInput.classList.add('border-gray-300');
-        
-        const emailWarning = document.getElementById('emailWarning');
-        if (emailWarning) {
-          emailWarning.remove();
-        }
-        
-        // Hide warnings if no warnings left
-        if (warningList.children.length === 0) {
-          warningsDiv.classList.add('hidden');
+        emailInput.classList.add('border-gray-200');
+        if (emailError) {
+          emailError.classList.add('hidden');
         }
         return true;
+      }
+    }
+
+    function clearEmailError() {
+      const emailInput = document.getElementById('email');
+      const emailError = document.getElementById('emailError');
+      emailInput.classList.remove('border-red-500');
+      emailInput.classList.add('border-gray-200');
+      if (emailError) {
+        emailError.classList.add('hidden');
       }
     }
 
     // Student ID validation: exactly 6 digits
     function validateStudentId() {
       const idInput = document.getElementById('studentid');
+      const idError = document.getElementById('studentIdError');
       let id = idInput.value.trim();
       
       // Remove any non-digit characters
       id = id.replace(/\D/g, '');
       idInput.value = id;
       
-      const warningsDiv = document.getElementById('validationWarnings');
-      const warningList = document.getElementById('warningList');
-      
       if (id && id.length !== 6) {
         idInput.classList.add('border-red-500');
-        idInput.classList.remove('border-gray-300');
-        
-        let idWarning = document.getElementById('idWarning');
-        if (!idWarning) {
-          idWarning = document.createElement('li');
-          idWarning.id = 'idWarning';
-          warningList.appendChild(idWarning);
+        idInput.classList.remove('border-gray-200');
+        if (idError) {
+          idError.textContent = 'Student ID must be exactly 6 digits';
+          idError.classList.remove('hidden');
         }
-        idWarning.textContent = 'Student ID must be exactly 6 digits';
-        
-        warningsDiv.classList.remove('hidden');
         return false;
       } else {
         idInput.classList.remove('border-red-500');
-        idInput.classList.add('border-gray-300');
-        
-        const idWarning = document.getElementById('idWarning');
-        if (idWarning) {
-          idWarning.remove();
-        }
-        
-        // Hide warnings if no warnings left
-        if (warningList.children.length === 0) {
-          warningsDiv.classList.add('hidden');
+        idInput.classList.add('border-gray-200');
+        if (idError) {
+          idError.classList.add('hidden');
         }
         return true;
       }
     }
 
     // Name validation: only letters, spaces, hyphens, and apostrophes
-    function validateName(inputId, warningId) {
+    function validateName(inputId, errorId) {
       const nameInput = document.getElementById(inputId);
+      const nameError = document.getElementById(errorId);
       const name = nameInput.value.trim();
-      const warningsDiv = document.getElementById('validationWarnings');
-      const warningList = document.getElementById('warningList');
       
       // Pattern: only letters, spaces, hyphens, and apostrophes
       const namePattern = /^[A-Za-z\s'-]+$/;
@@ -388,30 +569,17 @@
       
       if (name && (dangerousPatterns.test(name) || !namePattern.test(name))) {
         nameInput.classList.add('border-red-500');
-        nameInput.classList.remove('border-gray-300');
-        
-        let nameWarning = document.getElementById(warningId);
-        if (!nameWarning) {
-          nameWarning = document.createElement('li');
-          nameWarning.id = warningId;
-          warningList.appendChild(nameWarning);
+        nameInput.classList.remove('border-gray-200');
+        if (nameError) {
+          nameError.textContent = `${inputId === 'firstName' ? 'First' : 'Last'} name contains invalid characters. Only letters, spaces, hyphens (-), and apostrophes (') are allowed.`;
+          nameError.classList.remove('hidden');
         }
-        nameWarning.textContent = `${inputId === 'firstName' ? 'First' : 'Last'} name contains invalid characters. Only letters, spaces, hyphens (-), and apostrophes (') are allowed.`;
-        
-        warningsDiv.classList.remove('hidden');
         return false;
       } else {
         nameInput.classList.remove('border-red-500');
-        nameInput.classList.add('border-gray-300');
-        
-        const nameWarning = document.getElementById(warningId);
-        if (nameWarning) {
-          nameWarning.remove();
-        }
-        
-        // Hide warnings if no warnings left
-        if (warningList.children.length === 0) {
-          warningsDiv.classList.add('hidden');
+        nameInput.classList.add('border-gray-200');
+        if (nameError) {
+          nameError.classList.add('hidden');
         }
         return true;
       }
@@ -423,6 +591,35 @@
       const idValid = validateStudentId();
       const firstNameValid = validateName('firstName', 'firstNameWarning');
       const lastNameValid = validateName('lastName', 'lastNameWarning');
+      
+      // Password validation
+      const currentPassword = currentPasswordField ? currentPasswordField.value.trim() : '';
+      const password = passwordField ? passwordField.value.trim() : '';
+      const confirmPassword = confirmPasswordField ? confirmPasswordField.value.trim() : '';
+      
+      if (password && password.length > 0) {
+        if (!currentPassword || currentPassword.length === 0) {
+          e.preventDefault();
+          showToast('Current password is required to change password.', 'error', 'Validation Error');
+          return false;
+        }
+        
+        if (password.length < 8) {
+          e.preventDefault();
+          showToast('New password must be at least 8 characters.', 'error', 'Validation Error');
+          return false;
+        }
+        
+        if (password !== confirmPassword) {
+          e.preventDefault();
+          showToast('New passwords do not match.', 'error', 'Validation Error');
+          if (passwordMatchError) {
+            passwordMatchError.textContent = 'New passwords do not match';
+            passwordMatchError.classList.remove('hidden');
+          }
+          return false;
+        }
+      }
       
       if (!emailValid || !idValid || !firstNameValid || !lastNameValid) {
         e.preventDefault();
@@ -442,6 +639,68 @@
     }
     document.getElementById('mobileMenuBtn')?.addEventListener('click', toggleSidebar);
     document.getElementById('sidebarOverlay')?.addEventListener('click', toggleSidebar);
+
+    // Password visibility toggle function
+    window.togglePassword = function(inputId, buttonId) {
+      const input = document.getElementById(inputId);
+      const button = document.getElementById(buttonId);
+      if (input && button) {
+        if (input.type === 'password') {
+          input.type = 'text';
+          button.innerHTML = '<i data-lucide="eye-off" class="w-5 h-5"></i>';
+        } else {
+          input.type = 'password';
+          button.innerHTML = '<i data-lucide="eye" class="w-5 h-5"></i>';
+        }
+        if (window.lucide) window.lucide.replace();
+      }
+    };
+
+    // Password confirmation validation (real-time)
+    const currentPasswordField = document.getElementById('current_password');
+    const passwordField = document.getElementById('password');
+    const confirmPasswordField = document.getElementById('confirmPassword');
+    const passwordMatchError = document.getElementById('passwordMatchError');
+    
+    if (passwordField && confirmPasswordField && passwordMatchError) {
+      function validatePasswordMatch() {
+        const currentPassword = currentPasswordField ? currentPasswordField.value.trim() : '';
+        const password = passwordField.value.trim();
+        const confirmPassword = confirmPasswordField.value.trim();
+        
+        if (password.length === 0 && confirmPassword.length === 0) {
+          passwordMatchError.classList.add('hidden');
+          return;
+        }
+        
+        if (password.length > 0) {
+          if (currentPassword && currentPassword.length === 0) {
+            passwordMatchError.textContent = 'Current password is required';
+            passwordMatchError.classList.remove('hidden');
+            return;
+          }
+          
+          if (confirmPassword.length === 0) {
+            passwordMatchError.textContent = 'Please confirm your new password';
+            passwordMatchError.classList.remove('hidden');
+            return;
+          }
+          
+          if (password !== confirmPassword) {
+            passwordMatchError.textContent = 'New passwords do not match';
+            passwordMatchError.classList.remove('hidden');
+          } else {
+            passwordMatchError.classList.add('hidden');
+          }
+        }
+      }
+      
+      if (currentPasswordField) {
+        currentPasswordField.addEventListener('input', validatePasswordMatch);
+      }
+      passwordField.addEventListener('input', validatePasswordMatch);
+      confirmPasswordField.addEventListener('input', validatePasswordMatch);
+    }
   </script>
   <script src="/js/departmentPrograms.js"></script>
 
@@ -477,6 +736,23 @@
         <div class="toast-content">
           ${title ? `<div class="toast-title">${title}</div>` : ''}
           <div class="toast-message">${message}</div>
+        </div>
+
+        <!-- Profile Photo (Optional) -->
+        <div class="md:col-span-2 space-y-3">
+          <label class="block text-sm font-semibold">Profile Photo <span class="text-gray-400 font-normal">(optional)</span></label>
+          <p class="text-xs text-gray-500">Max size 5MB. Supported: JPG, PNG, GIF, WebP.</p>
+          <% if (student.profile_picture) { %>
+            <div class="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-lg p-3">
+              <img src="<%= student.profile_picture %>" alt="Current photo" class="w-16 h-16 object-cover rounded-lg border border-slate-300" onerror="this.style.display='none'">
+              <label class="flex items-center gap-2 text-sm text-red-600 cursor-pointer">
+                <input type="checkbox" name="delete_photo" class="rounded">
+                <span>Delete current photo</span>
+              </label>
+            </div>
+          <% } %>
+          <input type="file" name="photo" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+            class="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-[#a10109d1] focus:border-[#a10109d1] focus:outline-none bg-white">
         </div>
         <div class="toast-close" onclick="this.parentElement.remove()">×</div>
       `;

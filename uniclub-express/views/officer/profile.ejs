@@ -49,17 +49,15 @@
       </div>
     <% } %>
     <%
-      var totalFields = 4;
+      var totalFields = 3;
       var have = 0;
-      if (officer && officer.photo_url) have++;
+      if (officer && officer.profile_picture) have++;
       if (officer && officer.email) have++;
-      if (officer && officer.username) have++;
       if (officer && officer.bio) have++;
       var pct = Math.round((have / totalFields) * 100);
       var missingFields = [];
-      if (!(officer && officer.photo_url)) missingFields.push('Photo');
+      if (!(officer && officer.profile_picture)) missingFields.push('Profile Photo');
       if (!(officer && officer.email)) missingFields.push('Email');
-      if (!(officer && officer.username)) missingFields.push('Username');
       if (!(officer && officer.bio)) missingFields.push('Bio');
       var clubDescription = club && club.description ? club.description : '';
       var clubHasDescription = clubDescription.length > 0;
@@ -113,11 +111,21 @@
             <div class="bg-white/70 backdrop-blur-xl border border-white/60 rounded-2xl p-5 md:p-7 shadow-xl animate-fade-up" style="animation-delay: 40ms;">
               <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                 <div class="flex items-start md:items-center gap-4">
-                  <% if (officer && officer.photo_url) { %>
-                    <img src="<%= officer.photo_url %>" alt="Profile" class="w-24 h-24 md:w-28 md:h-28 rounded-3xl ring-4 ring-white/70 shadow-xl object-cover">
-                  <% } else { %>
-                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-3xl ring-4 ring-white/70 shadow-xl bg-gradient-to-br from-primary-900 via-primary-800 to-amber-500 flex items-center justify-center text-xl font-semibold text-white uppercase">UC</div>
-                  <% } %>
+                  <div class="relative">
+                    <% if (officer && officer.profile_picture) { %>
+                      <img src="<%= officer.profile_picture %>" alt="Profile" class="w-24 h-24 md:w-28 md:h-28 rounded-3xl ring-4 ring-white/70 shadow-xl object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                      <div class="hidden w-24 h-24 md:w-28 md:h-28 rounded-3xl ring-4 ring-white/70 shadow-xl bg-gradient-to-br from-primary-900 via-primary-800 to-amber-500 items-center justify-center text-xl font-semibold text-white uppercase">
+                        <%= officer && officer.name ? officer.name.charAt(0).toUpperCase() : 'UC' %>
+                      </div>
+                    <% } else { %>
+                      <div class="w-24 h-24 md:w-28 md:h-28 rounded-3xl ring-4 ring-white/70 shadow-xl bg-gradient-to-br from-primary-900 via-primary-800 to-amber-500 flex items-center justify-center text-xl font-semibold text-white uppercase">
+                        <%= officer && officer.name ? officer.name.charAt(0).toUpperCase() : 'UC' %>
+                      </div>
+                    <% } %>
+                    <button id="cameraBtn" type="button" class="absolute bottom-0 right-0 bg-primary-900 hover:bg-primary-800 text-white p-2.5 rounded-full shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/40" title="Change Photo" aria-label="Change profile photo">
+                      <i data-lucide="camera" class="w-4 h-4"></i>
+                    </button>
+                  </div>
                   <div>
                     <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight"><%= officer && officer.name ? officer.name : 'Officer' %></h1>
                     <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-600">
@@ -304,6 +312,74 @@
       </div>
     </div>
 
+    <!-- Profile Picture Modal -->
+    <div id="pictureModal" class="fixed inset-0 z-[10000] hidden" role="dialog" aria-modal="true" aria-labelledby="pictureModalTitle">
+      <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" data-close-picture-modal></div>
+      <div class="relative min-h-screen w-full flex items-center justify-center px-4 py-8">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-2xl w-full max-w-md">
+          <div class="flex items-center justify-between gap-3 p-5 border-b">
+            <div>
+              <h2 id="pictureModalTitle" class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <i data-lucide="camera" class="w-5 h-5 text-primary-900" aria-hidden="true"></i>
+                Change Profile Photo
+              </h2>
+              <p class="mt-1 text-xs text-gray-500">Upload a new profile picture</p>
+            </div>
+            <button type="button" class="rounded-full p-2 text-gray-500 hover:text-primary-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-900/30" aria-label="Close modal" data-close-picture-modal>
+              <i data-lucide="x" class="w-5 h-5" aria-hidden="true"></i>
+            </button>
+          </div>
+          <div class="p-5 md:p-6">
+            <!-- Preview -->
+            <div class="mb-6 flex justify-center">
+              <div class="relative">
+                <img id="picturePreview" src="<%= officer && officer.profile_picture ? officer.profile_picture : '' %>" alt="Preview" class="<%= officer && officer.profile_picture ? '' : 'hidden' %> w-32 h-32 rounded-full object-cover border-4 border-gray-200">
+                <div id="picturePreviewPlaceholder" class="<%= officer && officer.profile_picture ? 'hidden' : 'flex' %> w-32 h-32 rounded-full bg-gradient-to-br from-primary-900 via-primary-800 to-amber-500 items-center justify-center text-3xl font-semibold text-white uppercase border-4 border-gray-200">
+                  <%= officer && officer.name ? officer.name.charAt(0).toUpperCase() : 'UC' %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Upload Options -->
+            <div class="space-y-4">
+              <!-- File Upload Option -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
+                <input type="file" id="pictureFileInput" accept="image/*" class="hidden">
+                <button type="button" onclick="document.getElementById('pictureFileInput').click()" class="w-full px-4 py-2.5 rounded-xl border-2 border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
+                  <i data-lucide="upload" class="w-4 h-4"></i>
+                  Choose File
+                </button>
+                <p class="text-xs text-gray-500 mt-2">Select an image file (JPG, PNG, etc.) - Max 5MB</p>
+              </div>
+
+              <!-- Divider -->
+              <div class="relative">
+                <div class="absolute inset-0 flex items-center">
+                  <div class="w-full border-t border-gray-200"></div>
+                </div>
+                <div class="relative flex justify-center text-sm">
+                  <span class="px-2 bg-white text-gray-500">OR</span>
+                </div>
+              </div>
+
+              <!-- URL Option -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+                <input type="url" id="pictureUrlInput" class="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-900/30" placeholder="https://example.com/image.jpg">
+                <p class="text-xs text-gray-500 mt-2">Paste an image URL</p>
+              </div>
+            </div>
+
+            <div class="flex gap-3 mt-6 justify-end">
+              <button type="button" id="cancelPictureBtn" class="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:bg-gray-50 transition-colors">Cancel</button>
+              <button type="button" id="savePictureBtn" class="px-4 py-2 rounded-xl bg-primary-900 text-white font-semibold hover:bg-primary-800 transition-colors">Save Picture</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <section aria-label="Club information" class="bg-white rounded-2xl border border-gray-100 shadow-md animate-fade-up card-surface" style="animation-delay: 280ms;">
       <div class="p-5 md:p-6 border-b flex items-center justify-between gap-3">
         <div>
@@ -467,6 +543,192 @@
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && !profileModal?.classList.contains('hidden')) {
           toggleModal(false);
+        }
+      });
+
+      // Profile Picture Modal
+      const pictureModal = document.getElementById('pictureModal');
+      const cameraBtn = document.getElementById('cameraBtn');
+      const pictureCloseEls = document.querySelectorAll('[data-close-picture-modal]');
+      const pictureFileInput = document.getElementById('pictureFileInput');
+      const pictureUrlInput = document.getElementById('pictureUrlInput');
+      const picturePreview = document.getElementById('picturePreview');
+      const picturePreviewPlaceholder = document.getElementById('picturePreviewPlaceholder');
+      const savePictureBtn = document.getElementById('savePictureBtn');
+      const cancelPictureBtn = document.getElementById('cancelPictureBtn');
+      
+      let selectedPicture = null;
+      let pictureSource = null; // 'file' or 'url'
+
+      const togglePictureModal = (show) => {
+        if (!pictureModal) return;
+        if (show) {
+          pictureModal.classList.remove('hidden');
+          setBodyScroll(true);
+          renderLucideIcons();
+        } else {
+          pictureModal.classList.add('hidden');
+          setBodyScroll(false);
+          // Reset inputs
+          if (pictureFileInput) pictureFileInput.value = '';
+          if (pictureUrlInput) pictureUrlInput.value = '';
+          selectedPicture = null;
+          pictureSource = null;
+          // Reset preview
+          if (picturePreview) {
+            const currentSrc = picturePreview.src;
+            if (currentSrc && (currentSrc.startsWith('data:') || currentSrc.startsWith('http'))) {
+              picturePreview.classList.remove('hidden');
+              picturePreviewPlaceholder?.classList.add('hidden');
+            } else {
+              picturePreview.classList.add('hidden');
+              picturePreviewPlaceholder?.classList.remove('hidden');
+            }
+          }
+        }
+      };
+
+      cameraBtn?.addEventListener('click', () => togglePictureModal(true));
+      pictureCloseEls.forEach((el) => el.addEventListener('click', () => togglePictureModal(false)));
+      cancelPictureBtn?.addEventListener('click', () => togglePictureModal(false));
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !pictureModal?.classList.contains('hidden')) {
+          togglePictureModal(false);
+        }
+      });
+
+      // File input change handler
+      pictureFileInput?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+          // Validate file type
+          if (!file.type.startsWith('image/')) {
+            alert('Please select a valid image file');
+            return;
+          }
+
+          // Validate file size (max 5MB)
+          if (file.size > 5 * 1024 * 1024) {
+            alert('Image size must be less than 5MB');
+            return;
+          }
+
+          // Clear URL input when file is selected
+          if (pictureUrlInput) pictureUrlInput.value = '';
+          
+          // Read file and show preview
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            selectedPicture = e.target.result; // Base64 data URL
+            pictureSource = 'file';
+            
+            if (picturePreview) {
+              picturePreview.src = selectedPicture;
+              picturePreview.classList.remove('hidden');
+              picturePreviewPlaceholder?.classList.add('hidden');
+            }
+            renderLucideIcons();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // URL input change handler
+      pictureUrlInput?.addEventListener('input', function(e) {
+        const url = e.target.value.trim();
+        if (url && (url.startsWith('http://') || url.startsWith('https://'))) {
+          selectedPicture = url;
+          pictureSource = 'url';
+          
+          if (picturePreview) {
+            picturePreview.src = url;
+            picturePreview.classList.remove('hidden');
+            picturePreviewPlaceholder?.classList.add('hidden');
+            picturePreview.onerror = function() {
+              this.classList.add('hidden');
+              picturePreviewPlaceholder?.classList.remove('hidden');
+            };
+          }
+        } else if (!url) {
+          selectedPicture = null;
+          pictureSource = null;
+          if (picturePreview) {
+            const currentSrc = picturePreview.src;
+            if (currentSrc && (currentSrc.startsWith('data:') || currentSrc.startsWith('http'))) {
+              picturePreview.classList.remove('hidden');
+              picturePreviewPlaceholder?.classList.add('hidden');
+            } else {
+              picturePreview.classList.add('hidden');
+              picturePreviewPlaceholder?.classList.remove('hidden');
+            }
+          }
+        }
+      });
+
+      // Save picture handler
+      savePictureBtn?.addEventListener('click', async function() {
+        if (!selectedPicture) {
+          alert('⚠️ Please select an image file or enter an image URL to update your profile photo.');
+          return;
+        }
+
+        // Get CSRF token
+        const csrfToken = document.querySelector('input[name="_csrf"]')?.value || 
+                         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+        if (!csrfToken) {
+          alert('⚠️ Security token not found. Please refresh the page and try again.');
+          return;
+        }
+
+        // Disable button during save
+        savePictureBtn.disabled = true;
+        savePictureBtn.textContent = 'Saving...';
+
+        try {
+          const response = await fetch('/officer/profile/picture', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+              profile_picture: selectedPicture,
+              _csrf: csrfToken 
+            }),
+            credentials: 'same-origin'
+          });
+
+          // Check if response is JSON
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response:', text);
+            throw new Error('Server returned an invalid response. Please refresh the page and try again.');
+          }
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to update profile picture');
+          }
+
+          // Show success message with custom styling
+          const successMsg = '🎉 Your profile photo has been updated successfully!';
+          alert(successMsg);
+          
+          // Reload page to show new picture
+          window.location.reload();
+        } catch (error) {
+          console.error('Error updating profile picture:', error);
+          if (error.message.includes('JSON') || error.message.includes('invalid')) {
+            alert('⚠️ An error occurred while updating your profile picture. Please refresh the page and try again.');
+          } else {
+            alert('⚠️ ' + (error.message || 'Failed to update profile picture. Please try again.'));
+          }
+          savePictureBtn.disabled = false;
+          savePictureBtn.textContent = 'Save Picture';
         }
       });
     });

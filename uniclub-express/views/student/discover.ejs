@@ -402,6 +402,17 @@
       border-color: rgba(168, 85, 247, 0.3) !important;
     }
 
+    /* Active Status Badge - Light Mode */
+    body.light-mode .badge-active-status {
+      background: rgba(34, 197, 94, 0.15) !important;
+      color: #059669 !important;
+      border-color: rgba(34, 197, 94, 0.3) !important;
+    }
+
+    body.light-mode .badge-active-status i {
+      color: #059669 !important;
+    }
+
     /* Buttons - Light Mode */
     body.light-mode .join-btn {
       background: #C62828 !important;
@@ -1187,6 +1198,25 @@
       font-size: 11px;
       padding: 4px 10px;
       font-weight: 500;
+    }
+
+    /* Active Status Badge */
+    .badge-active-status {
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 500;
+    }
+
+    .badge-active-status i {
+      font-size: 6px;
+      color: inherit;
     }
 
     .category-chip {
@@ -2286,9 +2316,15 @@
                   </div>
                 </div>
                 <div class="flex gap-2">
-                  <button class="flex-1 join-btn px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-semibold text-sm transition-all" data-club-id="<%= club.id %>" data-club-name="<%= club.name %>">
-                    Join Club
-                  </button>
+                  <% if (club.is_member) { %>
+                    <button class="flex-1 join-btn joined px-4 py-2 rounded-lg bg-green-600 hover:bg-green-500 text-white font-semibold text-sm transition-all" disabled>
+                      <i class="fas fa-check-circle mr-1"></i>Joined
+                    </button>
+                  <% } else { %>
+                    <button class="flex-1 join-btn px-4 py-2 rounded-lg bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-semibold text-sm transition-all" data-club-id="<%= club.id %>" data-club-name="<%= club.name %>">
+                      Join Club
+                    </button>
+                  <% } %>
                   <a href="/student/club/<%= club.id %>" class="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/15 border border-white/20 text-white font-semibold text-sm transition-all">
                     View →
                   </a>
@@ -2353,8 +2389,8 @@
                           <%= club.category %>
                         </span>
                       <% } %>
-                        <span class="badge bg-green-500/20 text-green-400 border border-green-500/30 text-xs">
-                          <i class="fas fa-circle text-[6px] mr-1"></i>
+                        <span class="badge badge-active-status">
+                          <i class="fas fa-circle"></i>
                           Active
                         </span>
                     </div>
@@ -2838,38 +2874,7 @@
   </div>
 
   <script>
-    // Mobile menu functionality
-    const mobileMenuBtn = document.getElementById('mobile-menu-btn');
-    const mobileMenu = document.getElementById('mobile-menu');
-
-    if (mobileMenuBtn && mobileMenu) {
-      mobileMenuBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        mobileMenu.classList.toggle('active');
-      });
-
-      // Close menu when clicking outside
-      document.addEventListener('click', (e) => {
-        if (mobileMenu && !mobileMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-          mobileMenu.classList.remove('active');
-        }
-      });
-
-      // Close menu when clicking links
-      mobileMenu.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', () => {
-          mobileMenu.classList.remove('active');
-        });
-      });
-
-      // Close menu on escape key
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && mobileMenu && mobileMenu.classList.contains('active')) {
-          mobileMenu.classList.remove('active');
-        }
-      });
-    }
+    // Mobile menu functionality is handled by the shared navbar component (studentNav.ejs)
 
     // Search and filter functionality
     const searchInput = document.getElementById('searchInput');

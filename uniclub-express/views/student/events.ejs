@@ -1311,8 +1311,9 @@
               <p class="text-sm text-white/60 line-clamp-2">${escapeHtml(event.description || '')}</p>
             </div>
             <div class="flex flex-col gap-2">
-              <button class="rsvp-btn ${isGoing ? 'going' : ''}" onclick="handleRSVP(${event.id}, '${isGoing ? 'cancel' : 'going'}')">
-                ${isGoing ? '✓ Going' : 'RSVP'}
+              <button class="rsvp-btn ${event.rsvp_status === 'going' ? 'going' : ''}" 
+                      onclick="handleRSVP(${event.id}, '${event.rsvp_status === 'going' ? 'cancel' : 'going'}')">
+                ${event.rsvp_status === 'going' ? '✓ Going' : 'RSVP'}
               </button>
               <a href="/student/club/${event.club_id}" class="text-sm text-white/70 hover:text-white text-center">View Details →</a>
             </div>
@@ -1357,11 +1358,299 @@
       return div.innerHTML;
     }
 
+    // Show notification toast
+    function showNotification(message, type = 'info') {
+      // Remove existing notification if any
+      const existing = document.getElementById('rsvp-notification');
+      if (existing) {
+        existing.remove();
+      }
+
+      // Create notification element
+      const notification = document.createElement('div');
+      notification.id = 'rsvp-notification';
+      notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 16px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 10000;
+        max-width: 400px;
+        animation: slideIn 0.3s ease-out;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      `;
+
+      // Set colors based on type and theme
+      const isLightMode = document.body.classList.contains('light-mode');
+      
+      if (type === 'error') {
+        if (isLightMode) {
+          notification.style.backgroundColor = '#fee2e2';
+          notification.style.color = '#991b1b';
+          notification.style.borderLeft = '4px solid #dc2626';
+        } else {
+          notification.style.backgroundColor = '#7f1d1d';
+          notification.style.color = '#fecaca';
+          notification.style.borderLeft = '4px solid #ef4444';
+        }
+        notification.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink: 0;">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          <span>${escapeHtml(message)}</span>
+        `;
+      } else if (type === 'success') {
+        if (isLightMode) {
+          notification.style.backgroundColor = '#d1fae5';
+          notification.style.color = '#065f46';
+          notification.style.borderLeft = '4px solid #10b981';
+        } else {
+          notification.style.backgroundColor = '#064e3b';
+          notification.style.color = '#6ee7b7';
+          notification.style.borderLeft = '4px solid #10b981';
+        }
+        notification.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink: 0;">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <span>${escapeHtml(message)}</span>
+        `;
+      } else {
+        if (isLightMode) {
+          notification.style.backgroundColor = '#dbeafe';
+          notification.style.color = '#1e40af';
+          notification.style.borderLeft = '4px solid #3b82f6';
+        } else {
+          notification.style.backgroundColor = '#1e3a8a';
+          notification.style.color = '#93c5fd';
+          notification.style.borderLeft = '4px solid #3b82f6';
+        }
+        notification.innerHTML = `
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" style="flex-shrink: 0;">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+          </svg>
+          <span>${escapeHtml(message)}</span>
+        `;
+      }
+
+      // Add animation
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        @keyframes slideOut {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
+      `;
+      if (!document.getElementById('rsvp-notification-styles')) {
+        style.id = 'rsvp-notification-styles';
+        document.head.appendChild(style);
+      }
+
+      // Add to page
+      document.body.appendChild(notification);
+
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
+      }, 5000);
+
+      // Allow manual close on click
+      notification.addEventListener('click', () => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
+      });
+    }
+
     // Handle RSVP
-    function handleRSVP(eventId, action) {
-      // TODO: Implement RSVP functionality
-      console.log(`RSVP ${action} for event ${eventId}`);
-      alert(`RSVP functionality will be implemented soon!`);
+    async function handleRSVP(eventId, action) {
+      try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        if (!csrfToken) {
+          alert('Security token not found. Please refresh the page and try again.');
+          return;
+        }
+
+        // Disable button during request
+        const eventCard = document.querySelector(`.event-card[data-event-id="${eventId}"]`);
+        const button = eventCard ? eventCard.querySelector('.rsvp-btn') : null;
+        if (button) {
+          button.disabled = true;
+          const originalText = button.textContent;
+          button.textContent = 'Processing...';
+          button.setAttribute('data-original-text', originalText);
+        }
+
+        const response = await fetch(`/student/events/${eventId}/rsvp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            action: action,
+            status: action === 'going' ? 'going' : 'interested',
+            _csrf: csrfToken
+          })
+        });
+
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+          try {
+            data = await response.json();
+          } catch (jsonError) {
+            // If JSON parsing fails, it might be an HTML error page
+            const textResponse = await response.text();
+            console.error('Failed to parse JSON response:', textResponse.substring(0, 200));
+            throw new Error('The server returned an unexpected response. Please refresh the page and try again.');
+          }
+        } else {
+          // Response is not JSON (likely HTML error page)
+          const textResponse = await response.text();
+          console.error('Non-JSON response received:', textResponse.substring(0, 200));
+          
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Your session has expired. Please refresh the page and log in again.');
+          } else if (response.status === 404) {
+            throw new Error('Event not found. It may have been removed.');
+          } else if (response.status >= 500) {
+            throw new Error('Server error occurred. Please try again later.');
+          } else {
+            throw new Error('Unable to process your RSVP request. Please refresh the page and try again.');
+          }
+        }
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Failed to process RSVP');
+        }
+
+        // Update the event in the events array
+        const eventIndex = events.findIndex(e => e.id === eventId);
+        if (eventIndex !== -1) {
+          const event = events[eventIndex];
+          const oldStatus = event.rsvp_status || 'not_responded';
+          const newStatus = data.rsvp_status || 'not_responded';
+          
+          // Update RSVP status
+          event.rsvp_status = newStatus;
+          
+          // Update counts based on status change
+          if (oldStatus === 'going' && newStatus !== 'going') {
+            // Was going, now not going - decrease going count
+            event.going_count = Math.max(0, (event.going_count || 0) - 1);
+          } else if (oldStatus === 'interested' && newStatus !== 'interested') {
+            // Was interested, now not interested - decrease interested count
+            event.interested_count = Math.max(0, (event.interested_count || 0) - 1);
+          }
+          
+          if (newStatus === 'going' && oldStatus !== 'going') {
+            // Now going, wasn't before - increase going count
+            event.going_count = (event.going_count || 0) + 1;
+            // If was interested, decrease interested count
+            if (oldStatus === 'interested') {
+              event.interested_count = Math.max(0, (event.interested_count || 0) - 1);
+            }
+          } else if (newStatus === 'interested' && oldStatus !== 'interested') {
+            // Now interested, wasn't before - increase interested count
+            event.interested_count = (event.interested_count || 0) + 1;
+            // If was going, decrease going count
+            if (oldStatus === 'going') {
+              event.going_count = Math.max(0, (event.going_count || 0) - 1);
+            }
+          }
+        }
+
+        // Update button state immediately
+        if (button) {
+          button.disabled = false;
+          const event = events.find(e => e.id === eventId);
+          if (event) {
+            button.textContent = event.rsvp_status === 'going' ? '✓ Going' : 'RSVP';
+            button.className = `rsvp-btn ${event.rsvp_status === 'going' ? 'going' : ''}`;
+            // Update onclick to reflect new state
+            button.setAttribute('onclick', `handleRSVP(${eventId}, '${event.rsvp_status === 'going' ? 'cancel' : 'going'}')`);
+          }
+        }
+
+        // Re-render events to reflect changes (updates counts and filters)
+        renderEvents();
+
+        // Show success message
+        if (action === 'cancel') {
+          showNotification('RSVP removed successfully', 'success');
+        } else {
+          showNotification(data.message || 'RSVP updated successfully!', 'success');
+        }
+      } catch (error) {
+        console.error('RSVP error:', error);
+        
+        // Show user-friendly error message
+        let errorMessage = 'An error occurred while processing your RSVP.';
+        
+        if (error.message) {
+          errorMessage = error.message;
+        } else if (error.name === 'TypeError' && error.message.includes('JSON')) {
+          errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+        } else if (error.name === 'NetworkError' || error.message.includes('fetch')) {
+          errorMessage = 'Network error. Please check your internet connection and try again.';
+        }
+        
+        // Show styled error notification
+        showNotification(errorMessage, 'error');
+        
+        // Re-enable button
+        const eventCard = document.querySelector(`.event-card[data-event-id="${eventId}"]`);
+        const button = eventCard ? eventCard.querySelector('.rsvp-btn') : null;
+        if (button) {
+          button.disabled = false;
+          const event = events.find(e => e.id === eventId);
+          if (event) {
+            button.textContent = event.rsvp_status === 'going' ? '✓ Going' : 'RSVP';
+            button.className = `rsvp-btn ${event.rsvp_status === 'going' ? 'going' : ''}`;
+            // Update onclick to reflect new state
+            button.setAttribute('onclick', `handleRSVP(${eventId}, '${event.rsvp_status === 'going' ? 'cancel' : 'going'}')`);
+          } else {
+            // Fallback to original text
+            const originalText = button.getAttribute('data-original-text');
+            if (originalText) {
+              button.textContent = originalText;
+            }
+          }
+        }
+      }
     }
 
     // Initial render

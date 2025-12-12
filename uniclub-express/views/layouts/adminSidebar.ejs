@@ -77,6 +77,13 @@
     <div>
       <p class="px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Operations</p>
       <div class="space-y-0.5">
+        <a href="/admin/events"
+           class="flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-gray-50 <%= currentPath === '/admin/events' ? 'bg-blue-100 border-l-4 border-blue-600 text-blue-900 font-semibold' : 'text-gray-600' %>">
+          <svg class="w-5 h-5 <%= currentPath === '/admin/events' ? 'text-blue-700' : 'text-gray-500' %> flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          </svg>
+          <span class="flex-1">Events</span>
+        </a>
         <a href="/admin/approvals"
            class="flex items-center gap-3 px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-gray-50 <%= currentPath === '/admin/approvals' ? 'bg-blue-100 border-l-4 border-blue-600 text-blue-900 font-semibold' : 'text-gray-600' %>">
           <svg class="w-5 h-5 <%= currentPath === '/admin/approvals' ? 'text-blue-700' : 'text-gray-500' %> flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
@@ -123,8 +130,49 @@
     </div>
   </nav>
 
-  <!-- Sign out -->
-  <div class="p-3 border-t-2 border-gray-200 bg-gray-50">
+  <!-- User Profile & Sign out -->
+  <div class="p-3 border-t-2 border-gray-200 bg-gray-50 space-y-2">
+    <!-- User Profile Dropdown -->
+    <% if (typeof adminOfficer !== 'undefined' && adminOfficer) { %>
+      <div class="relative">
+        <button id="adminProfileBtn" class="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors font-medium">
+          <div class="relative w-10 h-10 rounded-full overflow-hidden shrink-0 ring-2 ring-gray-300">
+            <% if (adminOfficer.profile_picture) { %>
+              <img
+                src="<%= adminOfficer.profile_picture %>"
+                alt="Profile"
+                class="w-full h-full object-cover"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+              />
+            <% } %>
+            <div class="<%= adminOfficer.profile_picture ? 'hidden' : 'flex' %> w-full h-full items-center justify-center text-xs font-semibold text-gray-600 bg-gray-200">
+              <%= (adminOfficer.first_name || 'A').charAt(0).toUpperCase() %><%= (adminOfficer.last_name || '').charAt(0).toUpperCase() %>
+            </div>
+          </div>
+          <div class="flex-1 text-left min-w-0">
+            <p class="font-semibold text-gray-900 truncate"><%= adminOfficer.first_name || '' %> <%= adminOfficer.last_name || '' %></p>
+            <p class="text-xs text-gray-500 truncate">Admin</p>
+          </div>
+          <svg class="w-4 h-4 text-gray-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+        <div id="adminProfileMenu" class="hidden absolute bottom-full left-0 mb-2 w-full bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden z-50">
+          <div class="p-3 bg-gray-50 border-b">
+            <p class="font-semibold text-sm text-gray-900"><%= adminOfficer.first_name || '' %> <%= adminOfficer.last_name || '' %></p>
+            <p class="text-xs text-gray-500">Administrator</p>
+            <% if (adminOfficer.role) { %>
+              <p class="text-xs text-gray-500 mt-1"><%= adminOfficer.role %></p>
+            <% } %>
+          </div>
+          <div class="p-2">
+            <a href="/admin/settings" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700">Settings</a>
+            <a href="/admin/profile" class="block px-3 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700">Profile</a>
+          </div>
+        </div>
+      </div>
+    <% } %>
+    <!-- Sign out -->
     <form method="post" action="/admin/logout">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors font-medium">
@@ -135,4 +183,28 @@
       </button>
     </form>
   </div>
+  <script>
+    // Admin profile dropdown toggle
+    const adminProfileBtn = document.getElementById('adminProfileBtn');
+    const adminProfileMenu = document.getElementById('adminProfileMenu');
+    if (adminProfileBtn && adminProfileMenu) {
+      adminProfileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        adminProfileMenu.classList.toggle('hidden');
+        const svg = adminProfileBtn.querySelector('svg');
+        if (svg) {
+          svg.style.transform = adminProfileMenu.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+      });
+      document.addEventListener('click', (e) => {
+        if (!adminProfileBtn.contains(e.target) && !adminProfileMenu.contains(e.target)) {
+          adminProfileMenu.classList.add('hidden');
+          const svg = adminProfileBtn.querySelector('svg');
+          if (svg) {
+            svg.style.transform = 'rotate(0deg)';
+          }
+        }
+      });
+    }
+  </script>
 </aside>

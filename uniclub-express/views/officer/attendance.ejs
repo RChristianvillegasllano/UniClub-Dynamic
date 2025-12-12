@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="<%= typeof csrfToken !== 'undefined' ? csrfToken : '' %>">
   <title><%= title || 'Attendance' %></title>
   <link rel="icon" href="https://phshirt.com/wp-content/uploads/2022/01/UM-Tagum-College-1950.png" type="image/x-icon">
   <script src="https://cdn.tailwindcss.com"></script>
@@ -24,7 +25,12 @@
 <body class="font-sans antialiased bg-gradient-to-br from-gray-50 to-gray-100">
   <div class="flex h-screen">
     <!-- Sidebar -->
-    <%- include('./partials/sidebar', { activePage: (typeof activePage !== 'undefined' ? activePage : ''), club: (typeof club !== 'undefined' ? club : null) }) %>
+    <%- include('./partials/sidebar', { 
+      activePage: (typeof activePage !== 'undefined' ? activePage : ''), 
+      club: (typeof club !== 'undefined' ? club : null),
+      accessiblePages: (typeof accessiblePages !== 'undefined' ? accessiblePages : []),
+      officer: (typeof officer !== 'undefined' ? officer : null)
+    }) %>
 
     <!-- Main -->
     <main class="flex-1 overflow-auto">
@@ -45,10 +51,15 @@
                   <p class="text-sm font-bold text-gray-900 leading-tight"><%= (typeof officer !== 'undefined' && officer && officer.name) ? officer.name : 'Student' %></p>
                   <p class="text-xs text-gray-500 mt-1"><%= (typeof officer !== 'undefined' && officer && officer.role) ? officer.role : 'Club Officer' %></p>
                 </div>
-                <% if (typeof officer !== 'undefined' && officer && officer.photo_url) { %>
-                  <img src="<%= officer.photo_url %>" alt="Profile" class="w-10 h-10 rounded-full ring-1 ring-red-600 object-cover">
+                <% if (typeof officer !== 'undefined' && officer && officer.profile_picture) { %>
+                  <img src="<%= officer.profile_picture %>" alt="Profile" class="w-10 h-10 rounded-full ring-1 ring-red-600 object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                  <div class="hidden w-10 h-10 rounded-full ring-1 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } else { %>
-                  <div class="w-10 h-10 rounded-full ring-1 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">UC</div>
+                  <div class="w-10 h-10 rounded-full ring-1 ring-red-600 bg-gray-200 flex items-center justify-center text-xs font-semibold text-gray-600">
+                    <%= (typeof officer !== 'undefined' && officer && officer.name) ? (officer.name.charAt(0).toUpperCase() + (officer.name.split(' ')[1] ? officer.name.split(' ')[1].charAt(0).toUpperCase() : '')) : 'UC' %>
+                  </div>
                 <% } %>
               </button>
               <div id="profileMenu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden z-[9999]">
@@ -84,7 +95,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-green-700 text-sm font-medium mb-1">Present</p>
-                <h3 class="text-3xl font-bold text-green-900"><%= (typeof presentCount !== 'undefined' ? presentCount : 0) %></h3>
+                <h3 id="presentCountDisplay" class="text-3xl font-bold text-green-900"><%= (typeof presentCount !== 'undefined' ? presentCount : 0) %></h3>
                 <p class="text-xs text-green-600 mt-1">Marked present</p>
               </div>
               <div class="bg-green-100 p-3 rounded-full">
@@ -96,7 +107,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-red-700 text-sm font-medium mb-1">Absent</p>
-                <h3 class="text-3xl font-bold text-red-900"><%= (typeof absentCount !== 'undefined' ? absentCount : 0) %></h3>
+                <h3 id="absentCountDisplay" class="text-3xl font-bold text-red-900"><%= (typeof absentCount !== 'undefined' ? absentCount : 0) %></h3>
                 <p class="text-xs text-red-600 mt-1">Marked absent</p>
               </div>
               <div class="bg-red-100 p-3 rounded-full">
@@ -108,7 +119,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-amber-700 text-sm font-medium mb-1">Not Marked</p>
-                <h3 class="text-3xl font-bold text-amber-900"><%= (typeof notMarkedCount !== 'undefined' ? notMarkedCount : 0) %></h3>
+                <h3 id="notMarkedCountDisplay" class="text-3xl font-bold text-amber-900"><%= (typeof notMarkedCount !== 'undefined' ? notMarkedCount : 0) %></h3>
                 <p class="text-xs text-amber-600 mt-1">Pending</p>
               </div>
               <div class="bg-yellow-100 p-3 rounded-full">
@@ -120,7 +131,7 @@
             <div class="flex items-center justify-between">
               <div>
                 <p class="text-blue-700 text-sm font-medium mb-1">Total</p>
-                <h3 class="text-3xl font-bold text-blue-900"><%= (typeof totalCount !== 'undefined' ? totalCount : 0) %></h3>
+                <h3 id="totalCountDisplay" class="text-3xl font-bold text-blue-900"><%= (typeof totalCount !== 'undefined' ? totalCount : 0) %></h3>
                 <p class="text-xs text-blue-600 mt-1">All records</p>
               </div>
               <div class="bg-blue-100 p-3 rounded-full">
@@ -130,7 +141,11 @@
           </div>
         </div>
 
-        <!-- Add Attendance Form -->
+        <!-- Add Attendance Form - Only show if user has permission -->
+        <% 
+          var canCreateAttendance = (typeof canCreateAttendance !== 'undefined' && canCreateAttendance) || false;
+        %>
+        <% if (canCreateAttendance) { %>
         <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
           <div class="mb-4">
             <h2 class="text-lg font-semibold text-gray-800">Add Attendance Record</h2>
@@ -171,6 +186,15 @@
             </div>
           </form>
         </div>
+        <% } else { %>
+        <!-- View-only message for users without create permission -->
+        <div class="bg-amber-50 border-2 border-amber-200 rounded-2xl p-6 shadow-lg mb-6">
+          <div class="flex items-center gap-3">
+            <i data-lucide="info" class="w-6 h-6 text-amber-600"></i>
+            <p class="text-amber-800 font-medium">You have view-only access to attendance records. Contact an administrator to request permission to add attendance.</p>
+          </div>
+        </div>
+        <% } %>
 
         <!-- Filters and Search -->
         <div class="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 mb-6">
@@ -224,69 +248,164 @@
                 <tr>
                   <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Member Name</th>
                   <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Status</th>
+                  <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Event</th>
                   <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Date</th>
                   <th class="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody id="attendanceTableBody" class="divide-y divide-slate-200">
-                <% if (typeof attendance !== 'undefined' && attendance && attendance.length) { %>
-                  <% attendance.forEach(function(entry) { %>
-                    <tr class="hover:bg-gray-50 transition-colors attendance-row" data-status="<%= (entry.status || 'Not Marked').toLowerCase().replace(' ', '-') %>" data-name="<%= entry.member_name.toLowerCase() %>">
-                      <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="text-sm font-semibold text-gray-900"><%= entry.member_name %></div>
+                <% 
+                  // Only use RSVP students (all attendance comes from event_attendance)
+                  const allRecords = [];
+                  
+                  // Add RSVP students (this includes all attendance records)
+                  // Use a Set to track unique combinations of event_id and student_id to prevent duplicates
+                  const seenKeys = new Set();
+                  if (typeof rsvpStudents !== 'undefined' && rsvpStudents && rsvpStudents.length) {
+                    rsvpStudents.forEach(function(rsvp) {
+                      // Create unique key from event_id and student_id
+                      const uniqueKey = `${rsvp.event_id || rsvp.eventId || 'unknown'}_${rsvp.student_id || rsvp.studentId || 'unknown'}`;
+                      
+                      // Skip if we've already seen this combination
+                      if (seenKeys.has(uniqueKey)) {
+                        return;
+                      }
+                      seenKeys.add(uniqueKey);
+                      
+                      // Use attendance_status if available, otherwise default to 'Not Marked'
+                      const attendanceStatus = rsvp.attendance_status || 'Not Marked';
+                      allRecords.push({
+                        type: 'rsvp',
+                        id: rsvp.id,
+                        member_name: rsvp.student_name,
+                        status: attendanceStatus, // Use attendance_status (Present/Absent/Not Marked)
+                        rsvp_status: (rsvp.rsvp_status === 'going' || !rsvp.rsvp_status) ? 'Going' : 'Interested',
+                        date: rsvp.rsvp_date,
+                        event_name: rsvp.event_name,
+                        event_date: rsvp.event_date,
+                        event_status: rsvp.event_status || 'Scheduled',
+                        event_id: rsvp.event_id || rsvp.eventId, // Ensure event_id is included
+                        student_id: rsvp.student_id || rsvp.studentId, // Ensure student_id is included
+                        studentid: rsvp.studentid,
+                        program: rsvp.program,
+                        profile_picture: rsvp.profile_picture
+                      });
+                    });
+                  }
+                %>
+                <% if (allRecords.length > 0) { %>
+                  <% allRecords.forEach(function(entry) { %>
+                    <tr class="hover:bg-gray-50 transition-colors attendance-row" data-status="<%= entry.status.toLowerCase().replace(' ', '-') %>" data-name="<%= entry.member_name.toLowerCase() %>" data-type="<%= entry.type %>">
+                      <td class="px-6 py-4">
+                        <div class="flex items-center gap-3">
+                          <% if (entry.type === 'rsvp') { %>
+                            <% 
+                              const rsvpPhoto = entry.profile_picture || '';
+                              const rsvpInitials = (entry.member_name || '').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                              const hasRsvpPhoto = rsvpPhoto && rsvpPhoto.trim() !== '';
+                            %>
+                            <div class="w-10 h-10 rounded-full overflow-hidden bg-purple-100 flex items-center justify-center flex-shrink-0">
+                              <% if (hasRsvpPhoto) { %>
+                                <img src="<%= rsvpPhoto %>" alt="<%= entry.member_name %>" class="w-full h-full object-cover" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                <span class="text-purple-700 font-semibold text-xs" style="display: none;"><%= rsvpInitials %></span>
+                              <% } else { %>
+                                <span class="text-purple-700 font-semibold text-xs"><%= rsvpInitials %></span>
+                              <% } %>
+                            </div>
+                          <% } %>
+                          <div>
+                            <div class="text-sm font-semibold text-gray-900"><%= entry.member_name %></div>
+                            <% if (entry.type === 'rsvp' && entry.studentid) { %>
+                              <div class="text-xs text-gray-500"><%= entry.studentid %> • <%= entry.program || 'N/A' %></div>
+                            <% } %>
+                          </div>
+                        </div>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
                         <% 
-                          const status = (entry.status || 'Not Marked').toLowerCase();
+                          const status = entry.status.toLowerCase();
                           const statusColors = {
                             'present': 'bg-green-100 text-green-800',
                             'absent': 'bg-red-100 text-red-800',
                             'not marked': 'bg-amber-100 text-amber-800',
-                            'not-marked': 'bg-amber-100 text-amber-800'
+                            'not-marked': 'bg-amber-100 text-amber-800',
+                            'going': 'bg-green-100 text-green-800',
+                            'interested': 'bg-blue-100 text-blue-800'
                           };
                           const statusColor = statusColors[status] || 'bg-gray-100 text-gray-800';
-                          const displayStatus = entry.status || 'Not Marked';
+                          const displayStatus = entry.status;
                         %>
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold <%= statusColor %>">
                           <%= displayStatus %>
                         </span>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
+                        <% if (entry.event_name) { %>
+                          <div class="text-sm text-gray-900 font-medium"><%= entry.event_name %></div>
+                          <div class="text-xs text-gray-500">
+                            <%= new Date(entry.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %>
+                          </div>
+                        <% } else { %>
+                          <span class="text-sm text-gray-400">—</span>
+                        <% } %>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap">
                         <div class="text-sm text-gray-600">
-                          <%= new Date(entry.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
+                          <%= new Date(entry.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
                         </div>
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex gap-2">
-                          <button 
-                            onclick="updateAttendance(<%= entry.id %>, 'Present')"
-                            class="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 hover:scale-105 transition-all duration-200 shadow-sm flex items-center gap-1"
-                          >
-                            <i data-lucide="check" class="w-3 h-3"></i>
-                            Present
-                          </button>
-                          <button 
-                            onclick="updateAttendance(<%= entry.id %>, 'Absent')"
-                            class="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 hover:scale-105 transition-all duration-200 shadow-sm flex items-center gap-1"
-                          >
-                            <i data-lucide="x" class="w-3 h-3"></i>
-                            Absent
-                          </button>
-                        </div>
+                        <% 
+                          const eventStatus = (entry.event_status || 'Scheduled').toLowerCase();
+                          const isOngoing = eventStatus === 'ongoing';
+                        %>
+                        <% if (isOngoing && entry.event_id && entry.student_id) { %>
+                          <% 
+                            const currentStatus = (entry.status || 'Not Marked').toLowerCase();
+                            const isPresent = currentStatus === 'present';
+                            const isAbsent = currentStatus === 'absent';
+                          %>
+                          <div class="flex gap-2" id="attendance-buttons-<%= entry.event_id %>-<%= entry.student_id %>">
+                            <button 
+                              data-event-id="<%= entry.event_id %>"
+                              data-student-id="<%= entry.student_id %>"
+                              data-student-name="<%= entry.member_name %>"
+                              data-action="Present"
+                              class="mark-rsvp-attendance px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 shadow-sm flex items-center gap-1 <%= isPresent ? 'bg-green-700 text-white cursor-not-allowed opacity-75' : 'bg-green-600 text-white hover:bg-green-700 hover:scale-105' %>"
+                              <%= isPresent ? 'disabled' : '' %>
+                            >
+                              <i data-lucide="check" class="w-3 h-3"></i>
+                              <%= isPresent ? 'Present ✓' : 'Present' %>
+                            </button>
+                            <button 
+                              data-event-id="<%= entry.event_id %>"
+                              data-student-id="<%= entry.student_id %>"
+                              data-student-name="<%= entry.member_name %>"
+                              data-action="Absent"
+                              class="mark-rsvp-attendance px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 shadow-sm flex items-center gap-1 <%= isAbsent ? 'bg-red-700 text-white cursor-not-allowed opacity-75' : 'bg-red-600 text-white hover:bg-red-700 hover:scale-105' %>"
+                              <%= isAbsent ? 'disabled' : '' %>
+                            >
+                              <i data-lucide="x" class="w-3 h-3"></i>
+                              <%= isAbsent ? 'Absent ✓' : 'Absent' %>
+                            </button>
+                          </div>
+                        <% } else { %>
+                          <span class="text-xs text-gray-400">Event <%= entry.event_status || 'Scheduled' %></span>
+                        <% } %>
                       </td>
                     </tr>
                   <% }) %>
                 <% } else { %>
                   <tr>
-                    <td colspan="4" class="px-6 py-16">
+                    <td colspan="5" class="px-6 py-16">
                       <div class="bg-gray-50 border border-gray-200 rounded-2xl p-8 text-center">
                         <div class="flex flex-col items-center gap-4">
                           <div class="bg-gray-100 rounded-full p-4">
                             <i data-lucide="calendar-x" class="w-10 h-10 text-gray-400"></i>
                           </div>
                           <div class="space-y-2">
-                            <p class="text-gray-600 font-semibold text-lg">No attendance records found</p>
-                            <p class="text-sm text-gray-500 max-w-md">Start tracking attendance by adding records above.</p>
+                            <p class="text-gray-600 font-semibold text-lg">No records found</p>
+                            <p class="text-sm text-gray-500 max-w-md">No attendance records or RSVPs available.</p>
                           </div>
                         </div>
                       </div>
@@ -343,9 +462,75 @@
       }
     };
 
-    // Initialize Lucide icons
+    // Initialize Lucide icons and event listeners
     document.addEventListener('DOMContentLoaded', () => {
       renderLucideIcons();
+      
+      // Add event listeners for RSVP attendance buttons
+      const rsvpButtons = document.querySelectorAll('.mark-rsvp-attendance');
+      console.log('[Attendance] Found', rsvpButtons.length, 'RSVP attendance buttons');
+      
+      rsvpButtons.forEach((button, index) => {
+        button.addEventListener('click', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const eventId = this.getAttribute('data-event-id');
+          const studentId = this.getAttribute('data-student-id');
+          const studentName = this.getAttribute('data-student-name');
+          const status = this.getAttribute('data-action');
+          
+          console.log('[Attendance] Button clicked:', { eventId, studentId, studentName, status });
+          console.log('[Attendance] Button element:', this);
+          console.log('[Attendance] All data attributes:', {
+            'data-event-id': this.getAttribute('data-event-id'),
+            'data-student-id': this.getAttribute('data-student-id'),
+            'data-student-name': this.getAttribute('data-student-name'),
+            'data-action': this.getAttribute('data-action')
+          });
+          
+          if (!eventId || eventId === 'null' || eventId === 'undefined' || eventId === '') {
+            console.error('[Attendance] Missing or invalid eventId:', eventId);
+            showToast('Error: Event ID is missing. Please refresh the page.', 'error');
+            return;
+          }
+          
+          if (!studentId || studentId === 'null' || studentId === 'undefined' || studentId === '') {
+            console.error('[Attendance] Missing or invalid studentId:', studentId);
+            showToast('Error: Student ID is missing. Please refresh the page.', 'error');
+            return;
+          }
+          
+          if (!status || status === 'null' || status === 'undefined' || status === '') {
+            console.error('[Attendance] Missing or invalid status:', status);
+            showToast('Error: Status is missing. Please refresh the page.', 'error');
+            return;
+          }
+          
+          // Validate that IDs are valid numbers
+          const eventIdNum = parseInt(eventId);
+          const studentIdNum = parseInt(studentId);
+          
+          if (isNaN(eventIdNum) || eventIdNum <= 0) {
+            console.error('[Attendance] Invalid eventId number:', eventId, eventIdNum);
+            showToast('Error: Invalid Event ID. Please refresh the page.', 'error');
+            return;
+          }
+          
+          if (isNaN(studentIdNum) || studentIdNum <= 0) {
+            console.error('[Attendance] Invalid studentId number:', studentId, studentIdNum);
+            showToast('Error: Invalid Student ID. Please refresh the page.', 'error');
+            return;
+          }
+          
+          if (typeof window.markRSVPAttendance === 'function') {
+            window.markRSVPAttendance(eventIdNum, studentIdNum, studentName, status);
+          } else {
+            console.error('[Attendance] markRSVPAttendance function not found');
+            showToast('Attendance function not available. Please refresh.', 'error');
+          }
+        });
+      });
     });
 
     // Add attendance form
@@ -454,6 +639,152 @@
       }
     }
 
+    // Mark RSVP student as Present or Absent
+    // Function to update attendance counts in header cards
+    function updateAttendanceCounts(newStatus) {
+      // Get current counts by recalculating from all rows
+      const rows = document.querySelectorAll('.attendance-row');
+      let presentCount = 0;
+      let absentCount = 0;
+      let notMarkedCount = 0;
+      
+      rows.forEach(row => {
+        const status = row.getAttribute('data-status');
+        if (status === 'present') {
+          presentCount++;
+        } else if (status === 'absent') {
+          absentCount++;
+        } else {
+          notMarkedCount++;
+        }
+      });
+      
+      // Update the count displays using IDs
+      const presentCountEl = document.getElementById('presentCountDisplay');
+      const absentCountEl = document.getElementById('absentCountDisplay');
+      const notMarkedCountEl = document.getElementById('notMarkedCountDisplay');
+      const totalCountEl = document.getElementById('totalCountDisplay');
+      
+      if (presentCountEl) presentCountEl.textContent = presentCount;
+      if (absentCountEl) absentCountEl.textContent = absentCount;
+      if (notMarkedCountEl) notMarkedCountEl.textContent = notMarkedCount;
+      if (totalCountEl) totalCountEl.textContent = rows.length;
+    }
+    
+    async function markRSVPAttendance(eventId, studentId, studentName, status) {
+      console.log('[Attendance] markRSVPAttendance called:', { eventId, studentId, studentName, status });
+      
+      try {
+        // Get CSRF token from meta tag or hidden input
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                         document.querySelector('input[name="_csrf"]')?.value || '';
+        
+        console.log('[Attendance] CSRF token found:', !!csrfToken);
+        
+        if (!csrfToken) {
+          throw new Error('CSRF token not found. Please refresh the page and try again.');
+        }
+        
+        const url = `/api/officer/attendance/rsvp/${eventId}/${studentId}`;
+        console.log('[Attendance] Making request to:', url);
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ status, _csrf: csrfToken }),
+          credentials: 'same-origin'
+        });
+
+        console.log('[Attendance] Response status:', response.status, response.statusText);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('[Attendance] Error response:', errorData);
+          throw new Error(errorData.error || 'Failed to mark attendance');
+        }
+
+        const data = await response.json();
+        console.log('[Attendance] Success response:', data);
+        showToast(`${studentName} marked as ${status}`, 'success');
+        
+        // Update the buttons immediately without reloading
+        const buttonContainer = document.getElementById(`attendance-buttons-${eventId}-${studentId}`);
+        if (buttonContainer) {
+          const presentBtn = buttonContainer.querySelector('[data-action="Present"]');
+          const absentBtn = buttonContainer.querySelector('[data-action="Absent"]');
+          
+          if (status === 'Present') {
+            // Update Present button
+            if (presentBtn) {
+              presentBtn.classList.remove('bg-green-600', 'hover:bg-green-700', 'hover:scale-105');
+              presentBtn.classList.add('bg-green-700', 'cursor-not-allowed', 'opacity-75');
+              presentBtn.disabled = true;
+              presentBtn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Present ✓';
+              renderLucideIcons();
+            }
+            // Update Absent button
+            if (absentBtn) {
+              absentBtn.classList.remove('bg-red-700', 'cursor-not-allowed', 'opacity-75');
+              absentBtn.classList.add('bg-red-600', 'hover:bg-red-700', 'hover:scale-105');
+              absentBtn.disabled = false;
+              absentBtn.innerHTML = '<i data-lucide="x" class="w-3 h-3"></i> Absent';
+              renderLucideIcons();
+            }
+          } else if (status === 'Absent') {
+            // Update Absent button
+            if (absentBtn) {
+              absentBtn.classList.remove('bg-red-600', 'hover:bg-red-700', 'hover:scale-105');
+              absentBtn.classList.add('bg-red-700', 'cursor-not-allowed', 'opacity-75');
+              absentBtn.disabled = true;
+              absentBtn.innerHTML = '<i data-lucide="x" class="w-3 h-3"></i> Absent ✓';
+              renderLucideIcons();
+            }
+            // Update Present button
+            if (presentBtn) {
+              presentBtn.classList.remove('bg-green-700', 'cursor-not-allowed', 'opacity-75');
+              presentBtn.classList.add('bg-green-600', 'hover:bg-green-700', 'hover:scale-105');
+              presentBtn.disabled = false;
+              presentBtn.innerHTML = '<i data-lucide="check" class="w-3 h-3"></i> Present';
+              renderLucideIcons();
+            }
+          }
+          
+          // Update the status badge in the table
+          const row = buttonContainer.closest('tr');
+          if (row) {
+            const statusCell = row.querySelector('td:nth-child(2)'); // Status column
+            if (statusCell) {
+              const statusBadge = statusCell.querySelector('span');
+              if (statusBadge) {
+                if (status === 'Present') {
+                  statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800';
+                  statusBadge.textContent = 'Present';
+                } else if (status === 'Absent') {
+                  statusBadge.className = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800';
+                  statusBadge.textContent = 'Absent';
+                }
+              }
+            }
+            
+            // Update data-status attribute for filtering
+            row.setAttribute('data-status', status.toLowerCase().replace(' ', '-'));
+          }
+          
+          // Update the counts in the header cards
+          updateAttendanceCounts(status);
+        }
+      } catch (error) {
+        console.error('[Attendance] Error marking RSVP attendance:', error);
+        showToast(error.message || 'Failed to mark attendance. Please try again.', 'error');
+      }
+    }
+    
+    // Make function globally accessible
+    window.markRSVPAttendance = markRSVPAttendance;
+
     // Search functionality
     const attendanceSearch = document.getElementById('attendanceSearch');
     if (attendanceSearch) {
@@ -462,7 +793,7 @@
         const rows = document.querySelectorAll('.attendance-row');
         rows.forEach(row => {
           const name = row.getAttribute('data-name');
-          if (name.includes(searchTerm)) {
+          if (name && name.includes(searchTerm)) {
             row.style.display = '';
           } else {
             row.style.display = 'none';
@@ -508,7 +839,23 @@
       const rows = document.querySelectorAll('.attendance-row');
       rows.forEach((row, index) => {
         const status = row.getAttribute('data-status');
-        if (activeFilter === 'all' || status === activeFilter) {
+        const type = row.getAttribute('data-type');
+        
+        // For RSVP records, map 'going' and 'interested' to appropriate filters
+        let shouldShow = false;
+        if (activeFilter === 'all') {
+          shouldShow = true;
+        } else if (activeFilter === 'present' && (status === 'present' || status === 'going')) {
+          shouldShow = true;
+        } else if (activeFilter === 'absent' && status === 'absent') {
+          shouldShow = true;
+        } else if (activeFilter === 'not-marked' && status === 'not-marked') {
+          shouldShow = true;
+        } else if (status === activeFilter) {
+          shouldShow = true;
+        }
+        
+        if (shouldShow) {
           row.style.display = '';
           // Add fade-in animation
           row.style.opacity = '0';

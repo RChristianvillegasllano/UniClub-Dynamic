@@ -338,3 +338,9 @@ const canAccessFinance = canAccessPage('Treasurer', 'finance');
 
 6. **Role Normalization**: Role names are normalized (lowercase, trimmed) when matching, so "Vice President" and "vice president" are treated the same.
 
+
+
+
+
+
+
